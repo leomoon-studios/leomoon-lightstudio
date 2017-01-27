@@ -27,7 +27,7 @@ The speed of future development of this plugin depends on community donations. I
   - LeoMoon Studios
 
 ## Donors
-  - NULL
+  - Damir Simovski
 
 ## Main Programmer
   - Marcin Zielinski
