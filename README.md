@@ -28,6 +28,7 @@ The speed of future development of this plugin depends on community donations. I
 
 ## Donors
   - Damir Simovski
+  - Krzysztof Czerwiński
 
 ## Main Programmer
   - Marcin Zielinski
