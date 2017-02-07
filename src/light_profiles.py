@@ -172,22 +172,37 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         # whats the difference
         new_objects = (A ^ B)
         
-        # make icon material single user and update selection drivers
+        # make light material single user and update selection drivers
         bpy.ops.group.objects_remove_all()
         bpy.ops.group.create(name='BLS_Light')
-        for ob in new_objects:
-            if ob.name.startswith('BLS_CONTROLLER.'):
-                for id, mat in enumerate(ob.data.materials):
+        
+        for lg in new_objects:
+            if lg.name.startswith('BLS_LIGHT_GRP.'):
+                controller = [c for c in family(lg) if c.name.startswith("BLS_CONTROLLER.")][0]
+                lmesh = [l for l in family(lg) if l.name.startswith("BLS_LIGHT_MESH.")][0]
+                
+                light_mat = None
+                for id, mat in enumerate(controller.data.materials):
                     if mat.name.startswith('BLS_icon_ctrl'):
                         mat = mat.copy()
-                        ob.data.materials[id] = mat
+                        controller.data.materials[id] = mat
                         
                         for d in mat.animation_data.drivers:
-                            d.driver.variables[0].targets[0].id = scene.objects['BLS_LIGHT_MESH.'+ob.name.split('.')[1]]
+                            d.driver.variables[0].targets[0].id = scene.objects['BLS_LIGHT_MESH.'+controller.name.split('.')[1]]
                         
                         for d in mat.node_tree.animation_data.drivers:
                             for v in d.driver.variables:
-                                v.targets[0].id = scene.objects['BLS_LIGHT_MESH.'+ob.name.split('.')[1]]
+                                v.targets[0].id = scene.objects['BLS_LIGHT_MESH.'+controller.name.split('.')[1]]
+                                
+                    elif mat.name.startswith('BLS_light'):
+                        #mat = mat.copy()
+                        light_mat = mat.copy()
+                        controller.data.materials[id] = light_mat
+                        light_mat.node_tree.nodes['Light Texture'].image = light_mat.node_tree.nodes['Light Texture'].image.copy()
+                        
+                for id, mat in enumerate(lmesh.data.materials):
+                    if mat.name.startswith('BLS_light'):
+                        lmesh.data.materials[id] = light_mat               
                             
         # revert visibility
         for ob in chain(obsToCopy, new_objects):
@@ -357,6 +372,12 @@ class ImportProfiles(bpy.types.Operator):
                 controller.location.y = light['position'][1]
                 controller.location.z = light['position'][2]
                 
+                controller.scale.x = light['scale'][0]
+                controller.scale.y = light['scale'][1]
+                controller.scale.z = light['scale'][2]
+                
+                controller.rotation_euler.z = light['rotation']
+                
                 props.light_muted = light['mute']
                 controller.material_slots[1].material.node_tree.nodes["Group"].inputs[2].default_value = light['Intensity']
                 controller.material_slots[1].material.node_tree.nodes["Group"].inputs[3].default_value = light['Opacity']
@@ -391,6 +412,8 @@ def compose_profile(list_index):
         light = {}
         light['radius'] = lmesh.location.x
         light['position'] = [controller.location.x, controller.location.y, controller.location.z]
+        light['scale'] = [controller.scale.x, controller.scale.y, controller.scale.z]
+        light['rotation'] = controller.rotation_euler.z
         light['mute'] = props.light_muted
         texpath = controller.material_slots[1].material.node_tree.nodes["Light Texture"].image.filepath
         light['tex'] = texpath.split(bpy.path.native_pathsep("\\textures_real_lights\\"))[-1]
@@ -450,3 +473,20 @@ class ExportProfiles(bpy.types.Operator):
         self.filepath = "profile.bls"
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+    
+class ExportProfiles(bpy.types.Operator):
+    """ Find Missing Textures """
+ 
+    bl_idname = "bls.find_missing_textures"
+    bl_label = "Find Missing Textures"
+    #bl_options = {"INTERNAL"}
+    
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list """
+        return len(context.scene.BLStudio.profile_list)
+ 
+    def execute(self, context):
+        bpy.ops.file.find_missing_files(directory=os.path.join(dir, "textures_real_lights"))        
+        bpy.context.scene.frame_current = bpy.context.scene.frame_current
+        return{'FINISHED'}

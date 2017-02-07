@@ -147,3 +147,23 @@ class BLS_ProfileImportExport(bpy.types.Panel):
         col.operator('bls.export_profiles', text="Export Selected Profile")
         col.operator('bls.export_profiles', text="Export All Profiles").all=True
         col.operator('bls.import_profiles')
+        
+class BLS_Misc(bpy.types.Panel):
+    bl_idname = "bls_misc"
+    bl_label = "Misc"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
+    bl_category = "Light Studio"
+    
+    @classmethod
+    def poll(cls, context):
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized
+            
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        
+        props = scene.BLStudio
+              
+        col = layout.column(align=True)
+        col.operator('bls.find_missing_textures')
