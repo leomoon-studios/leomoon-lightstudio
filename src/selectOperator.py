@@ -25,7 +25,10 @@ class SelectionOperator(bpy.types.Operator):
             obname = context.active_object.name
             deactivate = obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.')
             
-        bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object, location=(self.location[0] , self.location[1] ))
+        result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object, location=(self.location[0] , self.location[1] ))
+        if 'FINISHED' not in result:
+            return {'PASS_THROUGH'}
+        
         if context.active_object:
             obname = context.active_object.name
             if obname.startswith('BLS_CONTROLLER.'):

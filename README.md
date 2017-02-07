@@ -19,6 +19,7 @@ Introducing Light Studio plugin for Blender. Based on a prototype by Maciek Ptas
 	- [S] Scale light mesh
 	- [G] Grab (meant to be used in rendered preview)
 	- [R] Rotate
+  - Import/Export of light profiles
 
 ## Donations
 The speed of future development of this plugin depends on community donations. If you use this plugin, please consider donating. Any amount will help and 100% of donations will go towards development of this plugin. You can donate using "[THIS LINK](https://www.paypal.me/aminpersia)".
@@ -37,6 +38,10 @@ The speed of future development of this plugin depends on community donations. I
   - Maciek Ptaszynski
 
 ## Changelog
+  - 2.3.2:
+    - Fix for left-click selection
+  - 2.3.1:
+    - Import/Export profiles
   - 2.3.0:
     - 3D Edit (first iteration of Light Brush)
     - Bugfixes
