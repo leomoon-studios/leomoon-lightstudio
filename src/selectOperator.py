@@ -42,8 +42,10 @@ class SelectionOperator(bpy.types.Operator):
                     
             context.scene.frame_current = context.scene.frame_current
             refreshMaterials()
-            
-        return {'FINISHED'}
+        
+        if self.toggle:
+            return {'FINISHED'}
+        return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
         self.location[0] = event.mouse_region_x
