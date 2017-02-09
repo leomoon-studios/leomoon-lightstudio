@@ -29,6 +29,19 @@ class Blender_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_radius = FloatProperty(name="Light Distance", default=30.0, min=0.5, set=set_light_x, step=5, get=get_light_x)
     light_muted = BoolProperty(name="Mute Light", default=False, set=set_light_hidden, get=get_light_hidden)
     
+    def get_selection_overriden(self):
+        from . selectOperator import addon_keymaps
+        #print(addon_keymaps)
+        return len(addon_keymaps)
+    def set_selection_overriden(self, context):
+        from . selectOperator import add_shortkeys, remove_shortkeys
+        if context:
+            add_shortkeys()
+        else:
+            remove_shortkeys()
+            
+    selection_overriden = BoolProperty(name="Override Selection", default=True, set=set_selection_overriden, get=get_selection_overriden)
+    
     ''' Profile List '''
     profile_list = CollectionProperty(type = ListItem)
     list_index = IntProperty(name = "Index for profile_list", default = 0, update=update_list_index)

@@ -43,7 +43,9 @@ class SelectionOperator(bpy.types.Operator):
             context.scene.frame_current = context.scene.frame_current
             refreshMaterials()
         
-        if self.toggle:
+        if context.user_preferences.inputs.select_mouse == 'RIGHT':
+            return {'FINISHED'}
+        elif self.toggle:
             return {'FINISHED'}
         return {'PASS_THROUGH'}
 
@@ -53,6 +55,7 @@ class SelectionOperator(bpy.types.Operator):
         return self.execute(context)
 
 addon_keymaps = []
+addin_kmis = []
 def add_shortkeys():
     def prepKmi(kmi):
         kmi.properties.toggle = False
@@ -67,21 +70,25 @@ def add_shortkeys():
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     prepKmi(addon_kmi)
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.shift = True
     prepKmi(addon_kmi)
     addon_kmi.properties.toggle = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.ctrl = True
     prepKmi(addon_kmi)
     addon_kmi.properties.center = True
     addon_kmi.properties.object = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.alt = True
     addon_kmi.properties.enumerate = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.shift = True
@@ -90,6 +97,7 @@ def add_shortkeys():
     addon_kmi.properties.center = True
     addon_kmi.properties.extend = True
     addon_kmi.properties.toggle = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.ctrl = True
@@ -97,6 +105,7 @@ def add_shortkeys():
     prepKmi(addon_kmi)
     addon_kmi.properties.center = True
     addon_kmi.properties.enumerate = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.shift = True
@@ -104,6 +113,7 @@ def add_shortkeys():
     prepKmi(addon_kmi)
     addon_kmi.properties.enumerate = True
     addon_kmi.properties.toggle = True
+    addin_kmis.append(addon_kmi)
     
     addon_kmi = addon_km.keymap_items.new(SelectionOperator.bl_idname, 'SELECTMOUSE', 'PRESS')
     addon_kmi.shift = True
@@ -113,12 +123,16 @@ def add_shortkeys():
     addon_kmi.properties.center = True
     addon_kmi.properties.enumerate = True
     addon_kmi.properties.toggle = True
+    addin_kmis.append(addon_kmi)
     
     addon_keymaps.append(addon_km)
     
 def remove_shortkeys():
     wm = bpy.context.window_manager
-    for km in addon_keymaps:
-        wm.keyconfigs.addon.keymaps.remove(km)
         
+    for km in addon_keymaps:
+        for kmi in addin_kmis:
+            km.keymap_items.remove(kmi)
+            
     addon_keymaps.clear()
+    addin_kmis.clear()

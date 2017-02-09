@@ -22,7 +22,7 @@ bl_info = {
     "name": "Blender Light Studio",
     "description": "Easy setup for complex studio lighting",
     "author": "LeoMoon Studios, Marcin Zielinski, special thanks to Maciek Ptaszynski for initial scene",
-    "version": (2, 3, 4),
+    "version": (2, 3, 5),
     "blender": (2, 78, 0),
     "location": "View3D -> Tools -> Light Studio",
     "wiki_url": "",
@@ -62,7 +62,7 @@ def register():
 
 def unregister():
     selectOperator.remove_shortkeys()
-    #deleteOperator.remove_shortkeys()
+    deleteOperator.remove_shortkeys()
     try: bpy.utils.unregister_module(__name__)
     except: traceback.print_exc()
     

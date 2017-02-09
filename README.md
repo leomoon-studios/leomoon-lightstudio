@@ -38,6 +38,8 @@ The speed of future development of this plugin depends on community donations. I
   - Maciek Ptaszynski
 
 ## Changelog
+  - 2.3.5:
+    - Bugfix
   - 2.3.4:
     - Bugfix for left-click selection
   - 2.3.3:

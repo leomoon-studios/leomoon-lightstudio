@@ -158,7 +158,7 @@ class BLS_Misc(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized
-            
+                
     def draw(self, context):
         layout = self.layout
         scene = context.scene
@@ -167,3 +167,10 @@ class BLS_Misc(bpy.types.Panel):
               
         col = layout.column(align=True)
         col.operator('bls.find_missing_textures')
+        
+        if context.user_preferences.inputs.select_mouse == 'LEFT':
+            box = layout.box()
+            col = box.column()
+            col.label("Disable in case of problems")
+            col.label("using manipulators")
+            col.prop(props, 'selection_overriden')    
