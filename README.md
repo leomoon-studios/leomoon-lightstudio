@@ -29,7 +29,7 @@ The speed of future development of this plugin depends on community donations. I
 
 ## Donors
   - Damir Simovski
-  - Krzysztof Czerwiński
+  - Krzysztof Czerwiński x2
 
 ## Main Programmer
   - Marcin Zielinski
@@ -64,7 +64,8 @@ The speed of future development of this plugin depends on community donations. I
   - 2.0.1:
     - Added Light Profiles feature
 	- Added light preview for each light
-  - 1.2.3: Solved Linux problems
+  - 1.2.3:
+    - Solved Linux problems
   - 1.2.2:
     - Linux paths bugfix
     - Control plane highlights when new light added
@@ -78,8 +79,10 @@ The speed of future development of this plugin depends on community donations. I
     - Added Light Distance option
   - 1.1.0: 
     - Automatically switch to cycles after clicking "Prepare Light Studio"
-  - 1.0.1: Some fixes
-  - 1.0.0: Beta release
+  - 1.0.1:
+    - Some fixes
+  - 1.0.0:
+    - Beta release
 
 ## How to install
   - 01: Download "[Blender Light Studio](https://leomoon.com/projects/plugins/blender-light-studio/)"
