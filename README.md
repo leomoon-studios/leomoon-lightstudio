@@ -69,7 +69,8 @@ The speed of future development of this plugin depends on community donations. I
   - 1.2.2:
     - Linux paths bugfix
     - Control plane highlights when new light added
-  - 1.2.1: Minor bugfix
+  - 1.2.1:
+    - Minor bugfix
   - 1.2.0:
     - Protection from accidental deletion
     - Light objects made selectable
@@ -99,10 +100,8 @@ The speed of future development of this plugin depends on community donations. I
   - 12: Happy Blending!
 
 ## Future Ideas to Implement
-  - Exporting/importing light profiles (using XML file or blend).
   - Copy profile to scene (internal) operator
-  - Modal operator to controll position (click to place) and parameters (strength, size, etc.) of lights in 3D Viewport.
-  - Add ability to export (render) the light setup as environment texture (Equirectangular Panoramic)
+  - Add ability to export (render) the light setup as environment texture (Equirectangular Panoramic EXR)
 
 ## Compatibility
 Tested with Blender 2.78
