@@ -13,7 +13,6 @@ class SelectionOperator(bpy.types.Operator):
     center = BoolProperty(default = False)
     enumerate = BoolProperty(default = False)
     object = BoolProperty(default = False)
-    location = IntVectorProperty(default = (0,0),subtype ='XYZ', size = 2)
 
     @classmethod
     def poll(cls, context):
@@ -24,10 +23,9 @@ class SelectionOperator(bpy.types.Operator):
         if context.active_object:
             obname = context.active_object.name
             deactivate = obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.')
-            
-        result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object, location=(self.location[0] , self.location[1] ))
+        result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object)
         if 'FINISHED' not in result:
-            return {'PASS_THROUGH'}
+            return result
         
         if context.active_object:
             obname = context.active_object.name
@@ -43,16 +41,7 @@ class SelectionOperator(bpy.types.Operator):
             context.scene.frame_current = context.scene.frame_current
             refreshMaterials()
         
-        if context.user_preferences.inputs.select_mouse == 'RIGHT':
-            return {'FINISHED'}
-        elif self.toggle:
-            return {'FINISHED'}
-        return {'PASS_THROUGH'}
-
-    def invoke(self, context, event):
-        self.location[0] = event.mouse_region_x
-        self.location[1] = event.mouse_region_y
-        return self.execute(context)
+        return result
 
 addon_keymaps = []
 addin_kmis = []

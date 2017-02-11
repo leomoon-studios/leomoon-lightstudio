@@ -459,9 +459,6 @@ class ExportProfiles(bpy.types.Operator):
         else:
             profiles_to_export.append(compose_profile(index))
         
-        #file = open(self.filepath, 'w')
-        #file.write(json.dumps(export_file, indent=4))
-        #file.close()
         
         with open(self.filepath, 'w') as f:
             f.write(json.dumps(export_file, indent=4))
