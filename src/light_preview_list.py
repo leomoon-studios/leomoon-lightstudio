@@ -69,8 +69,8 @@ def preview_enum_set(wm, context):
     light = getLightMesh()
     script_file = os.path.realpath(__file__)
     dir = os.path.dirname(script_file)
-    directory=os.path.join(dir,"textures_real_lights"+_)
-    light.active_material.node_tree.nodes["Light Texture"].image.filepath = directory + name
+    directory=os.path.join(dir,"textures_real_lights")
+    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), True)
     
     return None
 
