@@ -31,7 +31,7 @@ The speed of future development of this plugin depends on community donations. I
   - Damir Simovski
   - Krzysztof Czerwiński x2
 
-## Main Programmer
+## Programmers
   - Marcin Zielinski
 
 ## Prototype and Initial Scene by
@@ -99,9 +99,9 @@ The speed of future development of this plugin depends on community donations. I
   - 11: Use the options for the selected light and light your scene
   - 12: Happy Blending!
 
-## Future Ideas to Implement
+## Future Ideas
   - Copy profile to scene (internal) operator
   - Add ability to export (render) the light setup as environment texture (Equirectangular Panoramic EXR)
 
 ## Compatibility
-Tested with Blender 2.78
+Tested with Blender 2.78a
