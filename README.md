@@ -21,9 +21,6 @@ Introducing Light Studio plugin for Blender. Based on a prototype by Maciek Ptas
 	- [R] Rotate
   - Import/Export of light profiles
 
-## Donations
-The speed of future development of this plugin depends on community donations. If you use this plugin, please consider donating. Any amount will help and 100% of donations will go towards development of this plugin. You can donate using "[THIS LINK](https://www.paypal.me/aminpersia)".
-
 ## Funded by
   - LeoMoon Studios
 
@@ -36,6 +33,9 @@ The speed of future development of this plugin depends on community donations. I
 
 ## Prototype and Initial Scene by
   - Maciek Ptaszynski
+
+## Donations
+The speed of future development of this plugin depends on community donations. If you use this plugin, please consider donating. Any amount will help and 100% of donations will go towards development of this plugin. You can donate using "[THIS LINK](https://www.paypal.me/aminpersia)".
 
 ## Changelog
   - 2.3.5:
