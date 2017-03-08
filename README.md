@@ -30,6 +30,7 @@ The speed of future development of this plugin depends on community donations. I
 ## Donors
   - Damir Simovski
   - Krzysztof Czerwiński x2
+  - Paul Kotelevets
 
 ## Programmers
   - Marcin Zielinski
