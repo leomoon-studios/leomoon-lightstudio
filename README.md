@@ -31,6 +31,7 @@ The speed of future development of this plugin depends on community donations. I
   - Damir Simovski
   - Krzysztof Czerwiński x2
   - Paul Kotelevets
+  - Jacinto Carbajosa Fermoso x2
 
 ## Programmers
   - Marcin Zielinski
@@ -44,7 +45,7 @@ The speed of future development of this plugin depends on community donations. I
     - Added copy profile to scene
     - Added auto refresh light textures
     - Light distance is animatable now
-    - Fixed left click
+    - Fixed left click (partially)
     - Fixed blend autopacking
   - 2.3.5:
     - Bugfix
