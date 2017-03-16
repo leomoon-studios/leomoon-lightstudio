@@ -346,6 +346,11 @@ def parse_profile(context, props, profiles, internal_copy=False):
 
         #lgroups = [lg for lg in family(bpy.data.objects[props.profile_list[list_index].empty_name]) if "BLS_LIGHT_GRP" in lg.name]
         profile_empty = context.scene.objects[plist[-1].empty_name]
+        
+        handle = getLightHandle(profile_empty)    
+        handle.location.x = profile['handle_position'][0]
+        handle.location.y = profile['handle_position'][1]
+        handle.location.z = profile['handle_position'][2]
 
         for light in profile["lights"]:
             # before
@@ -364,11 +369,6 @@ def parse_profile(context, props, profiles, internal_copy=False):
             controller.location.x = light['position'][0]
             controller.location.y = light['position'][1]
             controller.location.z = light['position'][2]
-            
-            handle = getLightHandle(controller)
-            handle.location.x = light['handle_position'][0]
-            handle.location.y = light['handle_position'][1]
-            handle.location.z = light['handle_position'][2]
             
             controller.scale.x = light['scale'][0]
             controller.scale.y = light['scale'][1]
@@ -424,16 +424,17 @@ def compose_profile(list_index):
     profile_dict = {}
     profile_dict['name'] = props.profile_list[list_index].name
     profile_dict['lights']= []
-    lgroups = [lg for lg in family(bpy.data.objects[props.profile_list[list_index].empty_name]) if "BLS_LIGHT_GRP" in lg.name]
-    print(lgroups)
+    profile = bpy.data.objects[props.profile_list[list_index].empty_name]
+    lgroups = [lg for lg in family(profile) if "BLS_LIGHT_GRP" in lg.name]
+    handle = getLightHandle(profile)
+    print(profile, handle)
+    profile_dict['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
     for lg in lgroups:
         controller = [c for c in family(lg) if "BLS_CONTROLLER" in c.name][0]
         lmesh = [l for l in family(lg) if "BLS_LIGHT_MESH" in l.name][0]
         light = {}
         light['radius'] = lmesh.location.x
         light['position'] = [controller.location.x, controller.location.y, controller.location.z]
-        handle = getLightHandle(lg)
-        light['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
         light['scale'] = [controller.scale.x, controller.scale.y, controller.scale.z]
         light['rotation'] = controller.rotation_euler.z
         light['mute'] = props.light_muted
@@ -472,7 +473,7 @@ class ExportProfiles(bpy.types.Operator):
         export_file = {}
         date = time.localtime()
         export_file['date'] = '{}-{:02}-{:02} {:02}:{:02}'.format(date.tm_year, date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min)
-        export_file['version'] = '1'
+        export_file['version'] = '1.01'
         profiles_to_export = export_file['profiles'] = []
         
         if self.all:
