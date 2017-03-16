@@ -43,6 +43,7 @@ The speed of future development of this plugin depends on community donations. I
     - Added empty for each profile for easy movement
     - Added copy profile to scene
     - Added auto refresh light textures
+    - Light distance is animatable now
     - Fixed left click
     - Fixed blend autopacking
   - 2.3.5:
