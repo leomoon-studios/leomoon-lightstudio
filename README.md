@@ -95,7 +95,7 @@ The speed of future development of this plugin depends on community donations. I
     - Beta release
 
 ## How to install
-  - 01: Download "[Blender Light Studio](https://leomoon.com/projects/plugins/blender-light-studio/)"
+  - 01: Download "[Blender Light Studio](https://leomoon.com/downloads/plugins/blender-light-studio/)"
   - 02: Open Blender and go to File -> User Preferences... -> Addons
   - 03: Click on "Install from File..." and select "blender-light-studio.zip"
   - 04: After installation, the new plugin should show up and you can enable it
