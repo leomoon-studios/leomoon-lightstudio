@@ -107,7 +107,7 @@ class BLS_Selected(bpy.types.Panel):
                         col.prop(input, 'default_value', input.name)
             except:
                 col.label("BLS_light material is not valid.")
-            col.prop(context.scene.BLStudio, 'light_radius')
+            col.prop(getLightMesh(), 'location', index=0) #light radius
                 
 class BLS_Visibility(bpy.types.Panel):
     bl_idname = "bls_visibility"

@@ -9,13 +9,7 @@ _ = os.sep
 
 class Blender_Light_Studio_Properties(bpy.types.PropertyGroup):
     initialized = BoolProperty(default = False)
-    
-    def get_light_x(self):
-        return getLightMesh().location.x
-    
-    def set_light_x(self, context):
-        getLightMesh().location.x = context
-        
+            
     def get_light_hidden(self):
         return getLightMesh().hide_render
     
@@ -26,7 +20,6 @@ class Blender_Light_Studio_Properties(bpy.types.PropertyGroup):
         bpy.context.scene.frame_current = bpy.context.scene.frame_current # refresh hack
         refreshMaterials()
     
-    light_radius = FloatProperty(name="Light Distance", default=30.0, min=0.5, set=set_light_x, step=5, get=get_light_x)
     light_muted = BoolProperty(name="Mute Light", default=False, set=set_light_hidden, get=get_light_hidden)
     
     def get_selection_overriden(self):
