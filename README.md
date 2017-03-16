@@ -39,6 +39,12 @@ The speed of future development of this plugin depends on community donations. I
   - Maciek Ptaszynski
 
 ## Changelog
+  - 2.3.6:
+    - Added empty for each profile for easy movement
+    - Added copy profile to scene
+    - Added auto refresh light textures
+    - Fixed left click
+    - Fixed blend autopacking
   - 2.3.5:
     - Bugfix
   - 2.3.4:
