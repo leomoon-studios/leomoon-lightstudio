@@ -1,6 +1,6 @@
 import bpy
 from bpy.props import BoolProperty, IntVectorProperty
-from . common import isFamily, findLightGrp, family, refreshMaterials
+from . common import isFamily, findLightGrp, getLightMesh, family, refreshMaterials
 
 class SelectionOperator(bpy.types.Operator):
     """ Custom selection """
@@ -13,35 +13,45 @@ class SelectionOperator(bpy.types.Operator):
     center = BoolProperty(default = False)
     enumerate = BoolProperty(default = False)
     object = BoolProperty(default = False)
+    location = IntVectorProperty(default = (0,0),subtype ='XYZ', size = 2)
 
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
     
     def execute(self, context):
-        deactivate=''
-        if context.active_object:
-            obname = context.active_object.name
-            deactivate = obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.')
-        result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object)
+        #deactivate=False
+        #if context.active_object:
+        #    obname = context.active_object.name
+        #    deactivate = obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.')
+            
+        #result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object)
+        result = bpy.ops.view3d.select(extend=self.extend, deselect=self.deselect, toggle=self.toggle, center=self.center, enumerate=self.enumerate, object=self.object, location=(self.location[0], self.location[1]))
         if 'FINISHED' not in result:
-            return result
-        
+            return {'PASS_THROUGH'}
         if context.active_object:
             obname = context.active_object.name
             if obname.startswith('BLS_CONTROLLER.'):
-                lno = obname.split('.')[1]
-                lno = context.scene.objects.find('BLS_LIGHT_MESH.'+lno)
-                if lno is not -1:
-                    context.scene.objects[lno].select = True
+                lm = getLightMesh()
+                if lm:
+                    lm.select = True
                 
-            if deactivate or obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.'):
-                refreshMaterials()
+            #if deactivate or obname.startswith('BLS_CONTROLLER.') or obname.startswith('BLS_LIGHT_MESH.'):
+            #    refreshMaterials()
                     
             context.scene.frame_current = context.scene.frame_current
             refreshMaterials()
         
-        return result
+        if context.user_preferences.inputs.select_mouse == 'RIGHT':
+            return {'FINISHED'}
+        elif self.toggle:
+            return {'FINISHED'}
+        return {'PASS_THROUGH'}
+
+    def invoke(self, context, event):
+        self.location[0] = event.mouse_region_x
+        self.location[1] = event.mouse_region_y
+        return self.execute(context)
 
 addon_keymaps = []
 addin_kmis = []

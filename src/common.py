@@ -31,10 +31,14 @@ def findLightGrp(ob):
     return None
 
 def getLightMesh():
-    obs = bpy.context.scene.objects
-    lightGrp = obs.active
-    light_no = lightGrp.name.split('.')[1]
-    return obs[obs.find('BLS_LIGHT_MESH.'+light_no)]
+    #obs = bpy.context.scene.objects
+    #lightGrp = obs.active
+    #light_no = lightGrp.name.split('.')[1]
+    #return obs[obs.find('BLS_LIGHT_MESH.'+light_no)]
+
+    lg = findLightGrp(bpy.context.scene.objects.active)
+    lm = [l for l in family(lg) if l.name.startswith("BLS_LIGHT_MESH")]
+    return lm[0] if len(lm) else None
 
 def getLightController():
     obs = bpy.context.scene.objects

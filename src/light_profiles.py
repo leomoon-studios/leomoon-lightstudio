@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import StringProperty, PointerProperty, FloatProperty
+from bpy.props import StringProperty, PointerProperty, FloatProperty, EnumProperty
 import os
 from . common import isFamily, family, findLightGrp
 from itertools import chain
@@ -77,14 +77,23 @@ class LIST_OT_NewItem(bpy.types.Operator):
         
         item.empty_name = profile.name
         
+        bpy.ops.object.empty_add(type='PLAIN_AXES', radius=1, view_align=False, location=(0, 0, 0), layers=(True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+        handle = context.active_object
+        handle.parent = profile
+        handle.name = "BLS_HANDLE"
+        handle.protected = True
+        handle['last_layers'] = handle.layers[:]
+        handle.empty_draw_type = 'SPHERE'
+        
         #if len([prof for prof in profile.parent.children if prof.name.startswith('BLS_PROFILE.')]) > 1:
         if len([prof for prof in context.scene.objects if prof.name.startswith('BLS_PROFILE.') and isFamily(prof)]) > 1:
             #profile already exists
             context.scene.objects.unlink(profile)
+            context.scene.objects.unlink(handle)
         else:
             #init last_empty for first profile
             props.last_empty = profile.name
-            
+        
 
         return{'FINISHED'}
 
@@ -130,7 +139,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
     """ Copy an item in the list """
 
     bl_idname = "bls_list.copy_profile"
-    bl_label = "Copy an profile in the list"
+    bl_label = "Copy profile"
     bl_options = {"INTERNAL"}
 
     @classmethod
@@ -311,6 +320,7 @@ def update_list_index(self, context):
         
     #link selected profile
     for ob in family(bpy.data.objects[selected_profile.empty_name]):
+        print(ob.name)
         context.scene.objects.link(ob)
         ob.layers = [bool(l) for l in ob['last_layers']]
         
@@ -322,10 +332,61 @@ def update_list_index(self, context):
 import json, time
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
+
+def parse_profile(context, props, profiles, internal_copy=False):
+    plist = props.profile_list
+    for profile in profiles:
+        print(profile)
+        bpy.ops.bls_list.new_profile()
+        props.list_index = len(plist)-1
+        plist[-1].name = profile["name"]
+        if not internal_copy:
+            date = time.localtime()
+            plist[-1].name += ' {}-{:02}-{:02} {:02}:{:02}'.format(str(date.tm_year)[-2:], date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min)
+
+        #lgroups = [lg for lg in family(bpy.data.objects[props.profile_list[list_index].empty_name]) if "BLS_LIGHT_GRP" in lg.name]
+        profile_empty = context.scene.objects[plist[-1].empty_name]
+
+        for light in profile["lights"]:
+            # before
+            A = set(profile_empty.children)
+            
+            bpy.ops.scene.add_blender_studio_light()
+            
+            # after operation
+            B = set(profile_empty.children)
+            
+            # whats the difference
+            lgrp = (A ^ B).pop()
+            controller = [c for c in family(lgrp) if "BLS_CONTROLLER" in c.name][0]
+            props.light_radius = light['radius']
+            
+            controller.location.x = light['position'][0]
+            controller.location.y = light['position'][1]
+            controller.location.z = light['position'][2]
+            
+            controller.scale.x = light['scale'][0]
+            controller.scale.y = light['scale'][1]
+            controller.scale.z = light['scale'][2]
+            
+            controller.rotation_euler.z = light['rotation']
+            
+            props.light_muted = light['mute']
+            controller.material_slots[1].material.node_tree.nodes["Group"].inputs[2].default_value = light['Intensity']
+            controller.material_slots[1].material.node_tree.nodes["Group"].inputs[3].default_value = light['Opacity']
+            controller.material_slots[1].material.node_tree.nodes["Group"].inputs[4].default_value = light['Falloff']
+            controller.material_slots[1].material.node_tree.nodes["Group"].inputs[5].default_value = light['Color Saturation']
+            controller.material_slots[1].material.node_tree.nodes["Group"].inputs[6].default_value = light['Half']
+            
+            if os.path.isabs(light['tex']):
+                controller.material_slots[1].material.node_tree.nodes["Light Texture"].image.filepath = light['tex']
+            else:
+                controller.material_slots[1].material.node_tree.nodes["Light Texture"].image.filepath = os.path.join(dir, "textures_real_lights", light['tex'])
+                
 class ImportProfiles(bpy.types.Operator):
     """ Import Profiles from File """
  
-    bl_idname = "bls.import_profiles"
+    bl_idname = "bls_list.import_profiles"
     bl_label = "Import Profiles"
     #bl_options = {"INTERNAL"}
     
@@ -344,53 +405,7 @@ class ImportProfiles(bpy.types.Operator):
         f.closed
         
         file = json.loads(file)
-        for profile in file["profiles"]:
-            print(profile)
-            bpy.ops.bls_list.new_profile()
-            props.list_index = len(plist)-1
-            date = time.localtime()
-            plist[-1].name = profile["name"] + ' {}-{:02}-{:02} {:02}:{:02}'.format(str(date.tm_year)[-2:], date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min)
-            
-            #lgroups = [lg for lg in family(bpy.data.objects[props.profile_list[list_index].empty_name]) if "BLS_LIGHT_GRP" in lg.name]
-            profile_empty = context.scene.objects[plist[-1].empty_name]
-            
-            for light in profile["lights"]:
-                # before
-                A = set(profile_empty.children)
-                
-                bpy.ops.scene.add_blender_studio_light()
-                
-                # after operation
-                B = set(profile_empty.children)
-                
-                # whats the difference
-                lgrp = (A ^ B).pop()
-                controller = [c for c in family(lgrp) if "BLS_CONTROLLER" in c.name][0]
-                props.light_radius = light['radius']
-                
-                controller.location.x = light['position'][0]
-                controller.location.y = light['position'][1]
-                controller.location.z = light['position'][2]
-                
-                controller.scale.x = light['scale'][0]
-                controller.scale.y = light['scale'][1]
-                controller.scale.z = light['scale'][2]
-                
-                controller.rotation_euler.z = light['rotation']
-                
-                props.light_muted = light['mute']
-                controller.material_slots[1].material.node_tree.nodes["Group"].inputs[2].default_value = light['Intensity']
-                controller.material_slots[1].material.node_tree.nodes["Group"].inputs[3].default_value = light['Opacity']
-                controller.material_slots[1].material.node_tree.nodes["Group"].inputs[4].default_value = light['Falloff']
-                controller.material_slots[1].material.node_tree.nodes["Group"].inputs[5].default_value = light['Color Saturation']
-                controller.material_slots[1].material.node_tree.nodes["Group"].inputs[6].default_value = light['Half']
-                
-                if os.path.isabs(light['tex']):
-                    controller.material_slots[1].material.node_tree.nodes["Light Texture"].image.filepath = light['tex']
-                else:
-                    controller.material_slots[1].material.node_tree.nodes["Light Texture"].image.filepath = os.path.join(dir, "textures_real_lights", light['tex'])
-                    
-        
+        parse_profile(context, props, file["profiles"])
  
         return{'FINISHED'}
     
@@ -431,7 +446,7 @@ def compose_profile(list_index):
 class ExportProfiles(bpy.types.Operator):
     """ Export Profiles to File """
  
-    bl_idname = "bls.export_profiles"
+    bl_idname = "bls_list.export_profiles"
     bl_label = "Export"
     #bl_options = {"INTERNAL"}
     
@@ -459,6 +474,9 @@ class ExportProfiles(bpy.types.Operator):
         else:
             profiles_to_export.append(compose_profile(index))
         
+        #file = open(self.filepath, 'w')
+        #file.write(json.dumps(export_file, indent=4))
+        #file.close()
         
         with open(self.filepath, 'w') as f:
             f.write(json.dumps(export_file, indent=4))
@@ -471,7 +489,7 @@ class ExportProfiles(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
     
-class ExportProfiles(bpy.types.Operator):
+class FindMissingTextures(bpy.types.Operator):
     """ Find Missing Textures """
  
     bl_idname = "bls.find_missing_textures"
@@ -487,3 +505,64 @@ class ExportProfiles(bpy.types.Operator):
         bpy.ops.file.find_missing_files(directory=os.path.join(dir, "textures_real_lights"))        
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return{'FINISHED'}
+
+class CopyProfileToScene(bpy.types.Operator):
+    """ Copy Light Profile to Scene """
+ 
+    bl_idname = "bls_list.copy_profile_to_scene"
+    bl_label = "Copy Profile to Scene"
+    bl_property = "sceneprop"
+    
+    def get_scenes(self, context):
+        return ((s.name, s.name, "Scene name") for i,s in enumerate(bpy.data.scenes))#global_vars["scenes"]
+    
+    sceneprop = EnumProperty(items = get_scenes)
+    
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list """
+        return len(context.scene.BLStudio.profile_list)
+ 
+    def execute(self, context):
+        props = context.scene.BLStudio
+        index = props.list_index
+        
+        profiles = [compose_profile(index),]
+        
+        context.screen.scene = bpy.data.scenes[self.sceneprop]
+        context.scene.render.engine = 'CYCLES'
+        if not context.scene.BLStudio.initialized:
+            bpy.ops.scene.create_blender_light_studio()
+        
+        parse_profile(context, context.scene.BLStudio, profiles, internal_copy=True)
+        
+        return{'FINISHED'}
+        
+    def invoke(self, context, event):
+        wm = context.window_manager
+        wm.invoke_search_popup(self)
+        return {'FINISHED'}
+    
+
+class CopyProfileMenu(bpy.types.Operator):
+    """ Copy Light Profile """
+ 
+    bl_idname = "bls_list.copy_profile_menu"
+    bl_label = "Copy Profile"
+
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list """
+        return len(context.scene.BLStudio.profile_list)
+    
+    def execute(self, context):
+        wm = context.window_manager
+        def draw(self, context):
+            layout = self.layout
+            layout.operator_context='INVOKE_AREA'
+            col = layout.column(align=True)
+            col.operator('bls_list.copy_profile')
+            col.operator('bls_list.copy_profile_to_scene')
+
+        wm.popup_menu(draw, title="Copy Profile")
+        return {'FINISHED'}
