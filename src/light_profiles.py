@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import StringProperty, PointerProperty, FloatProperty, EnumProperty
 import os
-from . common import isFamily, family, findLightGrp
+from . common import isFamily, family, findLightGrp, getLightHandle
 from itertools import chain
 
 _ = os.sep
@@ -365,6 +365,11 @@ def parse_profile(context, props, profiles, internal_copy=False):
             controller.location.y = light['position'][1]
             controller.location.z = light['position'][2]
             
+            handle = getLightHandle(controller)
+            handle.location.x = light['handle_position'][0]
+            handle.location.y = light['handle_position'][1]
+            handle.location.z = light['handle_position'][2]
+            
             controller.scale.x = light['scale'][0]
             controller.scale.y = light['scale'][1]
             controller.scale.z = light['scale'][2]
@@ -427,6 +432,8 @@ def compose_profile(list_index):
         light = {}
         light['radius'] = lmesh.location.x
         light['position'] = [controller.location.x, controller.location.y, controller.location.z]
+        handle = getLightHandle(lg)
+        light['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
         light['scale'] = [controller.scale.x, controller.scale.y, controller.scale.z]
         light['rotation'] = controller.rotation_euler.z
         light['mute'] = props.light_muted

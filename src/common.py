@@ -46,6 +46,27 @@ def getLightController():
     light_no = lightGrp.name.split('.')[1]
     return obs[obs.find('BLS_CONTROLLER.'+light_no)]
 
+
+def findLightProfile(ob):
+    while ob.parent:
+        ob = ob.parent
+        if ob.name.startswith('BLS_PROFILE'): return ob
+    return None
+
+def getLightHandle(ob=None):
+    if not ob:
+        ob = bpy.context.scene.objects.active
+
+    p = findLightProfile(ob)
+    if not p:
+        return None
+    
+    h = [h for h in p.children if h.name.startswith('BLS_HANDLE')]
+    if len(h):
+        return h[0]
+    else:
+        return None
+
 import bpy
 def refreshMaterials():
     #controllers = [ob for ob in family(findLightGrp(context.active_object).parent) if ob.name.startswith('BLS_CONTROLLER.')]
