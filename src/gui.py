@@ -44,7 +44,7 @@ class BLS_ProfileList(bpy.types.Panel):
         col = row.column(align=True)
         col.operator('bls_list.new_profile', icon='ZOOMIN', text="")
         col.operator('bls_list.delete_profile', icon='ZOOMOUT', text="")
-        col.operator('bls_list.copy_profile', icon='GHOST', text="")
+        col.operator('bls_list.copy_profile_menu', icon='GHOST', text="")
         
         col.separator()
         col.operator('bls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
@@ -144,9 +144,9 @@ class BLS_ProfileImportExport(bpy.types.Panel):
         props = scene.BLStudio
               
         col = layout.column(align=True)
-        col.operator('bls.export_profiles', text="Export Selected Profile")
-        col.operator('bls.export_profiles', text="Export All Profiles").all=True
-        col.operator('bls.import_profiles')
+        col.operator('bls_list.export_profiles', text="Export Selected Profile")
+        col.operator('bls_list.export_profiles', text="Export All Profiles").all=True
+        col.operator('bls_list.import_profiles')
         
 class BLS_Misc(bpy.types.Panel):
     bl_idname = "bls_misc"
@@ -173,4 +173,4 @@ class BLS_Misc(bpy.types.Panel):
             col = box.column()
             col.label("Disable in case of problems")
             col.label("using manipulators")
-            col.prop(props, 'selection_overriden')    
+            col.prop(props, 'selection_overriden')   

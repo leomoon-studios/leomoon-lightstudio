@@ -1,8 +1,12 @@
 import os
+from time import time
 import bpy
 from . common import getLightMesh, isFamily
 
 _ = os.sep
+script_file = os.path.realpath(__file__)
+dir = os.path.dirname(script_file)
+directory=os.path.join(dir,"textures_real_lights")
     
 def enum_previews_from_directory_items(self, context):
     """EnumProperty callback"""
@@ -19,9 +23,13 @@ def enum_previews_from_directory_items(self, context):
 
     # Get the preview collection (defined in register func).
     pcoll = preview_collections["main"]
-
-    if not pcoll.updated:
+    
+    dir_up = os.path.getmtime(directory)
+    if pcoll.initiated and dir_up <= pcoll.dir_update_time:
         return pcoll.tex_previews
+    pcoll.dir_update_time = dir_up
+    pcoll.clear()
+    
 
     print("Scanning directory: %s" % directory)
 
@@ -35,12 +43,12 @@ def enum_previews_from_directory_items(self, context):
         for i, name in enumerate(image_paths):
             # generates a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
-            thumb = pcoll.load(filepath, filepath, 'IMAGE')
+            thumb = pcoll.load(filepath, filepath, 'IMAGE', True)
             basename = os.path.splitext(name)[0]
             enum_items.append((name, basename, name, thumb.icon_id, i))
 
     pcoll.tex_previews = enum_items
-    pcoll.updated = False
+    pcoll.initiated = True
     return pcoll.tex_previews
 
 
@@ -67,10 +75,7 @@ def preview_enum_set(wm, context):
     name = preview_collections["main"].tex_previews[context][0]
     
     light = getLightMesh()
-    script_file = os.path.realpath(__file__)
-    dir = os.path.dirname(script_file)
-    directory=os.path.join(dir,"textures_real_lights"+_)
-    light.active_material.node_tree.nodes["Light Texture"].image.filepath = directory + name
+    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), True)
     
     return None
 
@@ -87,7 +92,8 @@ def register():
     import bpy.utils.previews
     pcoll = bpy.utils.previews.new()
     pcoll.bls_tex_previews = ()
-    pcoll.updated = True
+    pcoll.initiated = False
+    pcoll.dir_update_time = os.path.getmtime(directory)
 
     preview_collections["main"] = pcoll
 
@@ -100,3 +106,4 @@ def unregister():
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
     preview_collections.clear()
+    
