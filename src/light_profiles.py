@@ -333,7 +333,8 @@ import json, time
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
 
-def parse_profile(context, props, profiles, internal_copy=False):
+VERSION = 1.01
+def parse_profile(context, props, profiles, version=VERSION, internal_copy=False):
     plist = props.profile_list
     for profile in profiles:
         print(profile)
@@ -347,10 +348,11 @@ def parse_profile(context, props, profiles, internal_copy=False):
         #lgroups = [lg for lg in family(bpy.data.objects[props.profile_list[list_index].empty_name]) if "BLS_LIGHT_GRP" in lg.name]
         profile_empty = context.scene.objects[plist[-1].empty_name]
         
-        handle = getLightHandle(profile_empty)    
-        handle.location.x = profile['handle_position'][0]
-        handle.location.y = profile['handle_position'][1]
-        handle.location.z = profile['handle_position'][2]
+        if version > 1:
+            handle = getLightHandle(profile_empty)    
+            handle.location.x = profile['handle_position'][0]
+            handle.location.y = profile['handle_position'][1]
+            handle.location.z = profile['handle_position'][2]
 
         for light in profile["lights"]:
             # before
@@ -410,7 +412,7 @@ class ImportProfiles(bpy.types.Operator):
         f.closed
         
         file = json.loads(file)
-        parse_profile(context, props, file["profiles"])
+        parse_profile(context, props, file["profiles"], float(file["version"]))
  
         return{'FINISHED'}
     
@@ -473,7 +475,7 @@ class ExportProfiles(bpy.types.Operator):
         export_file = {}
         date = time.localtime()
         export_file['date'] = '{}-{:02}-{:02} {:02}:{:02}'.format(date.tm_year, date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min)
-        export_file['version'] = '1.01'
+        export_file['version'] = VERSION
         profiles_to_export = export_file['profiles'] = []
         
         if self.all:
