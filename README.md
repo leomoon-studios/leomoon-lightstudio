@@ -22,7 +22,7 @@ Introducing Light Studio plugin for Blender. Based on a prototype by Maciek Ptas
   - Import/Export of light profiles
 
 ## Donations
-Future development of this plugin depends on community donations. If you use this plugin, please consider donating. Any amount will help and 100% of the proceeds will go towards development of this plugin. You can donate using "[THIS LINK](https://www.paypal.me/aminpersia)".
+Future development of this project depends on community donations. All proceeds will go towards the development. You can donate using "[THIS LINK](https://www.paypal.me/aminpersia)" and make sure to include which project you want to support.
 
 ## Funded by
   - LeoMoon Studios
