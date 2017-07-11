@@ -147,7 +147,10 @@ class BLS_ProfileImportExport(bpy.types.Panel):
         col.operator('bls_list.export_profiles', text="Export Selected Profile")
         col.operator('bls_list.export_profiles', text="Export All Profiles").all=True
         col.operator('bls_list.import_profiles')
-        
+
+from extensions_framework import util as efutil
+from . import bl_info
+
 class BLS_Misc(bpy.types.Panel):
     bl_idname = "bls_misc"
     bl_label = "Misc"
@@ -168,9 +171,9 @@ class BLS_Misc(bpy.types.Panel):
         col = layout.column(align=True)
         col.operator('bls.find_missing_textures')
         
-        if context.user_preferences.inputs.select_mouse == 'LEFT':
-            box = layout.box()
-            col = box.column()
-            col.label("Disable in case of problems")
-            col.label("using manipulators")
-            col.prop(props, 'selection_overriden')   
+        box = layout.box()
+        col = box.column()
+        col.label("Disable in case of problems")
+        col.label("eg. using manipulators")
+        col.prop(props, 'selection_overriden')
+        

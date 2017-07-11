@@ -40,6 +40,8 @@ Future development of this project depends on community donations. All proceeds 
   - Maciek Ptaszynski
 
 ## Changelog
+  - 2.3.8:
+    - State of Selection Override is now stored between sessions
   - 2.3.6:
     - Added empty for each profile for easy movement
     - Added copy profile to scene
@@ -108,6 +110,9 @@ Future development of this project depends on community donations. All proceeds 
   - 11: Use the options for the selected light and light your scene
   - 12: Happy Blending!
 
+## Known Issues
+  - In case of problems with left click selection, manipulators or overlapping selection please disable Override Selection checkbox under Misc. panel
+  
 ## Future Ideas
   - Copy profile to scene (internal) operator
   - Add ability to export (render) the light setup as environment texture (Equirectangular Panoramic EXR)
