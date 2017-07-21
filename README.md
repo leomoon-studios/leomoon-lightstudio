@@ -2,7 +2,7 @@
 ## Introduction
 Introducing Light Studio plugin for Blender. Based on a prototype by Maciek Ptaszynski and inspired by HDR Light Studio 5 lighting system.
 
-[![Light Studio plugin for Blender](http://img.youtube.com/vi/I6KVYMLFR98/0.jpg)](https://www.youtube.com/watch?v=I6KVYMLFR98)
+[![Light Studio plugin for Blender](http://img.youtube.com/vi/NWPeuJ6I5kc/0.jpg)](https://www.youtube.com/watch?v=NWPeuJ6I5kc)
 
 ## Features
   - Add/Remove lights around objects (0,0,0)
