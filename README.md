@@ -40,6 +40,8 @@ Future development of this project depends on community donations. All proceeds 
   - Maciek Ptaszynski
 
 ## Changelog
+  - 2.3.9:
+    - Bugfix
   - 2.3.8:
     - State of Selection Override is now stored between sessions
   - 2.3.6:
