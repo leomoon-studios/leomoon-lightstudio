@@ -49,8 +49,6 @@ from . import deleteOperator
 from . import selectOperator
 from . import light_preview_list
 
-from bpy.app.handlers import persistent
-@persistent
 def config_load():
     from extensions_framework import util as efutil
     bpy.bls_selection_override_right = efutil.find_config_value(bl_info['name'], 'defaults', 'selection_override_right', True)
