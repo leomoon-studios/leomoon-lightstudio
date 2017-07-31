@@ -9,6 +9,20 @@ _ = os.sep
 
 from extensions_framework import util as efutil
 from . import bl_info
+
+def update_selection_override():
+    from . selectOperator import addon_keymaps
+    keylen = bool(len(addon_keymaps))
+    
+    selection_override = bpy.bls_selection_override_right if bpy.context.user_preferences.inputs.select_mouse == 'RIGHT' else bpy.bls_selection_override_left
+    if keylen != selection_override:
+        from . selectOperator import add_shortkeys, remove_shortkeys
+        if selection_override:
+            add_shortkeys()
+        else:
+            remove_shortkeys()
+    return selection_override
+    
 class Blender_Light_Studio_Properties(bpy.types.PropertyGroup):
     initialized = BoolProperty(default = False)
             
@@ -25,24 +39,11 @@ class Blender_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_muted = BoolProperty(name="Mute Light", default=False, set=set_light_hidden, get=get_light_hidden)
     
     def get_selection_overriden(self):
-        from . selectOperator import addon_keymaps
-        keylen = bool(len(addon_keymaps))
-        #print(addon_keymaps)
-        
-    
         if not (hasattr(bpy, 'bls_selection_override_left') and hasattr(bpy, 'bls_selection_override_right')):
             bpy.bls_selection_override_left = efutil.find_config_value(bl_info['name'], 'defaults', 'selection_override_left', False)
             bpy.bls_selection_override_right = efutil.find_config_value(bl_info['name'], 'defaults', 'selection_override_right', True)
-                        
-        selection_override = bpy.bls_selection_override_right if bpy.context.user_preferences.inputs.select_mouse == 'RIGHT' else bpy.bls_selection_override_left
-            
-        if keylen != selection_override:
-            from . selectOperator import add_shortkeys, remove_shortkeys
-            if selection_override:
-                add_shortkeys()
-            else:
-                remove_shortkeys()
-        return selection_override
+        
+        return update_selection_override()
     
     def set_selection_overriden(self, context):
         from . selectOperator import add_shortkeys, remove_shortkeys

@@ -160,7 +160,7 @@ class BLS_Misc(bpy.types.Panel):
     
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.BLStudio.initialized
                 
     def draw(self, context):
         layout = self.layout
