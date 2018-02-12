@@ -32,6 +32,7 @@ Future development of this project depends on community donations. All proceeds 
   - Krzysztof Czerwiński x2
   - Paul Kotelevets
   - Jacinto Carbajosa Fermoso x2
+  - Tiago Santos
 
 ## Programmers
   - Marcin Zielinski
