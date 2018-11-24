@@ -6,6 +6,7 @@ class SelectionOperator(bpy.types.Operator):
     """ Custom selection """
     bl_idname = "view3d.select_custom" 
     bl_label = "Custom selection"
+    bl_options = {"UNDO", "UNDO_GROUPED"}
 
     extend = BoolProperty(default = False)
     deselect = BoolProperty(default = False)

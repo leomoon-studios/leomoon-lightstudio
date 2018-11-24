@@ -48,9 +48,13 @@ def getLightController():
 
 
 def findLightProfile(ob):
+    if ob.name.startswith('BLS_PROFILE'):
+        return ob
+    
     while ob.parent:
         ob = ob.parent
         if ob.name.startswith('BLS_PROFILE'): return ob
+        
     return None
 
 def getLightHandle(ob=None):

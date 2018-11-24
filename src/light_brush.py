@@ -91,11 +91,12 @@ def raycast(context, event, diff):
     #####
     profile = findLightGrp(controller).parent
     handle = [ob for ob in profile.children if ob.name.startswith('BLS_HANDLE')][0]
+    lightmesh = getLightMesh()
     position = intersect_line_sphere(
         location - handle.location,
         (normal if diff else view_vector.reflect(normal)) + location - handle.location,
         Vector((0,0,0)),
-        context.scene.BLStudio.light_radius,
+        lightmesh.location.x,
         False,
         )[0]
     
