@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import StringProperty, PointerProperty, FloatProperty, EnumProperty
+from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProperty, EnumProperty
 import os
 from . common import isFamily, family, findLightGrp, getLightHandle
 from itertools import chain
@@ -39,6 +39,8 @@ class LIST_OT_NewItem(bpy.types.Operator):
     bl_idname = "bls_list.new_profile"
     bl_label = "Add a new Profile"
     bl_options = {"INTERNAL"}
+    
+    handle = BoolProperty(default=True)
 
     def execute(self, context):
         props = context.scene.BLStudio
@@ -77,23 +79,25 @@ class LIST_OT_NewItem(bpy.types.Operator):
         
         item.empty_name = profile.name
         
-        bpy.ops.object.empty_add(type='PLAIN_AXES', radius=1, view_align=False, location=(0, 0, 0), layers=(True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
-        handle = context.active_object
-        handle.parent = profile
-        handle.name = "BLS_HANDLE"
-        handle.protected = True
-        handle['last_layers'] = handle.layers[:]
-        handle.empty_draw_type = 'SPHERE'
+        handle = None
+        if self.handle:
+            bpy.ops.object.empty_add(type='PLAIN_AXES', radius=1, view_align=False, location=(0, 0, 0), layers=(True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False))
+            handle = context.active_object
+            handle.name = "BLS_HANDLE"
+            handle.empty_draw_type = 'SPHERE'
+            handle.parent = profile
+            handle.protected = True
+            handle.use_fake_user = True
+            handle['last_layers'] = handle.layers[:]
         
         #if len([prof for prof in profile.parent.children if prof.name.startswith('BLS_PROFILE.')]) > 1:
         if len([prof for prof in context.scene.objects if prof.name.startswith('BLS_PROFILE.') and isFamily(prof)]) > 1:
             #profile already exists
             context.scene.objects.unlink(profile)
-            context.scene.objects.unlink(handle)
+            if handle: context.scene.objects.unlink(handle)
         else:
             #init last_empty for first profile
             props.last_empty = profile.name
-        
 
         return{'FINISHED'}
 
@@ -181,7 +185,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         # whats the difference
         new_objects = (A ^ B)
         
-        # make light material single user and update selection drivers
+        # make light material single user and update selection drivers]
         bpy.ops.group.objects_remove_all()
         bpy.ops.group.create(name='BLS_Light')
         
@@ -219,13 +223,14 @@ class LIST_OT_CopyItem(bpy.types.Operator):
             ob.hide_select = True
             
             if ob.name.startswith('BLS_LIGHT_MESH.') or \
+               ob.name.startswith('BLS_HANDLE') or \
                ob.name.startswith('BLS_CONTROLLER.'):
                 ob.hide = False
                 ob.hide_select = False
                 
         profileName = props.profile_list[props.list_index].name
         
-        bpy.ops.bls_list.new_profile()
+        bpy.ops.bls_list.new_profile(handle=False)
         lastItemId = len(props.profile_list)-1
         
         # parent objects to new profile
@@ -233,6 +238,9 @@ class LIST_OT_CopyItem(bpy.types.Operator):
             scene.objects.unlink(ob)
             if ob.name.startswith('BLS_LIGHT_GRP.'):
                 ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
+            elif ob.name.startswith('BLS_HANDLE.'):
+                ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
+                
             
         props.profile_list[len(props.profile_list)-1].name = profileName + ' Copy'
         
@@ -316,7 +324,10 @@ def update_list_index(self, context):
     if context.scene.objects.find(props.last_empty) > -1: # in case of update after deletion
         for ob in family(context.scene.objects[props.last_empty]):
             ob['last_layers'] = ob.layers[:]
-            context.scene.objects.unlink(ob)
+            try:
+                context.scene.objects.unlink(ob)
+            except Exception:
+                print('Warning: Light Studio Profile corrupted. Handle with care!')
         
     #link selected profile
     for ob in family(bpy.data.objects[selected_profile.empty_name]):
@@ -480,13 +491,15 @@ class ExportProfiles(bpy.types.Operator):
         
         if self.all:
             for p in range(len(props.profile_list)):
-                profiles_to_export.append(compose_profile(p))
+                try:
+                    profiles_to_export.append(compose_profile(p))
+                except Exception:
+                    self.report({'WARNING'}, 'Malformed profile %s. Omitting.' % props.profile_list[p].name)
         else:
-            profiles_to_export.append(compose_profile(index))
-        
-        #file = open(self.filepath, 'w')
-        #file.write(json.dumps(export_file, indent=4))
-        #file.close()
+            try:
+                profiles_to_export.append(compose_profile(index))
+            except Exception:
+                self.report({'WARNING'}, 'Malformed profile %s. Omitting.' % props.profile_list[index].name)
         
         with open(self.filepath, 'w') as f:
             f.write(json.dumps(export_file, indent=4))
