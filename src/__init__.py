@@ -1,27 +1,9 @@
-'''
-Copyright (C) 2015 Marcin Zielinski
-martin.zielinsky at gmail.com
-
-Created by Marcin Zielinski
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+#Created by Striam Sp. z o.o.
 
 bl_info = {
-    "name": "Blender Light Studio",
+    "name": "LeoMoon LightStudio",
     "description": "Easy setup for complex studio lighting",
-    "author": "LeoMoon Studios, Marcin Zielinski, special thanks to Maciek Ptaszynski for initial scene",
+    "author": "LeoMoon Studios",
     "version": (2, 3, 11),
     "blender": (2, 79, 0),
     "location": "View3D -> Tools -> Light Studio",
