@@ -1,9 +1,9 @@
 # LeoMoon LightStudio
 ## Important Notice
-LeoMoon LightStudio (formerly known as Blender Light Studio) is [100% free and open-source](https://leomoon.com/downloads/plugins/leomoon-lightstudio/). You can [download](https://leomoon.com/downloads/plugins/leomoon-lightstudio/) and use it without any limitations. The purpose of this product page is to raise funds to fix the bugs, improve the user interface and add new features.
+LeoMoon LightStudio (formerly known as Blender Light Studio) is **[100% free and open-source](https://leomoon.com/downloads/plugins/leomoon-lightstudio/)**. You can **[download](https://leomoon.com/downloads/plugins/leomoon-lightstudio/)** and use it without any limitations. The purpose of this product page is to raise funds to fix the bugs, improve the user interface and add new features.
 
 ## Development Fund
-If you think this plugin speeds up your workflow, consider funding the development of it by [purchasing it here](https://blendermarket.com/products/leomoon-lightstudio).
+If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**.
 
 **This plugin is currently in beta for Blender 2.8x. You might encounter bugs.**
 
