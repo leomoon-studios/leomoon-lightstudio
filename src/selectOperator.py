@@ -8,13 +8,13 @@ class SelectionOperator(bpy.types.Operator):
     bl_label = "Custom selection"
     bl_options = {"UNDO", "UNDO_GROUPED"}
 
-    extend = BoolProperty(default = False)
-    deselect = BoolProperty(default = False)
-    toggle = BoolProperty(default = False)
-    center = BoolProperty(default = False)
-    enumerate = BoolProperty(default = False)
-    object = BoolProperty(default = False)
-    location = IntVectorProperty(default = (0,0),subtype ='XYZ', size = 2)
+    extend: BoolProperty(default = False)
+    deselect: BoolProperty(default = False)
+    toggle: BoolProperty(default = False)
+    center: BoolProperty(default = False)
+    enumerate: BoolProperty(default = False)
+    object: BoolProperty(default = False)
+    location: IntVectorProperty(default = (0,0),subtype ='XYZ', size = 2)
 
     @classmethod
     def poll(cls, context):
@@ -127,9 +127,7 @@ def add_shortkeys():
     
     addon_keymaps.append(addon_km)
     
-def remove_shortkeys():
-    wm = bpy.context.window_manager
-        
+def remove_shortkeys():        
     for km in addon_keymaps:
         for kmi in addin_kmis:
             km.keymap_items.remove(kmi)

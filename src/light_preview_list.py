@@ -75,7 +75,7 @@ def preview_enum_set(wm, context):
     name = preview_collections["main"].tex_previews[context][0]
     
     light = getLightMesh()
-    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), True)
+    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), check_existing=True)
     
     return None
 

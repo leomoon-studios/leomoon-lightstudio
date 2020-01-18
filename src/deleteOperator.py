@@ -8,7 +8,7 @@ class DeleteOperator(bpy.types.Operator):
     bl_label = "Custom Delete"
     bl_options = {'REGISTER', 'UNDO'}
 
-    use_global = BoolProperty(default = False)
+    use_global: BoolProperty(default = False)
 
     @classmethod
     def poll(cls, context):
@@ -19,7 +19,7 @@ class DeleteOperator(bpy.types.Operator):
         protected_objects = (ob for ob in context.selected_objects if ob.protected)
         
         for obj in protected_objects:
-            context.scene.objects.active = obj
+            context.view_layer.objects.active = obj
             if hasattr(obj, 'use_fake_user'):
                 obj.use_fake_user = False
             ret = bpy.ops.scene.delete_blender_studio_light()
@@ -30,9 +30,9 @@ class DeleteOperator(bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_confirm(self, event)
+    # def invoke(self, context, event):
+    #     wm = context.window_manager
+    #     return wm.invoke_confirm(self, event)
         
 addon_keymaps = []
 def add_shortkeys():       
