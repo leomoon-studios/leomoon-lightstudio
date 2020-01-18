@@ -49,9 +49,3 @@ Me and some generous donors, we've been funding LightStudio so far. This plugin 
 If you think this plugin speeds up your workflow, consider funding the development of it by purchasing this plugin.
 
 Thank you.
-
-## Known Bugs and Upcoming Changes
-* There's an error when Blender 2.8x opens but the plugin is still functional
-* When deleting Light STudio, it will show an error
-* Animating lights will be added soon
-* LightStudio menu is not ordered correctly in 2.8x
