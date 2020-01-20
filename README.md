@@ -43,9 +43,9 @@ Why not use the other background HDR light plugins? It's simple. Template based 
 
 However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
-Why Are You Selling This "Free" Plugin?
+## Why Are You Selling This "Free" Plugin?
 Me and some generous donors, we've been funding LightStudio so far. This plugin is getting harder to develop and we need your help.
 
-If you think this plugin speeds up your workflow, consider funding the development of it by purchasing this plugin.
+If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**.
 
 Thank you.
