@@ -70,13 +70,13 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
             
         obsToRemove = [ob for ob in scene.objects if isFamily(ob)]
         for ob in obsToRemove:
-            scene.objects.unlink(ob)
-            for gr in ob.users_group:
-                gr.objects.unlink(ob)
+            for c in ob.users_collection:
+                c.objects.unlink(ob)
             ob.user_clear()
             ob.use_fake_user = False
             bpy.data.objects.remove(ob)
             
+        context.scene.collection.children.unlink(get_bls_collection(context))
         
         return {"FINISHED"}
      
@@ -177,54 +177,28 @@ class DeleteBSLight(bpy.types.Operator):
         layout = self.layout
         col = layout.column(align=True)
         col.label(text="OK?")
-    
-class BSL_MuteOtherLights(bpy.types.Operator):
-    bl_idname = "object.mute_other_lights"
-    bl_label = "Show Only This Light"
-    bl_description = "Show only this light."
-    bl_options = {"INTERNAL", "UNDO"}
-    
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized \
-            and context.active_object and (context.active_object.name.startswith('BLS_CONTROLLER') or context.active_object.name.startswith('BLS_LIGHT_MESH'))
-    
-    def execute(self, context):
-        obs = context.scene.objects
-        lightGrp = obs.active
-        light_no = lightGrp.name.split('.')[1]
-    
-        for light in (ob for ob in obs if ob.name.startswith('BLS_LIGHT_MESH') and isFamily(ob)):
-            if light.name[-3:] == light_no:
-                light.hide_render = False
-                light.hide = False
-            else:
-                light.hide_render = True
-                light.hide = True
-                
-        # context.scene.frame_current = context.scene.frame_current # refresh hack
-        # refreshMaterials()
-    
-        return {"FINISHED"}
-    
-class BSL_ShowAllLights(bpy.types.Operator):
-    bl_idname = "object.show_all_lights"
-    bl_label = "Show All Lights"
-    bl_description = "Show all lights."
-    bl_options = {"INTERNAL", "UNDO"}
-    
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized
-    
-    def execute(self, context):
-        obs = context.scene.objects
-        for light in (ob for ob in obs if ob.name.startswith('BLS_LIGHT_MESH') and isFamily(ob)):
-            light.hide_render = False
-            light.hide = False
-                
-        # context.scene.frame_current = context.scene.frame_current # refresh hack
-        # refreshMaterials()
-    
-        return {"FINISHED"}
+
+class BUILTIN_KSI_LightStudio(bpy.types.KeyingSetInfo):
+    bl_label = "LightStudio KeyingSet"
+
+    # poll - test for whether Keying Set can be used at all
+    def poll(ksi, context):
+        return context.active_object or context.selected_objects and context.scene.BLStudio.initialized
+
+    # iterator - go over all relevant data, calling generate()
+    def iterator(ksi, context, ks):
+        for ob in (l for l in context.selected_objects if l.name.startswith("BLS_LIGHT")):
+            ksi.generate(context, ks, ob)
+
+    # generator - populate Keying Set with property paths to use
+    def generate(ksi, context, ks, data):
+        id_block = data.id_data
+
+        bls_collection = get_collection(id_block)
+        light_mesh = [m for m in bls_collection.objects if m.name.startswith("BLS_LIGHT_MESH")][0]
+        bls_actuator = light_mesh.parent
         
+        ks.paths.add(light_mesh, "location", index=0, group_method='KEYINGSET')
+        ks.paths.add(light_mesh, "rotation_euler", index=0, group_method='KEYINGSET')
+        ks.paths.add(light_mesh, "scale", group_method='KEYINGSET')
+        ks.paths.add(bls_actuator, "rotation_euler", group_method='KEYINGSET')

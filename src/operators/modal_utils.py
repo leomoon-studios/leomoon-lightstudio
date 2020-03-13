@@ -5,12 +5,61 @@ from math import pi, fmod, radians, sin, cos, atan2
 from .. common import *
 from . import *
 import time
+from copy import deepcopy
 
 shader2Dcolor = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
 shader2Dcolor.bind()
 
-shader2Dtexture = gpu.shader.from_builtin('2D_IMAGE')
-shader2Dtexture.bind()
+# shader2Dtexture = gpu.shader.from_builtin('2D_IMAGE')
+# shader2Dtexture.bind()
+
+vertex_shader = '''
+    uniform mat4 ModelViewProjectionMatrix;
+
+    /* Keep in sync with intern/opencolorio/gpu_shader_display_transform_vertex.glsl */
+    in vec2 pos;
+    in vec2 texCoord;
+    out vec2 texCoord_interp;
+
+    void main()
+    {
+        gl_Position = ModelViewProjectionMatrix * vec4(pos.xy, 0.0f, 1.0f);
+        gl_Position.z = 1.0;
+        texCoord_interp = texCoord;
+    }
+'''
+
+fragment_shader = '''
+    #define PI 3.1415926535897932384626433832795f
+
+    in vec2 texCoord_interp;
+    out vec4 fragColor;
+
+    uniform sampler2D image;
+    uniform float intensity;
+    uniform float texture_switch;
+    uniform vec4 color_overlay;
+    uniform float color_saturation;
+
+    void main()
+    {
+        // Texture Switch + Intensity
+        // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
+        fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
+        
+        // Color Overlay
+        float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
+        vec4 colored = color_overlay * gray;
+        
+        // Color Saturation
+        fragColor = mix(fragColor, colored, color_saturation);
+        fragColor.a = gray;
+        fragColor.rgb *= fragColor.a;
+    }
+'''
+
+lightIconShader = gpu.types.GPUShader(vertex_shader, fragment_shader)
+lightIconShader.bind()
 
 class Rectangle:
     def __init__(self, start_point, width, height):
@@ -63,7 +112,7 @@ class Rectangle:
             y2 = sin(self.rot) * x1 + cos(self.rot) * y1
             x2 += offset.x
             y2 += offset.y
-            return (x2, y2)
+            return [x2, y2]
         
         loc = self.loc # prevent property from recomputing
         return (
@@ -74,7 +123,7 @@ class Rectangle:
         )
 
     def get_tex_coords(self):
-        return ((0, 1), (0, 0), (1, 1), (1, 0))
+        return ([0, 1], [0, 0], [1, 1], [1, 0])
 
     def move(self, loc_diff):
         rect = self.panel if hasattr(self, 'panel') else self
@@ -84,6 +133,13 @@ class Rectangle:
         new_loc.y = clamp(rect.point_rb.y, new_loc.y, rect.point_lt.y)
         self.loc = new_loc
 
+def send_light_to_bottom(args):
+    light = LightImage.selected_object
+    if not light:
+        return
+    lights = LightImage.lights
+    lights.insert(0, lights.pop(lights.index(light)))
+
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
         super().__init__(loc, width, height)
@@ -91,10 +147,6 @@ class Panel(Rectangle):
         self.button_exit.function = lambda x: "FINISHED"
 
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
-        def send_light_to_bottom(args):
-            light = LightImage.selected_object
-            lights = LightImage.lights
-            lights.insert(0, lights.pop(lights.index(light)))
         self.button_send_to_bottom.function = send_light_to_bottom
 
         self._move_buttons()
@@ -168,15 +220,192 @@ class Border(Rectangle):
         super().__init__(Vector((0, 0)), 100, 100)
 
     def draw(self):
-        shader2Dcolor.uniform_float("color", self.color)
-        batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
+        bleft = self.light_image.panel.point_lt[0]
+        bright = self.light_image.panel.point_rb[0]
+        lleft = self.light_image.point_lt[0]
+        lright = self.light_image.point_rb[0]
+
+        off = 0
+        # is left overextending
+        if lleft < bleft:
+            off = lleft - bleft
+        
+        # is right overextending
+        elif lright > bright:
+            off = lright - bright
+
+        verts = self.get_verts()
+        
+        if off < 0:
+            verts2 = deepcopy(verts)
+
+            # 1st part
+            verts[0][0] -= off - self.weight
+            verts[1][0] = verts[0][0]
+
+            right_verts = [
+                [verts[2][0]-self.weight, verts[0][1]],
+                [verts[2][0]-self.weight, verts[1][1]],
+                verts[2],
+                verts[3]
+            ]
+
+            top_verts = [
+                verts[0],
+                [verts[0][0], verts[0][1]-self.weight],
+                verts[2],
+                [verts[2][0], verts[2][1]-self.weight]
+            ]
+
+            bottom_verts = [
+                [verts[0][0], verts[1][1]+self.weight],
+                verts[1],
+                [verts[2][0], verts[3][1]+self.weight],
+                verts[3]
+            ]
+
+            # 2nd part
+            verts2[0][0] = verts2[1][0] = self.light_image.panel.point_rb[0] + off - self.weight
+            verts2[2][0] = verts2[3][0] = self.light_image.panel.point_rb[0]
+
+            left_verts2 = [
+                verts2[0],
+                verts2[1],
+                [verts2[0][0]+self.weight, verts2[2][1]],
+                [verts2[0][0]+self.weight, verts2[3][1]]
+            ]
+
+            top_verts2 = [
+                verts2[0],
+                [verts2[0][0], verts2[0][1]-self.weight],
+                verts2[2],
+                [verts2[2][0], verts2[2][1]-self.weight]
+            ]
+
+            bottom_verts2 = [
+                [verts2[0][0], verts2[1][1]+self.weight],
+                verts2[1],
+                [verts2[2][0], verts2[3][1]+self.weight],
+                verts2[3]
+            ]
+
+            shader2Dcolor.uniform_float("color", self.color)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
+
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(shader2Dcolor)
+        elif off > 0:
+            verts2 = deepcopy(verts)
+
+            # 1st part
+            verts[2][0] -= off + self.weight
+            verts[3][0] = verts[2][0]
+
+            left_verts = [
+                verts[0],
+                verts[1],
+                [verts[0][0]+self.weight, verts[2][1]],
+                [verts[0][0]+self.weight, verts[3][1]]
+            ]
+
+            top_verts = [
+                verts[0],
+                [verts[0][0], verts[0][1]-self.weight],
+                verts[2],
+                [verts[2][0], verts[2][1]-self.weight]
+            ]
+
+            bottom_verts = [
+                [verts[0][0], verts[1][1]+self.weight],
+                verts[1],
+                [verts[2][0], verts[3][1]+self.weight],
+                verts[3]
+            ]
+
+            # 2nd part
+            verts2[0][0] = verts2[1][0] = self.light_image.panel.point_lt[0]
+            verts2[2][0] = verts2[3][0] = self.light_image.panel.point_lt[0] + off + self.weight
+
+            right_verts2 = [
+                [verts2[2][0]-self.weight, verts2[0][1]],
+                [verts2[2][0]-self.weight, verts2[1][1]],
+                verts2[2],
+                verts2[3]
+            ]
+
+            top_verts2 = [
+                verts2[0],
+                [verts2[0][0], verts2[0][1]-self.weight],
+                verts2[2],
+                [verts2[2][0], verts2[2][1]-self.weight]
+            ]
+
+            bottom_verts2 = [
+                [verts2[0][0], verts2[1][1]+self.weight],
+                verts2[1],
+                [verts2[2][0], verts2[3][1]+self.weight],
+                verts2[3]
+            ]
+
+            shader2Dcolor.uniform_float("color", self.color)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
+
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(shader2Dcolor)
+        else:        
+            #       0   1
+            # 0  lt.x, lt.y         0 2
+            # 1  lt.x, rb.y         1 3
+            # 2  rb.x, lt.y
+            # 3  rb.x, rb.y
+
+            left_verts = [
+                verts[0],
+                verts[1],
+                [verts[0][0]+self.weight, verts[2][1]],
+                [verts[0][0]+self.weight, verts[3][1]]
+            ]
+
+            right_verts = [
+                [verts[2][0]-self.weight, verts[0][1]],
+                [verts[2][0]-self.weight, verts[1][1]],
+                verts[2],
+                verts[3]
+            ]
+
+            top_verts = [
+                verts[0],
+                [verts[0][0], verts[0][1]-self.weight],
+                verts[2],
+                [verts[2][0], verts[2][1]-self.weight]
+            ]
+
+            bottom_verts = [
+                [verts[0][0], verts[1][1]+self.weight],
+                verts[1],
+                [verts[2][0], verts[3][1]+self.weight],
+                verts[3]
+            ]
+
+            shader2Dcolor.uniform_float("color", self.color)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
+            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
 
     def get_verts(self):
         self.point_lt = self.light_image.point_lt.copy()
+        self.point_rb = self.light_image.point_rb.copy()
+
         self.point_lt.x -= self.weight
         self.point_lt.y += self.weight
 
-        self.point_rb = self.light_image.point_rb.copy()
         self.point_rb.x += self.weight
         self.point_rb.y -= self.weight
         
@@ -217,8 +446,8 @@ class LightImage(Rectangle):
     def change_default_size(cls, value):
         cls.default_size = value
         for l in cls.lights:
-            l.width = value
-            l.height = value
+            l.width = value * l._scale.y
+            l.height = value * l._scale.z
         
     def panel_loc_to_area_px_lt(self):
         panel_px_loc = Vector((self.panel.width * self.panel_loc.x, -self.panel.height * (1-self.panel_loc.y)))
@@ -315,6 +544,34 @@ class LightImage(Rectangle):
         bpy.context.view_layer.objects.active = self._bls_mesh
         self._bls_mesh.select_set(True)
 
+    def is_mouse_over(self, mouse_x, mouse_y):
+        if not (mouse_y <= self.point_lt[1] and mouse_y >= self.point_rb[1]):
+            return False
+        if not (mouse_x >= self.panel.point_lt[0] and mouse_x <= self.panel.point_rb[0]):
+            return False
+        if mouse_x >= self.point_lt[0] and mouse_x <= self.point_rb[0]:
+            return True
+
+        bleft = self.panel.point_lt[0]
+        bright = self.panel.point_rb[0]
+        lleft = self.point_lt[0]
+        lright = self.point_rb[0]
+
+        off = 0
+        # is left overextending
+        if lleft < bleft:
+            off = lleft - bleft
+            if mouse_x >= bright + off:
+                return True
+        
+        # is right overextending
+        elif lright > bright:
+            off = lright - bright
+            if mouse_x <= bleft + off:
+                return True
+
+        return False
+
     def draw(self):
         try:
             select = self._bls_mesh.select_get()
@@ -324,23 +581,113 @@ class LightImage(Rectangle):
         # draw something to refresh buffer?
         shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
         batch_for_shader(shader2Dcolor, 'POINTS', {"pos": [(0,0), ]}).draw(shader2Dcolor)
+
+        bleft = self.panel.point_lt[0]
+        bright = self.panel.point_rb[0]
+        lleft = self.point_lt[0]
+        lright = self.point_rb[0]
+
+        off = 0
+        # is left overextending
+        if lleft < bleft:
+            off = lleft - bleft
         
+        # is right overextending
+        elif lright > bright:
+            off = lright - bright
+
+        uv_factor = abs(off / self.width)
+
+        verts = self.get_verts()
+        uv_coords = self.get_tex_coords()
+
         if self.mute:
             self.mute_border.draw()
         if select:
             self.select_border.draw()
 
+        lightIconShader.bind()
         bgl.glActiveTexture(bgl.GL_TEXTURE0)
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
-        shader2Dtexture.uniform_int("image", 0)
+        lightIconShader.uniform_int("image", 0)
 
-        batch_for_shader(
-            shader2Dtexture, 'TRI_STRIP',
-            {
-                "pos": self.get_verts(),
-                "texCoord": self.get_tex_coords(),
-            }
-        ).draw(shader2Dtexture)
+        # material properties
+        bls_node = self._bls_mesh.active_material.node_tree.nodes['Group']
+        intensity = bls_node.inputs['Intensity'].default_value
+
+        texture_switch = bls_node.inputs['Texture Switch'].default_value
+        color_overlay = bls_node.inputs['Color Overlay'].default_value
+        color_saturation = bls_node.inputs['Color Saturation'].default_value
+
+        lightIconShader.uniform_float("intensity", intensity)
+        lightIconShader.uniform_float("texture_switch", texture_switch)
+        lightIconShader.uniform_float("color_overlay", color_overlay)
+        lightIconShader.uniform_float("color_saturation", color_saturation)
+
+        bgl.glEnable(bgl.GL_BLEND);
+        if off < 0:
+            verts2 = deepcopy(verts)
+            verts[0][0] -= off
+            verts[1][0] = verts[0][0]
+
+            verts2[0][0] = verts2[1][0] = self.panel.point_rb[0] + off
+            verts2[2][0] = verts2[3][0] = self.panel.point_rb[0]
+
+            uv_coords2 = deepcopy(uv_coords)
+            uv_coords[0][0] = uv_coords[1][0] = uv_factor
+            uv_coords2[2][0] = uv_coords2[3][0] = uv_factor
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts2,
+                    "texCoord": uv_coords2,
+                }
+            ).draw(lightIconShader)
+        elif off > 0:
+            verts2 = deepcopy(verts)
+            verts[2][0] -= off
+            verts[3][0] = verts[2][0]
+
+            verts2[0][0] = verts2[1][0] = self.panel.point_lt[0]
+            verts2[2][0] = verts2[3][0] = self.panel.point_lt[0] + off
+
+            uv_coords2 = deepcopy(uv_coords)
+            uv_coords[2][0] = uv_coords[3][0] = 1-uv_factor
+            uv_coords2[0][0] = uv_coords2[1][0] = 1-uv_factor
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts2,
+                    "texCoord": uv_coords2,
+                }
+            ).draw(lightIconShader)
+        else:
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": self.get_tex_coords(),
+                }
+            ).draw(lightIconShader)
+        bgl.glDisable(bgl.GL_BLEND);
 
     def update_visual_location(self):
         self.loc = self.panel_loc_to_area_px_lt() + Vector((self.width/2, self.height/2))
@@ -469,7 +816,7 @@ class MouseWidget:
     def _unregister_handler(self):
         try:
             bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
     
     def length(self):
