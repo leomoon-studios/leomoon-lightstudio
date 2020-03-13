@@ -318,7 +318,12 @@ class BLS_OT_control_panel(bpy.types.Operator):
                     dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
 
                     overlapped = self.find_clicked(area_mouse_x, area_mouse_y, overlapping=True)
-                    self.clicked_object = overlapped[0] if overlapped else None
+                    if type(overlapped) == list:
+                        # List of overlapping lights
+                        self.clicked_object = overlapped[0] if overlapped else None
+                    else:
+                        # Button
+                        self.clicked_object = overlapped
                     self.panel_moving = self.clicked_object != None
                     
                     click_result = self.click_manager.click(self.clicked_object)
