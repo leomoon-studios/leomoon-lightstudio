@@ -10,9 +10,6 @@ from copy import deepcopy
 shader2Dcolor = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
 shader2Dcolor.bind()
 
-# shader2Dtexture = gpu.shader.from_builtin('2D_IMAGE')
-# shader2Dtexture.bind()
-
 vertex_shader = '''
     uniform mat4 ModelViewProjectionMatrix;
 
@@ -33,6 +30,7 @@ fragment_shader = '''
     #define PI 3.1415926535897932384626433832795f
 
     in vec2 texCoord_interp;
+    in vec4 gl_FragCoord;
     out vec4 fragColor;
 
     uniform sampler2D image;
@@ -40,6 +38,9 @@ fragment_shader = '''
     uniform float texture_switch;
     uniform vec4 color_overlay;
     uniform float color_saturation;
+
+    uniform vec2 panel_point_lt;
+    uniform vec2 panel_point_rb;
 
     void main()
     {
@@ -55,11 +56,48 @@ fragment_shader = '''
         fragColor = mix(fragColor, colored, color_saturation);
         fragColor.a = gray;
         fragColor.rgb *= fragColor.a;
+
+        if(gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
+            fragColor.rgba = vec4(0);
+    }
+'''
+
+border_vertex_shader= '''
+    uniform mat4 ModelViewProjectionMatrix;
+
+    #ifdef UV_POS
+    in vec2 u;
+    #  define pos u
+    #else
+    in vec2 pos;
+    #endif
+
+    void main()
+    {
+        gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+    }
+'''
+border_fragment_shader= '''
+    uniform vec4 color;
+    uniform vec2 panel_point_lt;
+    uniform vec2 panel_point_rb;
+    in vec4 gl_FragCoord;
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = color;
+
+        if(gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
+            fragColor.rgba = vec4(0);
     }
 '''
 
 lightIconShader = gpu.types.GPUShader(vertex_shader, fragment_shader)
 lightIconShader.bind()
+
+border_shader2Dcolor = gpu.types.GPUShader(border_vertex_shader, border_fragment_shader)
+border_shader2Dcolor.bind()
 
 class Rectangle:
     def __init__(self, start_point, width, height):
@@ -227,184 +265,105 @@ class Border(Rectangle):
         super().__init__(Vector((0, 0)), 100, 100)
 
     def draw(self):
+        verts = self.get_verts()
+        lleft = min(verts, key=lambda v: v[0])[0]
+        lright = max(verts, key=lambda v: v[0])[0]
+
         bleft = self.light_image.panel.point_lt[0]
         bright = self.light_image.panel.point_rb[0]
-        lleft = self.light_image.point_lt[0]
-        lright = self.light_image.point_rb[0]
 
-        off = 0
-        # is left overextending
+        from mathutils import Euler
+        rot_translate = Vector((self.weight, 0, 0))
+        rot_translate.rotate(Euler((0,0,self.rot)))
+        rot_translate_ort = Vector((-rot_translate.y, rot_translate.x))
+
+                #       0   1
+        # 0  lt.x, lt.y         0 2
+        # 1  lt.x, rb.y         1 3
+        # 2  rb.x, lt.y
+        # 3  rb.x, rb.y
+
+        left_verts = [
+            verts[0],
+            verts[1],
+            [verts[0][0]+rot_translate.x, verts[0][1]+rot_translate.y],
+            [verts[1][0]+rot_translate.x, verts[1][1]+rot_translate.y]
+        ]
+
+        right_verts = [
+            [verts[2][0]-rot_translate.x, verts[2][1]-rot_translate.y],
+            [verts[3][0]-rot_translate.x, verts[3][1]-rot_translate.y],
+            verts[2],
+            verts[3]
+        ]
+
+        top_verts = [
+            verts[0],
+            [verts[0][0]-rot_translate_ort.x, verts[0][1]-rot_translate_ort.y],
+            verts[2],
+            [verts[2][0]-rot_translate_ort.x, verts[2][1]-rot_translate_ort.y]
+        ]
+
+        bottom_verts = [
+            [verts[1][0]+rot_translate_ort.x, verts[1][1]+rot_translate_ort.y],
+            verts[1],
+            [verts[3][0]+rot_translate_ort.x, verts[3][1]+rot_translate_ort.y],
+            verts[3]
+        ]
+        
+        border_shader2Dcolor.bind()
+        bgl.glEnable(bgl.GL_BLEND);
+        border_shader2Dcolor.uniform_float("color", self.color)
+        border_shader2Dcolor.uniform_float("panel_point_lt", self.light_image.panel.point_lt)
+        border_shader2Dcolor.uniform_float("panel_point_rb", self.light_image.panel.point_rb)
         if lleft < bleft:
-            off = lleft - bleft
-        
-        # is right overextending
+            left_verts2 = deepcopy(left_verts)
+            for v in left_verts2:
+                v[0] += self.light_image.panel.width
+
+            right_verts2 = deepcopy(right_verts)
+            for v in right_verts2:
+                v[0] += self.light_image.panel.width
+            
+            top_verts2 = deepcopy(top_verts)
+            for v in top_verts2:
+                v[0] += self.light_image.panel.width
+            
+            bottom_verts2 = deepcopy(bottom_verts)
+            for v in bottom_verts2:
+                v[0] += self.light_image.panel.width
+
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
         elif lright > bright:
-            off = lright - bright
+            left_verts2 = deepcopy(left_verts)
+            for v in left_verts2:
+                v[0] -= self.light_image.panel.width
 
-        verts = self.get_verts()
+            right_verts2 = deepcopy(right_verts)
+            for v in right_verts2:
+                v[0] -= self.light_image.panel.width
+            
+            top_verts2 = deepcopy(top_verts)
+            for v in top_verts2:
+                v[0] -= self.light_image.panel.width
+            
+            bottom_verts2 = deepcopy(bottom_verts)
+            for v in bottom_verts2:
+                v[0] -= self.light_image.panel.width
+
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
         
-        if off < 0:
-            verts2 = deepcopy(verts)
-
-            # 1st part
-            verts[0][0] -= off - self.weight
-            verts[1][0] = verts[0][0]
-
-            right_verts = [
-                [verts[2][0]-self.weight, verts[0][1]],
-                [verts[2][0]-self.weight, verts[1][1]],
-                verts[2],
-                verts[3]
-            ]
-
-            top_verts = [
-                verts[0],
-                [verts[0][0], verts[0][1]-self.weight],
-                verts[2],
-                [verts[2][0], verts[2][1]-self.weight]
-            ]
-
-            bottom_verts = [
-                [verts[0][0], verts[1][1]+self.weight],
-                verts[1],
-                [verts[2][0], verts[3][1]+self.weight],
-                verts[3]
-            ]
-
-            # 2nd part
-            verts2[0][0] = verts2[1][0] = self.light_image.panel.point_rb[0] + off - self.weight
-            verts2[2][0] = verts2[3][0] = self.light_image.panel.point_rb[0]
-
-            left_verts2 = [
-                verts2[0],
-                verts2[1],
-                [verts2[0][0]+self.weight, verts2[2][1]],
-                [verts2[0][0]+self.weight, verts2[3][1]]
-            ]
-
-            top_verts2 = [
-                verts2[0],
-                [verts2[0][0], verts2[0][1]-self.weight],
-                verts2[2],
-                [verts2[2][0], verts2[2][1]-self.weight]
-            ]
-
-            bottom_verts2 = [
-                [verts2[0][0], verts2[1][1]+self.weight],
-                verts2[1],
-                [verts2[2][0], verts2[3][1]+self.weight],
-                verts2[3]
-            ]
-
-            shader2Dcolor.uniform_float("color", self.color)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
-
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(shader2Dcolor)
-        elif off > 0:
-            verts2 = deepcopy(verts)
-
-            # 1st part
-            verts[2][0] -= off + self.weight
-            verts[3][0] = verts[2][0]
-
-            left_verts = [
-                verts[0],
-                verts[1],
-                [verts[0][0]+self.weight, verts[2][1]],
-                [verts[0][0]+self.weight, verts[3][1]]
-            ]
-
-            top_verts = [
-                verts[0],
-                [verts[0][0], verts[0][1]-self.weight],
-                verts[2],
-                [verts[2][0], verts[2][1]-self.weight]
-            ]
-
-            bottom_verts = [
-                [verts[0][0], verts[1][1]+self.weight],
-                verts[1],
-                [verts[2][0], verts[3][1]+self.weight],
-                verts[3]
-            ]
-
-            # 2nd part
-            verts2[0][0] = verts2[1][0] = self.light_image.panel.point_lt[0]
-            verts2[2][0] = verts2[3][0] = self.light_image.panel.point_lt[0] + off + self.weight
-
-            right_verts2 = [
-                [verts2[2][0]-self.weight, verts2[0][1]],
-                [verts2[2][0]-self.weight, verts2[1][1]],
-                verts2[2],
-                verts2[3]
-            ]
-
-            top_verts2 = [
-                verts2[0],
-                [verts2[0][0], verts2[0][1]-self.weight],
-                verts2[2],
-                [verts2[2][0], verts2[2][1]-self.weight]
-            ]
-
-            bottom_verts2 = [
-                [verts2[0][0], verts2[1][1]+self.weight],
-                verts2[1],
-                [verts2[2][0], verts2[3][1]+self.weight],
-                verts2[3]
-            ]
-
-            shader2Dcolor.uniform_float("color", self.color)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
-
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(shader2Dcolor)
-        else:        
-            #       0   1
-            # 0  lt.x, lt.y         0 2
-            # 1  lt.x, rb.y         1 3
-            # 2  rb.x, lt.y
-            # 3  rb.x, rb.y
-
-            left_verts = [
-                verts[0],
-                verts[1],
-                [verts[0][0]+self.weight, verts[2][1]],
-                [verts[0][0]+self.weight, verts[3][1]]
-            ]
-
-            right_verts = [
-                [verts[2][0]-self.weight, verts[0][1]],
-                [verts[2][0]-self.weight, verts[1][1]],
-                verts[2],
-                verts[3]
-            ]
-
-            top_verts = [
-                verts[0],
-                [verts[0][0], verts[0][1]-self.weight],
-                verts[2],
-                [verts[2][0], verts[2][1]-self.weight]
-            ]
-
-            bottom_verts = [
-                [verts[0][0], verts[1][1]+self.weight],
-                verts[1],
-                [verts[2][0], verts[3][1]+self.weight],
-                verts[3]
-            ]
-
-            shader2Dcolor.uniform_float("color", self.color)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(shader2Dcolor)
-            batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(border_shader2Dcolor)
+        bgl.glDisable(bgl.GL_BLEND);
 
     def get_verts(self):
         self.point_lt = self.light_image.point_lt.copy()
@@ -552,30 +511,35 @@ class LightImage(Rectangle):
         self._bls_mesh.select_set(True)
 
     def is_mouse_over(self, mouse_x, mouse_y):
-        if not (mouse_y <= self.point_lt[1] and mouse_y >= self.point_rb[1]):
-            return False
-        if not (mouse_x >= self.panel.point_lt[0] and mouse_x <= self.panel.point_rb[0]):
-            return False
-        if mouse_x >= self.point_lt[0] and mouse_x <= self.point_rb[0]:
-            return True
-
+        def rotate(x1, y1, offset):
+            x1 -= offset.x
+            y1 -= offset.y
+            x2 = cos(-self.rot) * x1 - sin(-self.rot) * y1
+            y2 = sin(-self.rot) * x1 + cos(-self.rot) * y1
+            x2 += offset.x
+            y2 += offset.y
+            return [x2, y2]
+        
         bleft = self.panel.point_lt[0]
         bright = self.panel.point_rb[0]
-        lleft = self.point_lt[0]
-        lright = self.point_rb[0]
 
-        off = 0
-        # is left overextending
-        if lleft < bleft:
-            off = lleft - bleft
-            if mouse_x >= bright + off:
-                return True
+        if mouse_x > bright or mouse_x < bleft:
+            return False
+
+        tmouse_x, tmouse_y = rotate(mouse_x, mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
         
-        # is right overextending
-        elif lright > bright:
-            off = lright - bright
-            if mouse_x <= bleft + off:
-                return True
+        tmouse_x, tmouse_y = rotate(bleft-(bright-mouse_x), mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
+
+        tmouse_x, tmouse_y = rotate(bright+(mouse_x-bleft), mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
 
         return False
 
@@ -591,22 +555,12 @@ class LightImage(Rectangle):
 
         bleft = self.panel.point_lt[0]
         bright = self.panel.point_rb[0]
-        lleft = self.point_lt[0]
-        lright = self.point_rb[0]
-
-        off = 0
-        # is left overextending
-        if lleft < bleft:
-            off = lleft - bleft
         
-        # is right overextending
-        elif lright > bright:
-            off = lright - bright
-
-        uv_factor = abs(off / self.width)
-
         verts = self.get_verts()
         uv_coords = self.get_tex_coords()
+        
+        lleft = min(verts, key=lambda v: v[0])[0]
+        lright = max(verts, key=lambda v: v[0])[0]
 
         if self.mute:
             self.mute_border.draw()
@@ -631,18 +585,15 @@ class LightImage(Rectangle):
         lightIconShader.uniform_float("color_overlay", color_overlay)
         lightIconShader.uniform_float("color_saturation", color_saturation)
 
+        lightIconShader.uniform_float("panel_point_lt", self.panel.point_lt)
+        lightIconShader.uniform_float("panel_point_rb", self.panel.point_rb)
+
         bgl.glEnable(bgl.GL_BLEND);
-        if off < 0:
+
+        if lleft < bleft:
             verts2 = deepcopy(verts)
-            verts[0][0] -= off
-            verts[1][0] = verts[0][0]
-
-            verts2[0][0] = verts2[1][0] = self.panel.point_rb[0] + off
-            verts2[2][0] = verts2[3][0] = self.panel.point_rb[0]
-
-            uv_coords2 = deepcopy(uv_coords)
-            uv_coords[0][0] = uv_coords[1][0] = uv_factor
-            uv_coords2[2][0] = uv_coords2[3][0] = uv_factor
+            for v in verts2:
+                v[0] += self.panel.width
 
             batch_for_shader(
                 lightIconShader, 'TRI_STRIP',
@@ -656,20 +607,13 @@ class LightImage(Rectangle):
                 lightIconShader, 'TRI_STRIP',
                 {
                     "pos": verts2,
-                    "texCoord": uv_coords2,
+                    "texCoord": uv_coords,
                 }
             ).draw(lightIconShader)
-        elif off > 0:
+        elif lright > bright:
             verts2 = deepcopy(verts)
-            verts[2][0] -= off
-            verts[3][0] = verts[2][0]
-
-            verts2[0][0] = verts2[1][0] = self.panel.point_lt[0]
-            verts2[2][0] = verts2[3][0] = self.panel.point_lt[0] + off
-
-            uv_coords2 = deepcopy(uv_coords)
-            uv_coords[2][0] = uv_coords[3][0] = 1-uv_factor
-            uv_coords2[0][0] = uv_coords2[1][0] = 1-uv_factor
+            for v in verts2:
+                v[0] -= self.panel.width
 
             batch_for_shader(
                 lightIconShader, 'TRI_STRIP',
@@ -683,7 +627,7 @@ class LightImage(Rectangle):
                 lightIconShader, 'TRI_STRIP',
                 {
                     "pos": verts2,
-                    "texCoord": uv_coords2,
+                    "texCoord": uv_coords,
                 }
             ).draw(lightIconShader)
         else:
