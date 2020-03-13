@@ -317,7 +317,8 @@ class BLS_OT_control_panel(bpy.types.Operator):
                 elif event.type == "LEFTMOUSE":
                     dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
 
-                    self.clicked_object = self.find_clicked(area_mouse_x, area_mouse_y)
+                    overlapped = self.find_clicked(area_mouse_x, area_mouse_y, overlapping=True)
+                    self.clicked_object = overlapped[0] if overlapped else None
                     self.panel_moving = self.clicked_object != None
                     
                     click_result = self.click_manager.click(self.clicked_object)
@@ -344,9 +345,11 @@ class BLS_OT_control_panel(bpy.types.Operator):
 
                     if hasattr(self.clicked_object, 'select'):
                         self.clicked_object.select()
-                        if self.ctrl:
+                        if self.ctrl and len(overlapped)>1:
                             send_light_to_bottom(self.clicked_object)
                             self.find_clicked(area_mouse_x, area_mouse_y).select()
+                        else:
+                            send_light_to_top(self.clicked_object)
 
 
                     if hasattr(self.clicked_object, 'click'):

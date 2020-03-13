@@ -133,12 +133,19 @@ class Rectangle:
         new_loc.y = clamp(rect.point_rb.y, new_loc.y, rect.point_lt.y)
         self.loc = new_loc
 
-def send_light_to_bottom(args):
-    light = LightImage.selected_object
+def send_light_to_bottom(light):
+    light = LightImage.selected_object if not light else light
     if not light:
         return
     lights = LightImage.lights
     lights.insert(0, lights.pop(lights.index(light)))
+
+def send_light_to_top(light):
+    light = LightImage.selected_object if not light else light
+    if not light:
+        return
+    lights = LightImage.lights
+    lights.append(lights.pop(lights.index(light)))
 
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
