@@ -337,8 +337,9 @@ def update_list_index(self, context):
     bls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
     
     props.last_empty = selected_profile.empty_name
-    
-        
+
+    from . operators.modal import update_light_sets, panel_global
+    update_light_sets(panel_global, bpy.context, always=True)
         
 # import/export
 import json, time

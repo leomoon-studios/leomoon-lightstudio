@@ -217,7 +217,7 @@ class BLS_OT_control_panel(bpy.types.Operator):
         self.mouse_x = event.mouse_x - context.area.x
         self.mouse_y = event.mouse_y - context.area.y
 
-        self.update_light_sets(context, always=True)
+        update_light_sets(self.panel, context, always=True)
 
         context.area.header_text_set(text=self.textinfo)
 
@@ -239,7 +239,7 @@ class BLS_OT_control_panel(bpy.types.Operator):
         try:
             context.area.tag_redraw()
 
-            self.update_light_sets(context)
+            update_light_sets(self.panel, context)
             LightImage.refresh()
 
             if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
@@ -407,23 +407,6 @@ class BLS_OT_control_panel(bpy.types.Operator):
         
         return {"PASS_THROUGH"}
 
-    def update_light_sets(self, context, always=False):
-        bls_collection, profile_collection = blscol_profilecol(context)
-        if is_updated() or always or len(profile_collection.children) != len(LightImage.lights):
-            bls_lights = set(profile_collection.children)
-            working_set = set((l._collection for l in LightImage.lights))
-
-            to_delete = working_set.difference(bls_lights)
-            to_add =  bls_lights.difference(working_set)
-            
-            for col in to_delete:
-                LightImage.remove(col)
-
-            for col in to_add:
-                LightImage(context, self.panel, col)
-
-            update_clear()
-
     def find_clicked(self, area_mouse_x, area_mouse_y, overlapping=False):
         overlapped = []
         for l in reversed(LightImage.lights):
@@ -443,3 +426,20 @@ class BLS_OT_control_panel(bpy.types.Operator):
         if is_in_rect(self.panel, Vector((area_mouse_x, area_mouse_y))):
             return self.panel
         return None
+
+def update_light_sets(panel, context, always=False):
+    bls_collection, profile_collection = blscol_profilecol(context)
+    if is_updated() or always or len(profile_collection.children) != len(LightImage.lights):
+        bls_lights = set(profile_collection.children)
+        working_set = set((l._collection for l in LightImage.lights))
+
+        to_delete = working_set.difference(bls_lights)
+        to_add =  bls_lights.difference(working_set)
+        
+        for col in to_delete:
+            LightImage.remove(col)
+
+        for col in to_add:
+            LightImage(context, panel, col)
+
+        update_clear()
