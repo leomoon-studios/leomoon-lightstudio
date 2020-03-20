@@ -67,7 +67,6 @@ class BLS_PT_Selected(bpy.types.Panel):
             col.template_icon_view(wm, "bls_tex_previews", show_labels=True)
             col.label(text=os.path.splitext(wm.bls_tex_previews)[0])
             
-            
             layout.separator()
             try:
                 bls_inputs = getLightMesh().active_material.node_tree.nodes["Group"].inputs
@@ -79,8 +78,8 @@ class BLS_PT_Selected(bpy.types.Panel):
                         col.prop(input, 'default_value', text=input.name)
             except:
                 col.label(text="BLS_light material is not valid.")
-                import traceback
-                traceback.print_exc()
+                #import traceback
+                #traceback.print_exc()
             col.prop(getLightMesh(), 'location', index=0) #light radius
 
 @force_register

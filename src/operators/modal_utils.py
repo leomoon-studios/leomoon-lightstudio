@@ -31,19 +31,39 @@ fragment_shader = '''
 
     in vec2 texCoord_interp;
     in vec4 gl_FragCoord;
-    out vec4 fragColor;
+
+    layout(location = 0) out vec4 fragColor;
+    layout(location = 1) out vec4 trash;
 
     uniform sampler2D image;
-    uniform float intensity;
-    uniform float texture_switch;
-    uniform vec4 color_overlay;
-    uniform float color_saturation;
+    uniform float panel_point_left;
+    uniform float panel_point_right;
 
-    uniform vec2 panel_point_lt;
-    uniform vec2 panel_point_rb;
+    uniform vec4 color_overlay = vec4(0);
+    uniform float intensity = 1;
+    uniform float texture_switch = 1;
+    uniform float color_saturation = 0;
+
+    uniform float mask_bottom_to_top = 0;
+    uniform float mask_diagonal_bottom_left = 0;
+    uniform float mask_diagonal_bottom_right = 0;
+    uniform float mask_diagonal_top_left = 0;
+    uniform float mask_diagonal_top_right = 0;
+    uniform float mask_gradient_amount = 0;
+    uniform float mask_gradient_switch = 0;
+    uniform float mask_gradient_type = 0;
+    uniform float mask_left_to_right = 0;
+    uniform float mask_right_to_left = 0;
+    uniform float mask_ring_inner_radius = 0;
+    uniform float mask_ring_outer_radius = 0;
+    uniform float mask_ring_switch = 0;
+    uniform float mask_top_to_bottom = 0;
 
     void main()
     {
+        // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
+        trash = vec4(panel_point_left+panel_point_right+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
+        
         // Texture Switch + Intensity
         // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
         fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
@@ -57,8 +77,58 @@ fragment_shader = '''
         fragColor.a = gray;
         fragColor.rgb *= fragColor.a;
 
-        if(gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
-            fragColor.rgba = vec4(0);
+        // MASKS //
+
+        // Vertical gradient + mask_gradient_amount
+        float vg = sqrt(texCoord_interp.y);
+        vg = (texCoord_interp.y <= mask_gradient_amount+.05f) ? mix(0, vg, (texCoord_interp.y-mask_gradient_amount)/.05f) : vg;
+        vg = texCoord_interp.y >= mask_gradient_amount ? vg : 0;
+
+        // Spherical gradient + mask_gradient_amount
+        float d = distance(texCoord_interp.xy, vec2(0.5f, 0.5f));
+        float m = (1.0f-mask_gradient_amount)*.5f;
+        float sg = 1-pow(d*2, 2.f);
+        sg = (d >= m-.05f) ? mix(0, sg, (m-d)/.05f) : sg;
+        sg = (d <= m) ? sg : 0;
+
+        // Gradient Type
+        float grad = mix(sg, vg, mask_gradient_type);
+
+        // Gradient Switch
+        fragColor.a = mix(fragColor.a, grad*fragColor.a, mask_gradient_switch);
+
+        // Gradient Ring Switch
+        float ring = d < (1-mask_ring_outer_radius)*.575f ? 1 : 0;
+        ring = d < (1-mask_ring_inner_radius)*.55f ? 0 : ring;
+        fragColor.a = mix(fragColor.a, fragColor.a*ring, mask_ring_switch);
+        
+        // Top-Bottom
+        fragColor.a = texCoord_interp.y < (1-mask_top_to_bottom) ? fragColor.a : 0;
+        
+        // Bottom-Top
+        fragColor.a = texCoord_interp.y > mask_bottom_to_top ? fragColor.a : 0;
+
+        // Left-Right
+        fragColor.a = texCoord_interp.x > mask_left_to_right ? fragColor.a : 0;
+        
+        // Right-Left
+        fragColor.a = texCoord_interp.x < (1-mask_right_to_left) ? fragColor.a : 0;
+
+        // Diagonal Top-Right
+        fragColor.a = 1-(texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_right ? fragColor.a : 0;
+        
+        // Diagonal Top-Left
+        fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_left ? fragColor.a : 0;
+        
+        // Diagonal Bottom-Right
+        fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_right ? fragColor.a : 0;
+
+        // Diagonal Bottom-Left
+        fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_left ? fragColor.a : 0;
+
+        // Panel bound clipping
+        if(gl_FragCoord.x < panel_point_left || gl_FragCoord.x > panel_point_right)
+            discard;
     }
 '''
 
@@ -572,22 +642,54 @@ class LightImage(Rectangle):
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
         lightIconShader.uniform_int("image", 0)
 
-        # material properties
-        bls_node = self._bls_mesh.active_material.node_tree.nodes['Group']
-        intensity = bls_node.inputs['Intensity'].default_value
+        lightIconShader.uniform_float("panel_point_left", self.panel.point_lt.x)
+        lightIconShader.uniform_float("panel_point_right", self.panel.point_rb.x)
 
-        texture_switch = bls_node.inputs['Texture Switch'].default_value
-        color_overlay = bls_node.inputs['Color Overlay'].default_value
-        color_saturation = bls_node.inputs['Color Saturation'].default_value
+        try:
+            # material properties
+            bls_node = self._bls_mesh.active_material.node_tree.nodes['Group']
+            intensity = bls_node.inputs['Intensity'].default_value
 
-        lightIconShader.uniform_float("intensity", intensity)
-        lightIconShader.uniform_float("texture_switch", texture_switch)
-        lightIconShader.uniform_float("color_overlay", color_overlay)
-        lightIconShader.uniform_float("color_saturation", color_saturation)
+            texture_switch = bls_node.inputs['Texture Switch'].default_value
+            color_overlay = bls_node.inputs['Color Overlay'].default_value
+            color_saturation = bls_node.inputs['Color Saturation'].default_value
 
-        lightIconShader.uniform_float("panel_point_lt", self.panel.point_lt)
-        lightIconShader.uniform_float("panel_point_rb", self.panel.point_rb)
+            lightIconShader.uniform_float("intensity", intensity)
+            lightIconShader.uniform_float("texture_switch", texture_switch)
+            lightIconShader.uniform_float("color_overlay", color_overlay)
+            lightIconShader.uniform_float("color_saturation", color_saturation)
 
+            mask_bottom_to_top = bls_node.inputs['Mask - Bottom to Top'].default_value
+            mask_diagonal_bottom_left = bls_node.inputs['Mask - Diagonal Bottom Left'].default_value
+            mask_diagonal_bottom_right = bls_node.inputs['Mask - Diagonal Bottom Right'].default_value
+            mask_diagonal_top_left = bls_node.inputs['Mask - Diagonal Top Left'].default_value
+            mask_diagonal_top_right = bls_node.inputs['Mask - Diagonal Top Right'].default_value
+            mask_gradient_amount = bls_node.inputs['Mask - Gradient Amount'].default_value
+            mask_gradient_switch = bls_node.inputs['Mask - Gradient Switch'].default_value
+            mask_gradient_type = bls_node.inputs['Mask - Gradient Type'].default_value
+            mask_left_to_right = bls_node.inputs['Mask - Left to Right'].default_value
+            mask_right_to_left = bls_node.inputs['Mask - Right to Left'].default_value
+            mask_ring_inner_radius = bls_node.inputs['Mask - Ring Inner Radius'].default_value
+            mask_ring_outer_radius = bls_node.inputs['Mask - Ring Outer Radius'].default_value
+            mask_ring_switch = bls_node.inputs['Mask - Ring Switch'].default_value
+            mask_top_to_bottom = bls_node.inputs['Mask - Top to Bottom'].default_value
+
+            lightIconShader.uniform_float("mask_bottom_to_top", mask_bottom_to_top)
+            lightIconShader.uniform_float("mask_diagonal_bottom_left", mask_diagonal_bottom_left)
+            lightIconShader.uniform_float("mask_diagonal_bottom_right", mask_diagonal_bottom_right)
+            lightIconShader.uniform_float("mask_diagonal_top_left", mask_diagonal_top_left)
+            lightIconShader.uniform_float("mask_diagonal_top_right", mask_diagonal_top_right)
+            lightIconShader.uniform_float("mask_gradient_amount", mask_gradient_amount)
+            lightIconShader.uniform_float("mask_gradient_switch", mask_gradient_switch)
+            lightIconShader.uniform_float("mask_gradient_type", mask_gradient_type)
+            lightIconShader.uniform_float("mask_left_to_right", mask_left_to_right)
+            lightIconShader.uniform_float("mask_right_to_left", mask_right_to_left)
+            lightIconShader.uniform_float("mask_ring_inner_radius", mask_ring_inner_radius)
+            lightIconShader.uniform_float("mask_ring_outer_radius", mask_ring_outer_radius)
+            lightIconShader.uniform_float("mask_ring_switch", mask_ring_switch)
+            lightIconShader.uniform_float("mask_top_to_bottom", mask_top_to_bottom)
+        except:
+            pass
         bgl.glEnable(bgl.GL_BLEND);
 
         if lleft < bleft:
