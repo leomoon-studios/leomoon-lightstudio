@@ -63,6 +63,10 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
     def execute(self, context):
         scene = context.scene
         scene.BLStudio.initialized = False
+
+        # close control panel
+        from . operators.modal import close_control_panel
+        close_control_panel()
         
         ''' for each profile from this scene: delete objects then remove from list '''
         while len(context.scene.BLStudio.profile_list):

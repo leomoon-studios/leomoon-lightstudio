@@ -443,3 +443,7 @@ def update_light_sets(panel, context, always=False):
             LightImage(context, panel, col)
 
         update_clear()
+
+def close_control_panel():
+    global running_modals
+    running_modals = 0
