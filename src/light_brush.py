@@ -86,7 +86,7 @@ def raycast(context, event, diff):
     
     #####
     profile = findLightGrp(context.active_object).parent
-    handle = [ob for ob in profile.children if ob.name.startswith('BLS_HANDLE')][0]
+    handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
     lightmesh = getLightMesh()
     actuator = lightmesh.parent
     position = intersect_line_sphere(
@@ -109,9 +109,9 @@ def raycast(context, event, diff):
     deg = copysign(degrees(Vector.angle(Vector((x,y,z)), Vector((x,y,0)))), z)
     actuator.rotation_euler.y = copysign(Vector.angle(Vector((x,y,z)), Vector((x,y,0))), z)
 
-class BLSLightBrush(bpy.types.Operator):
+class LLSLightBrush(bpy.types.Operator):
     """Click on object to position light and reflection"""
-    bl_idname = "bls.light_brush"
+    bl_idname = "lls.light_brush"
     bl_label = "Light Brush"
     bl_options = {"UNDO"}
     
@@ -123,10 +123,10 @@ class BLSLightBrush(bpy.types.Operator):
         light = context.active_object
         return context.area.type == 'VIEW_3D' and \
                context.mode == 'OBJECT' and \
-               context.scene.BLStudio.initialized and \
+               context.scene.LLStudio.initialized and \
                light and \
                isFamily(light) and \
-               not (light.name.startswith('BLS_PANEL') or light.name.startswith('BLS_PROFILE') or light.name.startswith('BLS_LIGHT_GRP'))
+               not (light.name.startswith('LLS_PANEL') or light.name.startswith('LLS_PROFILE') or light.name.startswith('LLS_LIGHT_GRP'))
 
     def modal(self, context, event):
         print(event.type, event.value)

@@ -83,14 +83,14 @@ def register():
     from bpy.types import WindowManager
     from bpy.props import EnumProperty
 
-    WindowManager.bls_tex_previews = EnumProperty(
+    WindowManager.lls_tex_previews = EnumProperty(
             items=enum_previews_from_directory_items,
             get=preview_enum_get,
             set=preview_enum_set,
             )
     import bpy.utils.previews
     pcoll = bpy.utils.previews.new()
-    pcoll.bls_tex_previews = ()
+    pcoll.lls_tex_previews = ()
     pcoll.initiated = False
     pcoll.dir_update_time = os.path.getmtime(directory)
 
@@ -99,7 +99,7 @@ def register():
 def unregister():
     from bpy.types import WindowManager
 
-    del WindowManager.bls_tex_previews
+    del WindowManager.lls_tex_previews
 
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)

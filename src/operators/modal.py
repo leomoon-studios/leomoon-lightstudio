@@ -9,6 +9,8 @@ from .modal_utils import shader2Dcolor
 from gpu_extras.batch import batch_for_shader
 import time
 
+#textinfo = "[S] Scale | [R] Rotate | [Shift] Precision mode | [Double/Triple Click] Mute, Isolate | [Right Click] Isolate | [+/-] Icon scale | [Ctrl+Click] Loop overlapping"
+
 last_time = time.time()
 def draw(self, area):
     if area != bpy.context.area:
@@ -16,7 +18,6 @@ def draw(self, area):
 
     shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
     batch_for_shader(shader2Dcolor, 'POINTS', {"pos": [(0,0), ]}).draw(shader2Dcolor)
-    #
 
     self.panel.draw()
     for b in Button.buttons:
@@ -24,7 +25,7 @@ def draw(self, area):
     for l in LightImage.lights:
         l.draw()
 
-class BLS_OT_Rotate(bpy.types.Operator, MouseWidget):
+class LLS_OT_Rotate(bpy.types.Operator, MouseWidget):
     bl_idname = "light_studio.rotate"
     bl_label = "Rotate Light"
     bl_options = {"REGISTER", "UNDO", "INTERNAL"}
@@ -37,24 +38,26 @@ class BLS_OT_Rotate(bpy.types.Operator, MouseWidget):
 
     def invoke(self, context, event):
         super().invoke(context, event)
-        self.base_object_rotation = LightImage.selected_object._bls_mesh.rotation_euler.x
+        self.base_object_rotation = LightImage.selected_object._lls_mesh.rotation_euler.x
         return {"RUNNING_MODAL"}
     
     def _finish(self, context, event):
-        context.area.header_text_set(text=None)
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _cancel(self, context, event):
-        LightImage.selected_object._bls_mesh.rotation_euler.x = self.base_object_rotation
-        context.area.header_text_set(text=None)
+        LightImage.selected_object._lls_mesh.rotation_euler.x = self.base_object_rotation
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _modal(self, context, event):
-        LightImage.selected_object._bls_mesh.rotation_euler.x = self.base_object_rotation + self.angle()
-
-        context.area.header_text_set(text=f"Rot: {self.angle():.3f}")
+        LightImage.selected_object._lls_mesh.rotation_euler.x = self.base_object_rotation + self.angle()
+        bpy.context.workspace.status_text_set(f"Rot: {self.angle():.3f}")
+        #context.area.header_text_set(text=f"Rot: {self.angle():.3f}")
 
         return {"PASS_THROUGH"}
 
-class BLS_OT_Scale(bpy.types.Operator, MouseWidget):
+class LLS_OT_Scale(bpy.types.Operator, MouseWidget):
     bl_idname = "light_studio.scale"
     bl_label = "Scale Light"
     bl_options = {"GRAB_CURSOR", "BLOCKING", "REGISTER", "UNDO", "INTERNAL"}
@@ -68,15 +71,17 @@ class BLS_OT_Scale(bpy.types.Operator, MouseWidget):
 
     def invoke(self, context, event):
         super().invoke(context, event)
-        self.base_object_scale = LightImage.selected_object._bls_mesh.scale.copy()
+        self.base_object_scale = LightImage.selected_object._lls_mesh.scale.copy()
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
-        LightImage.selected_object._bls_mesh.scale = self.base_object_scale
-        context.area.header_text_set(text=None)
+        LightImage.selected_object._lls_mesh.scale = self.base_object_scale
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _finish(self, context, event):
-        context.area.header_text_set(text=None)
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _modal(self, context, event):
         new_scale = self.base_object_scale * self.delta_length_factor()
@@ -85,16 +90,16 @@ class BLS_OT_Scale(bpy.types.Operator, MouseWidget):
         if self.y_key:
             new_scale.y = self.base_object_scale.y
 
-        LightImage.selected_object._bls_mesh.scale = new_scale
-
-        context.area.header_text_set(text=f"Scale X: {new_scale.z:.3f} Y: {new_scale.y:.3f}  [X/Y] Axis, [Shift] Precision mode")
+        LightImage.selected_object._lls_mesh.scale = new_scale
+        bpy.context.workspace.status_text_set(f"Scale X: {new_scale.z:.3f} Y: {new_scale.y:.3f}  [X/Y] Axis, [Shift] Precision mode")
+        #context.area.header_text_set(text=f"Scale X: {new_scale.z:.3f} Y: {new_scale.y:.3f}  [X/Y] Axis, [Shift] Precision mode")
 
         if event.value == "PRESS" and not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
             return {"RUNNING_MODAL"}
         return {"PASS_THROUGH"}
 
 GRABBING = False
-class BLS_OT_Grab(bpy.types.Operator, MouseWidget):
+class LLS_OT_Grab(bpy.types.Operator, MouseWidget):
     bl_idname = "light_studio.grab"
     bl_label = "Grab Light"
     bl_options = {"GRAB_CURSOR", "BLOCKING", "INTERNAL"}
@@ -113,19 +118,21 @@ class BLS_OT_Grab(bpy.types.Operator, MouseWidget):
 
     def invoke(self, context, event):
         super().invoke(context, event)
-        self.base_object_rotation = LightImage.selected_object._bls_actuator.rotation_euler.copy()
+        self.base_object_rotation = LightImage.selected_object._lls_actuator.rotation_euler.copy()
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
-        LightImage.selected_object._bls_actuator.rotation_euler = self.base_object_rotation
+        LightImage.selected_object._lls_actuator.rotation_euler = self.base_object_rotation
         global GRABBING
         GRABBING = False
-        context.area.header_text_set(text=None)
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _finish(self, context, event):
         global GRABBING
         GRABBING = False
-        context.area.header_text_set(text=None)
+        bpy.context.workspace.status_text_set(None)
+        #context.area.header_text_set(text=None)
 
     def _modal(self, context, event):
         dv = self.delta_vector()
@@ -137,12 +144,12 @@ class BLS_OT_Grab(bpy.types.Operator, MouseWidget):
         x_factor = 2*pi / self.canvas_width
         y_factor = pi / self.canvas_height
 
-        LightImage.selected_object._bls_actuator.rotation_euler = self.base_object_rotation.copy()
-        LightImage.selected_object._bls_actuator.rotation_euler.x += dv.x * x_factor
-        LightImage.selected_object._bls_actuator.rotation_euler.y += dv.y * y_factor
-        LightImage.selected_object._bls_actuator.rotation_euler.y = clamp(-pi/2 + 0.000001, LightImage.selected_object._bls_actuator.rotation_euler.y, pi/2 - 0.000001)
-
-        context.area.header_text_set(text=f"Move Dx: {dv.x * x_factor:.3f} Dy: {dv.y * y_factor:.3f}   [X/Y] Axis | [Shift] Precision Mode")
+        LightImage.selected_object._lls_actuator.rotation_euler = self.base_object_rotation.copy()
+        LightImage.selected_object._lls_actuator.rotation_euler.x += dv.x * x_factor
+        LightImage.selected_object._lls_actuator.rotation_euler.y += dv.y * y_factor
+        LightImage.selected_object._lls_actuator.rotation_euler.y = clamp(-pi/2 + 0.000001, LightImage.selected_object._lls_actuator.rotation_euler.y, pi/2 - 0.000001)
+        bpy.context.workspace.status_text_set(f"Move Dx: {dv.x * x_factor:.3f} Dy: {dv.y * y_factor:.3f}   [X/Y] Axis | [Shift] Precision Mode")
+        #context.area.header_text_set(text=f"Move Dx: {dv.x * x_factor:.3f} Dy: {dv.y * y_factor:.3f}   [X/Y] Axis | [Shift] Precision Mode")
 
         if event.value == "PRESS" and not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
             return {"RUNNING_MODAL"}
@@ -150,19 +157,19 @@ class BLS_OT_Grab(bpy.types.Operator, MouseWidget):
 
 panel_global = None
 running_modals = 0
-class BLS_OT_control_panel(bpy.types.Operator):
+class LLS_OT_control_panel(bpy.types.Operator):
     bl_idname = "light_studio.control_panel"
-    bl_label = "Light Studio Control Panel"
+    bl_label = "LightStudio Control Panel"
+    bl_description = "Show/Hide LightStudio Control Panel"
 
     mouse_x: bpy.props.IntProperty()
     mouse_y: bpy.props.IntProperty()
 
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.BLStudio.initialized
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
     def __init__(self):
-        self.textinfo = "[S] Scale | [R] Rotate | [Shift] Precision mode | [Double/Triple Click] Mute, Isolate | [Right Click] Isolate | [+/-] Icon scale | [Ctrl+Click] Loop overlapping"
         self.handler = None
         self.panel = None
         self.panel_moving = False
@@ -202,24 +209,23 @@ class BLS_OT_control_panel(bpy.types.Operator):
 
         self.handler = bpy.types.SpaceView3D.draw_handler_add(draw, (self, context.area), 'WINDOW', 'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
-
         aw = context.area.width
         ah = context.area.height
-        pw = min(aw-60, 600)
+        pw = min(aw-60, 800)
         
         global panel_global
         if not panel_global:
             panel_global = Panel(Vector((30, 25)), pw, pw*(9/16))
         self.panel = panel_global
 
-        LightImage.default_size = 100
+        LightImage.default_size = 50
 
         self.mouse_x = event.mouse_x - context.area.x
         self.mouse_y = event.mouse_y - context.area.y
 
         update_light_sets(self.panel, context, always=True)
-
-        context.area.header_text_set(text=self.textinfo)
+        #bpy.context.workspace.status_text_set(textinfo)
+        #context.area.header_text_set(text=textinfo)
 
         self.ctrl = False
 
@@ -360,7 +366,8 @@ class BLS_OT_control_panel(bpy.types.Operator):
                     if hasattr(self.clicked_object, 'click'):
                         result = self.clicked_object.click()
                         if result == "FINISHED":
-                            context.area.header_text_set(text=None)
+                            bpy.context.workspace.status_text_set(None) #clear help if window is closed
+                            #context.area.header_text_set(text=None)
                             self._unregister_handler()
                             return {"FINISHED"}
                         return {"RUNNING_MODAL"}
@@ -381,12 +388,14 @@ class BLS_OT_control_panel(bpy.types.Operator):
                 
                 # Return (Enter) key is pressed
                 elif event.type == "RET":
-                    context.area.header_text_set(text=None)
+                    bpy.context.workspace.status_text_set(None)
+                    #context.area.header_text_set(text=None)
                     self._unregister_handler()
                     return {'FINISHED'}
             
             if event.value == "RELEASE":
-                context.area.header_text_set(text=self.textinfo)
+                #bpy.context.workspace.status_text_set(textinfo)
+                #context.area.header_text_set(text=textinfo)
                 if event.type == "LEFTMOUSE":
                     self.panel_moving = False
                 elif event.type == "LEFT_SHIFT":
@@ -428,22 +437,24 @@ class BLS_OT_control_panel(bpy.types.Operator):
         return None
 
 def update_light_sets(panel, context, always=False):
-    bls_collection, profile_collection = blscol_profilecol(context)
-    if is_updated() or always or len(profile_collection.children) != len(LightImage.lights):
-        bls_lights = set(profile_collection.children)
-        working_set = set((l._collection for l in LightImage.lights))
+    lls_collection, profile_collection = llscol_profilecol(context)
+    if profile_collection is not None:
+        if is_updated() or always or len(profile_collection.children) != len(LightImage.lights):
+            lls_lights = set(profile_collection.children)
+            working_set = set((l._collection for l in LightImage.lights))
 
-        to_delete = working_set.difference(bls_lights)
-        to_add =  bls_lights.difference(working_set)
-        
-        for col in to_delete:
-            LightImage.remove(col)
+            to_delete = working_set.difference(lls_lights)
+            to_add =  lls_lights.difference(working_set)
+            
+            for col in to_delete:
+                LightImage.remove(col)
 
-        for col in to_add:
-            LightImage(context, panel, col)
+            for col in to_add:
+                LightImage(context, panel, col)
 
-        update_clear()
+            update_clear()
 
 def close_control_panel():
     global running_modals
     running_modals = 0
+    

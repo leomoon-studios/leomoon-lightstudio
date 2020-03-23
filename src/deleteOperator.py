@@ -22,7 +22,7 @@ class DeleteOperator(bpy.types.Operator):
             context.view_layer.objects.active = obj
             if hasattr(obj, 'use_fake_user'):
                 obj.use_fake_user = False
-            ret = bpy.ops.scene.delete_blender_studio_light()
+            ret = bpy.ops.scene.delete_leomoon_studio_light()
             if 'CANCELLED' in ret:
                 self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
         

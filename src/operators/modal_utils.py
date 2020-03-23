@@ -258,7 +258,7 @@ def send_light_to_top(light):
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
         super().__init__(loc, width, height)
-        self.button_exit = Button(Vector((0,0)), 'X', 30)
+        self.button_exit = Button(Vector((0,0)), 'x', 30)
         self.button_exit.function = lambda x: "FINISHED"
 
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
@@ -327,7 +327,7 @@ class Button(Rectangle):
 view_layers = []
 
 class Border(Rectangle):
-    weight = 5
+    weight = 3
 
     def __init__(self, light_image, color):
         self.color = color
@@ -454,14 +454,14 @@ class LightImage(Rectangle):
     selected_object = None
     lights = []
     @classmethod
-    def find_idx(cls, bls_light_collection):
+    def find_idx(cls, lls_light_collection):
         for idx, l in enumerate(cls.lights):
-            if l._collection == bls_light_collection:
+            if l._collection == lls_light_collection:
                 return idx
         return -1
     @classmethod
-    def remove(cls, bls_light_collection):
-        del cls.lights[cls.find_idx(bls_light_collection)]
+    def remove(cls, lls_light_collection):
+        del cls.lights[cls.find_idx(lls_light_collection)]
 
     def delete(self):
         del LightImage.lights[LightImage.lights.index(self)]
@@ -471,7 +471,7 @@ class LightImage(Rectangle):
         cls.selected_object = None
         for l in cls.lights:
             try:
-                if l.update_from_bls():
+                if l.update_from_lls():
                     l.update_visual_location()
             except ReferenceError:
                 l.delete()
@@ -490,33 +490,33 @@ class LightImage(Rectangle):
         return panel_px_loc + self.panel.point_lt - Vector((LightImage.default_size*self._scale.y/2, LightImage.default_size*self._scale.z/2))
     
     def _update_panel_loc(self):
-        self.panel_loc.x = (self._bls_rot.x + pi) % (2*pi) / (2*pi)
-        self.panel_loc.y = fmod(self._bls_rot.y + pi/2, pi) / (pi)
+        self.panel_loc.x = (self._lls_rot.x + pi) % (2*pi) / (2*pi)
+        self.panel_loc.y = fmod(self._lls_rot.y + pi/2, pi) / (pi)
 
-    def update_from_bls(self):
-        if self._bls_mesh.select_get():
+    def update_from_lls(self):
+        if self._lls_mesh.select_get():
             LightImage.selected_object = self
 
         updated = False
-        if self._bls_rot != self._bls_actuator.rotation_euler:
+        if self._lls_rot != self._lls_actuator.rotation_euler:
             updated |= True
-            self._bls_rot = self._bls_actuator.rotation_euler.copy()
-        if self.rot != self._bls_mesh.rotation_euler.x:
+            self._lls_rot = self._lls_actuator.rotation_euler.copy()
+        if self.rot != self._lls_mesh.rotation_euler.x:
             updated |= True
-            self.rot = self._bls_mesh.rotation_euler.x
-        if self._scale != self._bls_mesh.scale:
+            self.rot = self._lls_mesh.rotation_euler.x
+        if self._scale != self._lls_mesh.scale:
             updated |= True
-            self._scale = self._bls_mesh.scale.copy()
+            self._scale = self._lls_mesh.scale.copy()
             self.width = LightImage.default_size * self._scale.y
             self.height = LightImage.default_size * self._scale.z
         
         if updated:
             self._update_panel_loc()
 
-        if self._image_path != self._bls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath:
+        if self._image_path != self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath:
             updated |= True
-            self.image = self._bls_mesh.active_material.node_tree.nodes["Light Texture"].image
-            self._image_path = self._bls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath
+            self.image = self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image
+            self._image_path = self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath
         # this should run when image changes but sometimes Blender looses images... so it's run every time to be safe
         if self.image.gl_load():
             raise Exception
@@ -524,32 +524,33 @@ class LightImage(Rectangle):
 
         return updated
 
-    def update_bls(self):
-        self._bls_actuator.rotation_euler = self._bls_rot
-        self._bls_mesh.rotation_euler.x = self.rot
+    def update_lls(self):
+        self._lls_actuator.rotation_euler = self._lls_rot
+        self._lls_mesh.rotation_euler.x = self.rot
 
-    def __init__(self, context, panel, bls_light_collection):
+    def __init__(self, context, panel, lls_light_collection):
         self.panel = panel
         self.__panel_loc = Vector((.5, .5))
 
-        self._collection = bls_light_collection
-        self._bls_mesh = [m for m in bls_light_collection.objects if m.name.startswith("BLS_LIGHT_MESH")][0]
-        self._bls_actuator = self._bls_mesh.parent
+        self._collection = lls_light_collection
+        self._lls_mesh = [m for m in lls_light_collection.objects if m.name.startswith("LLS_LIGHT_MESH")][0]
+        self._lls_actuator = self._lls_mesh.parent
         self._view_layer = find_view_layer(self._collection, context.view_layer.layer_collection)
         
         self._image_path = ""
-        self._bls_rot = None
+        self._lls_rot = None
         self._scale = None
 
         super().__init__(Vector((0,0)), LightImage.default_size, LightImage.default_size)
-        self.update_from_bls()
+        self.update_from_lls()
         self.update_visual_location()
         
         LightImage.lights.append(self)
 
+        self.default_border = Border(self, (.2, .35, .2, 1))
         self.mute_border = Border(self, (.7, 0, 0, 1))
         self.select_border = Border(self, (.2, .9, .2, 1))
-        self.select_border.weight = 2
+        #self.select_border.weight = 2
     
     @property
     def mute(self):
@@ -566,10 +567,10 @@ class LightImage(Rectangle):
     @panel_loc.setter
     def panel_loc(self, pos):
         self.__panel_loc = pos
-        self._bls_rot = Vector((
+        self._lls_rot = Vector((
             (self.panel_loc.x -.5) * (2*pi),
             (self.panel_loc.y -.5) * (pi),
-            self._bls_rot.z
+            self._lls_rot.z
         ))
         self.update_visual_location() # update self.loc
 
@@ -577,8 +578,8 @@ class LightImage(Rectangle):
         if self.mute:
             return
         bpy.ops.object.select_all(action='DESELECT')
-        bpy.context.view_layer.objects.active = self._bls_mesh
-        self._bls_mesh.select_set(True)
+        bpy.context.view_layer.objects.active = self._lls_mesh
+        self._lls_mesh.select_set(True)
 
     def is_mouse_over(self, mouse_x, mouse_y):
         def rotate(x1, y1, offset):
@@ -615,7 +616,7 @@ class LightImage(Rectangle):
 
     def draw(self):
         try:
-            select = self._bls_mesh.select_get()
+            select = self._lls_mesh.select_get()
         except ReferenceError:
             return
         
@@ -634,8 +635,10 @@ class LightImage(Rectangle):
 
         if self.mute:
             self.mute_border.draw()
-        if select:
+        elif select:
             self.select_border.draw()
+        else:
+            self.default_border.draw()
 
         lightIconShader.bind()
         bgl.glActiveTexture(bgl.GL_TEXTURE0)
@@ -647,32 +650,32 @@ class LightImage(Rectangle):
 
         try:
             # material properties
-            bls_node = self._bls_mesh.active_material.node_tree.nodes['Group']
-            intensity = bls_node.inputs['Intensity'].default_value
+            lls_node = self._lls_mesh.active_material.node_tree.nodes['Group']
+            intensity = lls_node.inputs['Intensity'].default_value
 
-            texture_switch = bls_node.inputs['Texture Switch'].default_value
-            color_overlay = bls_node.inputs['Color Overlay'].default_value
-            color_saturation = bls_node.inputs['Color Saturation'].default_value
+            texture_switch = lls_node.inputs['Texture Switch'].default_value
+            color_overlay = lls_node.inputs['Color Overlay'].default_value
+            color_saturation = lls_node.inputs['Color Saturation'].default_value
 
             lightIconShader.uniform_float("intensity", intensity)
             lightIconShader.uniform_float("texture_switch", texture_switch)
             lightIconShader.uniform_float("color_overlay", color_overlay)
             lightIconShader.uniform_float("color_saturation", color_saturation)
 
-            mask_bottom_to_top = bls_node.inputs['Mask - Bottom to Top'].default_value
-            mask_diagonal_bottom_left = bls_node.inputs['Mask - Diagonal Bottom Left'].default_value
-            mask_diagonal_bottom_right = bls_node.inputs['Mask - Diagonal Bottom Right'].default_value
-            mask_diagonal_top_left = bls_node.inputs['Mask - Diagonal Top Left'].default_value
-            mask_diagonal_top_right = bls_node.inputs['Mask - Diagonal Top Right'].default_value
-            mask_gradient_amount = bls_node.inputs['Mask - Gradient Amount'].default_value
-            mask_gradient_switch = bls_node.inputs['Mask - Gradient Switch'].default_value
-            mask_gradient_type = bls_node.inputs['Mask - Gradient Type'].default_value
-            mask_left_to_right = bls_node.inputs['Mask - Left to Right'].default_value
-            mask_right_to_left = bls_node.inputs['Mask - Right to Left'].default_value
-            mask_ring_inner_radius = bls_node.inputs['Mask - Ring Inner Radius'].default_value
-            mask_ring_outer_radius = bls_node.inputs['Mask - Ring Outer Radius'].default_value
-            mask_ring_switch = bls_node.inputs['Mask - Ring Switch'].default_value
-            mask_top_to_bottom = bls_node.inputs['Mask - Top to Bottom'].default_value
+            mask_bottom_to_top = lls_node.inputs['Mask - Bottom to Top'].default_value
+            mask_diagonal_bottom_left = lls_node.inputs['Mask - Diagonal Bottom Left'].default_value
+            mask_diagonal_bottom_right = lls_node.inputs['Mask - Diagonal Bottom Right'].default_value
+            mask_diagonal_top_left = lls_node.inputs['Mask - Diagonal Top Left'].default_value
+            mask_diagonal_top_right = lls_node.inputs['Mask - Diagonal Top Right'].default_value
+            mask_gradient_amount = lls_node.inputs['Mask - Gradient Amount'].default_value
+            mask_gradient_switch = lls_node.inputs['Mask - Gradient Switch'].default_value
+            mask_gradient_type = lls_node.inputs['Mask - Gradient Type'].default_value
+            mask_left_to_right = lls_node.inputs['Mask - Left to Right'].default_value
+            mask_right_to_left = lls_node.inputs['Mask - Right to Left'].default_value
+            mask_ring_inner_radius = lls_node.inputs['Mask - Ring Inner Radius'].default_value
+            mask_ring_outer_radius = lls_node.inputs['Mask - Ring Outer Radius'].default_value
+            mask_ring_switch = lls_node.inputs['Mask - Ring Switch'].default_value
+            mask_top_to_bottom = lls_node.inputs['Mask - Top to Bottom'].default_value
 
             lightIconShader.uniform_float("mask_bottom_to_top", mask_bottom_to_top)
             lightIconShader.uniform_float("mask_diagonal_bottom_left", mask_diagonal_bottom_left)
@@ -753,7 +756,7 @@ class LightImage(Rectangle):
             clamp(0.0001, (self.loc.y-self.panel.loc.y) / self.panel.height +.5, 0.9999),
         ))
 
-        self.update_bls()
+        self.update_lls()
 
 def is_in_rect(rect, loc):
     return (loc.x >= rect.point_lt.x and loc.x <= rect.point_rb.x) and (loc.y >= rect.point_rb.y and loc.y <= rect.point_lt.y)

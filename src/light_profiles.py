@@ -20,9 +20,9 @@ class ListItem(bpy.types.PropertyGroup):
             description="",
             default="")
             
-class BLS_UL_List(bpy.types.UIList):
+class LLS_UL_List(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.BLStudio.list_index else 'LIGHT'
+        custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.list_index else 'LIGHT'
 
         # Make sure your code supports all 3 layout types
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
@@ -34,23 +34,22 @@ class BLS_UL_List(bpy.types.UIList):
             
             
 class LIST_OT_NewItem(bpy.types.Operator):
-    """ Add a new profile to the list """
 
-    bl_idname = "bls_list.new_profile"
-    bl_label = "Add a new Profile"
+    bl_idname = "lls_list.new_profile"
+    bl_label = "Add a new profile"
     bl_options = {"INTERNAL"}
     
     handle: BoolProperty(default=True)
 
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         item = props.profile_list.add()
-        bls_collection = get_bls_collection(context)
+        lls_collection = get_lls_collection(context)
 
         # unlink existing profiles
-        for profile in (prof for prof in context.scene.objects if prof.name.startswith('BLS_PROFILE.') and isFamily(prof)):
+        for profile in (prof for prof in context.scene.objects if prof.name.startswith('LLS_PROFILE.') and isFamily(prof)):
             profile_collection = profile.users_collection[0]
-            bls_collection.children.unlink(profile_collection)
+            lls_collection.children.unlink(profile_collection)
         #
 
         idx = 0
@@ -70,9 +69,9 @@ class LIST_OT_NewItem(bpy.types.Operator):
         
         script_file = os.path.realpath(__file__)
         dir = os.path.dirname(script_file)
-        bpy.ops.wm.append(filepath=_+'BLS3.blend'+_+'Object'+_,
-            directory=os.path.join(dir,"BLS3.blend"+_+"Object"+_),
-            filename="BLS_PROFILE.000",
+        bpy.ops.wm.append(filepath=_+'LLS3.blend'+_+'Object'+_,
+            directory=os.path.join(dir,"LLS3.blend"+_+"Object"+_),
+            filename="LLS_PROFILE.000",
             active_collection=True)
         
         # after operation
@@ -81,12 +80,12 @@ class LIST_OT_NewItem(bpy.types.Operator):
         # whats the difference
         profile = (A ^ B).pop()
         
-        profile.parent = [ob for ob in context.scene.objects if ob.name.startswith('BLENDER_LIGHT_STUDIO')][0]
+        profile.parent = [ob for ob in context.scene.objects if ob.name.startswith('LEOMOON_LIGHT_STUDIO')][0]
         profile.use_fake_user = True
         profile_collection = bpy.data.collections.new(profile.name)
         profile_collection.use_fake_user = True
-        bls_collection = [c for c in context.scene.collection.children if c.name.startswith('BLS')][0]
-        bls_collection.children.link(profile_collection)
+        lls_collection = [c for c in context.scene.collection.children if c.name.startswith('LLS')][0]
+        lls_collection.children.link(profile_collection)
         replace_link(profile, profile.name)
         
         item.empty_name = profile.name
@@ -95,7 +94,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
         if self.handle:
             bpy.ops.object.empty_add()
             handle = context.active_object
-            handle.name = "BLS_HANDLE"
+            handle.name = "LLS_HANDLE"
             handle.empty_display_type = 'SPHERE'
             handle.parent = profile
             handle.protected = True
@@ -108,19 +107,18 @@ class LIST_OT_NewItem(bpy.types.Operator):
         return{'FINISHED'}
 
 class LIST_OT_DeleteItem(bpy.types.Operator):
-    """ Delete the selected profile from the list """
  
-    bl_idname = "bls_list.delete_profile"
-    bl_label = "Deletes an profile"
+    bl_idname = "lls_list.delete_profile"
+    bl_label = "Delete the selected profile"
     bl_options = {"INTERNAL"}
  
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
  
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         index = props.list_index
  
         props.profile_list.remove(index)
@@ -134,7 +132,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
             ob.use_fake_user = False
         bpy.ops.object.delete({"selected_objects": obsToRemove}, use_global=True)
         for c in collectionsToRemove:
-            if c.name.startswith('BLS_'):
+            if c.name.startswith('LLS_'):
                 bpy.data.collections.remove(c)
         
         # update index
@@ -146,19 +144,18 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
     
 
 class LIST_OT_CopyItem(bpy.types.Operator):
-    """ Copy an item in the list """
 
-    bl_idname = "bls_list.copy_profile"
+    bl_idname = "lls_list.copy_profile"
     bl_label = "Copy profile"
     bl_options = {"INTERNAL"}
 
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list. """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
 
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         list = props.profile_list
         index = props.list_index
         
@@ -174,7 +171,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         
         for ob in context.selected_objects: ob.select = False
         for ob in obsToCopy:
-            if ob.name.startswith('BLS_PROFILE.'): continue
+            if ob.name.startswith('LLS_PROFILE.'): continue
             ob.hide_select = False
             ob.hide = False
             ob.select = True
@@ -193,34 +190,34 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         
         # make light material single user and update selection drivers]
         bpy.ops.group.objects_remove_all()
-        bpy.ops.group.create(name='BLS_Light')
+        bpy.ops.group.create(name='LLS_Light')
         
         for lg in new_objects:
-            if lg.name.startswith('BLS_LIGHT_GRP.'):
-                controller = [c for c in family(lg) if c.name.startswith("BLS_CONTROLLER.")][0]
-                lmesh = [l for l in family(lg) if l.name.startswith("BLS_LIGHT_MESH.")][0]
+            if lg.name.startswith('LLS_LIGHT_GRP.'):
+                controller = [c for c in family(lg) if c.name.startswith("LLS_CONTROLLER.")][0]
+                lmesh = [l for l in family(lg) if l.name.startswith("LLS_LIGHT_MESH.")][0]
                 
                 light_mat = None
                 for id, mat in enumerate(controller.data.materials):
-                    if mat.name.startswith('BLS_icon_ctrl'):
+                    if mat.name.startswith('LLS_icon_ctrl'):
                         mat = mat.copy()
                         controller.data.materials[id] = mat
                         
                         for d in mat.animation_data.drivers:
-                            d.driver.variables[0].targets[0].id = scene.objects['BLS_LIGHT_MESH.'+controller.name.split('.')[1]]
+                            d.driver.variables[0].targets[0].id = scene.objects['LLS_LIGHT_MESH.'+controller.name.split('.')[1]]
                         
                         for d in mat.node_tree.animation_data.drivers:
                             for v in d.driver.variables:
-                                v.targets[0].id = scene.objects['BLS_LIGHT_MESH.'+controller.name.split('.')[1]]
+                                v.targets[0].id = scene.objects['LLS_LIGHT_MESH.'+controller.name.split('.')[1]]
                                 
-                    elif mat.name.startswith('BLS_light'):
+                    elif mat.name.startswith('LLS_light'):
                         #mat = mat.copy()
                         light_mat = mat.copy()
                         controller.data.materials[id] = light_mat
                         light_mat.node_tree.nodes['Light Texture'].image = light_mat.node_tree.nodes['Light Texture'].image.copy()
                         
                 for id, mat in enumerate(lmesh.data.materials):
-                    if mat.name.startswith('BLS_light'):
+                    if mat.name.startswith('LLS_light'):
                         lmesh.data.materials[id] = light_mat               
                             
         # revert visibility
@@ -228,23 +225,23 @@ class LIST_OT_CopyItem(bpy.types.Operator):
             ob.hide = True
             ob.hide_select = True
             
-            if ob.name.startswith('BLS_LIGHT_MESH.') or \
-               ob.name.startswith('BLS_HANDLE') or \
-               ob.name.startswith('BLS_CONTROLLER.'):
+            if ob.name.startswith('LLS_LIGHT_MESH.') or \
+               ob.name.startswith('LLS_HANDLE') or \
+               ob.name.startswith('LLS_CONTROLLER.'):
                 ob.hide = False
                 ob.hide_select = False
                 
         profileName = props.profile_list[props.list_index].name
         
-        bpy.ops.bls_list.new_profile(handle=False)
+        bpy.ops.lls_list.new_profile(handle=False)
         lastItemId = len(props.profile_list)-1
         
         # parent objects to new profile
         for ob in new_objects:
             scene.objects.unlink(ob)
-            if ob.name.startswith('BLS_LIGHT_GRP.'):
+            if ob.name.startswith('LLS_LIGHT_GRP.'):
                 ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
-            elif ob.name.startswith('BLS_HANDLE.'):
+            elif ob.name.startswith('LLS_HANDLE.'):
                 ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
                 
             
@@ -264,10 +261,9 @@ class LIST_OT_CopyItem(bpy.types.Operator):
     
  
 class LIST_OT_MoveItem(bpy.types.Operator):
-    """ Move an item in the list """
 
-    bl_idname = "bls_list.move_profile"
-    bl_label = "Move profile in the list"
+    bl_idname = "lls_list.move_profile"
+    bl_label = "Move profile"
     bl_options = {"INTERNAL"}
 
     direction: bpy.props.EnumProperty(
@@ -278,12 +274,12 @@ class LIST_OT_MoveItem(bpy.types.Operator):
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list. """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
 
 
     def move_index(self, context):
         """ Move index of an item render queue while clamping it. """
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         index = props.list_index
         list_length = len(props.profile_list) - 1 # (index starts at 0)
         new_index = 0
@@ -298,7 +294,7 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
 
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         list = props.profile_list
         index = props.list_index
 
@@ -316,8 +312,8 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
 
 def update_list_index(self, context):
-    props = context.scene.BLStudio
-    bls_collection = get_bls_collection(context)
+    props = context.scene.LLStudio
+    lls_collection = get_lls_collection(context)
     
     if len(props.profile_list) == 0: return
         
@@ -331,10 +327,10 @@ def update_list_index(self, context):
     prof_idx = context.scene.objects.find(props.last_empty)
     if prof_idx > -1: # in case of update after deletion
         profile_collection = context.scene.objects[prof_idx].users_collection[0]
-        bls_collection.children.unlink(profile_collection)
+        lls_collection.children.unlink(profile_collection)
         
     #link selected profile
-    bls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
+    lls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
     
     props.last_empty = selected_profile.empty_name
 
@@ -351,7 +347,7 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
     plist = props.profile_list
     for profile in profiles:
         print(profile)
-        bpy.ops.bls_list.new_profile()
+        bpy.ops.lls_list.new_profile()
         props.list_index = len(plist)-1
         plist[-1].name = profile["name"]
         if not internal_copy:
@@ -370,7 +366,7 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
             # before
             A = set(profile_empty.children)
             
-            bpy.ops.scene.add_blender_studio_light()
+            bpy.ops.scene.add_leomoon_studio_light()
             
             # after operation
             B = set(profile_empty.children)
@@ -378,8 +374,8 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
             # whats the difference
             lgrp = (A ^ B).pop()
 
-            actuator = [c for c in family(lgrp) if "BLS_ROTATION" in c.name][0]
-            lmesh = [c for c in family(lgrp) if "BLS_LIGHT_MESH" in c.name][0]
+            actuator = [c for c in family(lgrp) if "LLS_ROTATION" in c.name][0]
+            lmesh = [c for c in family(lgrp) if "LLS_LIGHT_MESH" in c.name][0]
             lmesh.location.x = light['radius']
             
             actuator.rotation_euler.x = light['position'][0]
@@ -425,20 +421,20 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
                 lmesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath = os.path.join(dir, "textures_real_lights", light['tex'])
                 
 class ImportProfiles(bpy.types.Operator):
-    """ Import Profiles from File """
  
-    bl_idname = "bls_list.import_profiles"
-    bl_label = "Import Profiles"
+    bl_idname = "lls_list.import_profiles"
+    bl_label = "Import profiles"
+    bl_description = "Import profiles from file"
     #bl_options = {"INTERNAL"}
     
-    filepath: bpy.props.StringProperty(default="*.bls", subtype="FILE_PATH")
+    filepath: bpy.props.StringProperty(default="*.lls", subtype="FILE_PATH")
  
     @classmethod
     def poll(self, context):
         return True
  
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         
         with open(self.filepath, 'r') as f:
             file = f.read()
@@ -454,7 +450,7 @@ class ImportProfiles(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 def compose_profile(list_index):
-    props = bpy.context.scene.BLStudio
+    props = bpy.context.scene.LLStudio
     profile_dict = {}
     profile_dict['name'] = props.profile_list[list_index].name
     profile_dict['lights']= []
@@ -463,8 +459,8 @@ def compose_profile(list_index):
     handle = getLightHandle(profile)
     profile_dict['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
     for light_collection in profile_collection.children:
-        lmesh = [ob for ob in light_collection.objects if ob.name.startswith('BLS_LIGHT_MESH')][0]
-        actuator = [ob for ob in light_collection.objects if ob.name.startswith('BLS_ROTATION')][0]
+        lmesh = [ob for ob in light_collection.objects if ob.name.startswith('LLS_LIGHT_MESH')][0]
+        actuator = [ob for ob in light_collection.objects if ob.name.startswith('LLS_ROTATION')][0]
         light = {}
         light['radius'] = lmesh.location.x
         light['position'] = [actuator.rotation_euler.x, actuator.rotation_euler.y]
@@ -508,22 +504,22 @@ def compose_profile(list_index):
     return profile_dict
         
 class ExportProfiles(bpy.types.Operator):
-    """ Export Profiles to File """
  
-    bl_idname = "bls_list.export_profiles"
-    bl_label = "Export"
+    bl_idname = "lls_list.export_profiles"
+    bl_label = "Export profiles to file"
+    bl_description = "Export profile(s) to file"
     #bl_options = {"INTERNAL"}
     
-    filepath: bpy.props.StringProperty(default="profile.bls", subtype="FILE_PATH")
+    filepath: bpy.props.StringProperty(default="profile.lls", subtype="FILE_PATH")
     all: bpy.props.BoolProperty(default=False, name="Export All Profiles")
  
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
  
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         index = props.list_index
             
         export_file = {}
@@ -551,21 +547,21 @@ class ExportProfiles(bpy.types.Operator):
         return{'FINISHED'}
     
     def invoke(self, context, event):
-        self.filepath = "profile.bls"
+        self.filepath = "profile.lls"
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
     
 class FindMissingTextures(bpy.types.Operator):
-    """ Find Missing Textures """
  
-    bl_idname = "bls.find_missing_textures"
+    bl_idname = "lls.find_missing_textures"
     bl_label = "Find Missing Textures"
+    bl_description = "Find missing light textures"
     #bl_options = {"INTERNAL"}
     
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
  
     def execute(self, context):
         bpy.ops.file.find_missing_files(directory=os.path.join(dir, "textures_real_lights"))        
@@ -575,7 +571,7 @@ class FindMissingTextures(bpy.types.Operator):
 class CopyProfileToScene(bpy.types.Operator):
     """ Copy Light Profile to Scene """
  
-    bl_idname = "bls_list.copy_profile_to_scene"
+    bl_idname = "lls_list.copy_profile_to_scene"
     bl_label = "Copy Profile to Scene"
     bl_property = "sceneprop"
     
@@ -587,20 +583,20 @@ class CopyProfileToScene(bpy.types.Operator):
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
  
     def execute(self, context):
-        props = context.scene.BLStudio
+        props = context.scene.LLStudio
         index = props.list_index
         
         profiles = [compose_profile(index),]
         
         context.screen.scene = bpy.data.scenes[self.sceneprop]
         context.scene.render.engine = 'CYCLES'
-        if not context.scene.BLStudio.initialized:
-            bpy.ops.scene.create_blender_light_studio()
+        if not context.scene.LLStudio.initialized:
+            bpy.ops.scene.create_leomoon_light_studio()
         
-        parse_profile(context, context.scene.BLStudio, profiles, internal_copy=True)
+        parse_profile(context, context.scene.LLStudio, profiles, internal_copy=True)
         
         return{'FINISHED'}
         
@@ -611,15 +607,14 @@ class CopyProfileToScene(bpy.types.Operator):
     
 
 class CopyProfileMenu(bpy.types.Operator):
-    """ Copy Light Profile """
  
-    bl_idname = "bls_list.copy_profile_menu"
-    bl_label = "Copy Profile"
+    bl_idname = "lls_list.copy_profile_menu"
+    bl_label = "Copy selected profile"
 
     @classmethod
     def poll(self, context):
         """ Enable if there's something in the list """
-        return len(context.scene.BLStudio.profile_list)
+        return len(context.scene.LLStudio.profile_list)
     
     def execute(self, context):
         wm = context.window_manager
@@ -627,8 +622,8 @@ class CopyProfileMenu(bpy.types.Operator):
             layout = self.layout
             layout.operator_context='INVOKE_AREA'
             col = layout.column(align=True)
-            col.operator('bls_list.copy_profile')
-            col.operator('bls_list.copy_profile_to_scene')
+            col.operator('lls_list.copy_profile')
+            col.operator('lls_list.copy_profile_to_scene')
 
         wm.popup_menu(draw, title="Copy Profile")
         return {'FINISHED'}

@@ -6,7 +6,7 @@ bl_info = {
     "author": "LeoMoon Studios",
     "version": (2, 5, 0),
     "blender": (2, 80, 0),
-    "location": "View3D -> Tools -> Light Studio",
+    "location": "View3D -> Tools -> LightStudio",
     "wiki_url": "",
     "category": "User Interface" }
     
@@ -24,13 +24,13 @@ auto_load.init()
 # register
 ################################## 
 
-from . light_operators import Blender_Light_Studio_Properties
+from . light_operators import LeoMoon_Light_Studio_Properties
 from . import deleteOperator
 
 def register():
     auto_load.register()
 
-    bpy.types.Scene.BLStudio = bpy.props.PointerProperty(name="Blender Light Studio Properties", type = Blender_Light_Studio_Properties)
+    bpy.types.Scene.LLStudio = bpy.props.PointerProperty(name="LeoMoon LightStudio Properties", type = LeoMoon_Light_Studio_Properties)
     bpy.types.Object.protected = bpy.props.BoolProperty(name = 'protected', default = False)
     deleteOperator.add_shortkeys()
     
