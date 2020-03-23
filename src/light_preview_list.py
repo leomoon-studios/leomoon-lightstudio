@@ -28,8 +28,8 @@ def enum_previews_from_directory_items(self, context):
     if pcoll.initiated and dir_up <= pcoll.dir_update_time:
         return pcoll.tex_previews
     pcoll.dir_update_time = dir_up
-    pcoll.clear()
     
+    pcoll.clear()
 
     print("Scanning directory: %s" % directory)
 
@@ -88,7 +88,6 @@ def register():
             get=preview_enum_get,
             set=preview_enum_set,
             )
-
     import bpy.utils.previews
     pcoll = bpy.utils.previews.new()
     pcoll.bls_tex_previews = ()
@@ -97,7 +96,6 @@ def register():
 
     preview_collections["main"] = pcoll
 
-
 def unregister():
     from bpy.types import WindowManager
 
@@ -105,5 +103,5 @@ def unregister():
 
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
+        pcoll.clear()
     preview_collections.clear()
-    

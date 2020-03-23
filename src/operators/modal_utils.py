@@ -5,12 +5,169 @@ from math import pi, fmod, radians, sin, cos, atan2
 from .. common import *
 from . import *
 import time
+from copy import deepcopy
 
 shader2Dcolor = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
 shader2Dcolor.bind()
 
-shader2Dtexture = gpu.shader.from_builtin('2D_IMAGE')
-shader2Dtexture.bind()
+vertex_shader = '''
+    uniform mat4 ModelViewProjectionMatrix;
+
+    /* Keep in sync with intern/opencolorio/gpu_shader_display_transform_vertex.glsl */
+    in vec2 pos;
+    in vec2 texCoord;
+    out vec2 texCoord_interp;
+
+    void main()
+    {
+        gl_Position = ModelViewProjectionMatrix * vec4(pos.xy, 0.0f, 1.0f);
+        gl_Position.z = 1.0;
+        texCoord_interp = texCoord;
+    }
+'''
+
+fragment_shader = '''
+    #define PI 3.1415926535897932384626433832795f
+
+    in vec2 texCoord_interp;
+    in vec4 gl_FragCoord;
+
+    layout(location = 0) out vec4 fragColor;
+    layout(location = 1) out vec4 trash;
+
+    uniform sampler2D image;
+    uniform float panel_point_left;
+    uniform float panel_point_right;
+
+    uniform vec4 color_overlay = vec4(0);
+    uniform float intensity = 1;
+    uniform float texture_switch = 1;
+    uniform float color_saturation = 0;
+
+    uniform float mask_bottom_to_top = 0;
+    uniform float mask_diagonal_bottom_left = 0;
+    uniform float mask_diagonal_bottom_right = 0;
+    uniform float mask_diagonal_top_left = 0;
+    uniform float mask_diagonal_top_right = 0;
+    uniform float mask_gradient_amount = 0;
+    uniform float mask_gradient_switch = 0;
+    uniform float mask_gradient_type = 0;
+    uniform float mask_left_to_right = 0;
+    uniform float mask_right_to_left = 0;
+    uniform float mask_ring_inner_radius = 0;
+    uniform float mask_ring_outer_radius = 0;
+    uniform float mask_ring_switch = 0;
+    uniform float mask_top_to_bottom = 0;
+
+    void main()
+    {
+        // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
+        trash = vec4(panel_point_left+panel_point_right+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
+        
+        // Texture Switch + Intensity
+        // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
+        fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
+        
+        // Color Overlay
+        float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
+        vec4 colored = color_overlay * gray;
+        
+        // Color Saturation
+        fragColor = mix(fragColor, colored, color_saturation);
+        fragColor.a = gray;
+        fragColor.rgb *= fragColor.a;
+
+        // MASKS //
+
+        // Vertical gradient + mask_gradient_amount
+        float vg = sqrt(texCoord_interp.y);
+        vg = (texCoord_interp.y <= mask_gradient_amount+.05f) ? mix(0, vg, (texCoord_interp.y-mask_gradient_amount)/.05f) : vg;
+        vg = texCoord_interp.y >= mask_gradient_amount ? vg : 0;
+
+        // Spherical gradient + mask_gradient_amount
+        float d = distance(texCoord_interp.xy, vec2(0.5f, 0.5f));
+        float m = (1.0f-mask_gradient_amount)*.5f;
+        float sg = 1-pow(d*2, 2.f);
+        sg = (d >= m-.05f) ? mix(0, sg, (m-d)/.05f) : sg;
+        sg = (d <= m) ? sg : 0;
+
+        // Gradient Type
+        float grad = mix(sg, vg, mask_gradient_type);
+
+        // Gradient Switch
+        fragColor.a = mix(fragColor.a, grad*fragColor.a, mask_gradient_switch);
+
+        // Gradient Ring Switch
+        float ring = d < (1-mask_ring_outer_radius)*.575f ? 1 : 0;
+        ring = d < (1-mask_ring_inner_radius)*.55f ? 0 : ring;
+        fragColor.a = mix(fragColor.a, fragColor.a*ring, mask_ring_switch);
+        
+        // Top-Bottom
+        fragColor.a = texCoord_interp.y < (1-mask_top_to_bottom) ? fragColor.a : 0;
+        
+        // Bottom-Top
+        fragColor.a = texCoord_interp.y > mask_bottom_to_top ? fragColor.a : 0;
+
+        // Left-Right
+        fragColor.a = texCoord_interp.x > mask_left_to_right ? fragColor.a : 0;
+        
+        // Right-Left
+        fragColor.a = texCoord_interp.x < (1-mask_right_to_left) ? fragColor.a : 0;
+
+        // Diagonal Top-Right
+        fragColor.a = 1-(texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_right ? fragColor.a : 0;
+        
+        // Diagonal Top-Left
+        fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_left ? fragColor.a : 0;
+        
+        // Diagonal Bottom-Right
+        fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_right ? fragColor.a : 0;
+
+        // Diagonal Bottom-Left
+        fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_left ? fragColor.a : 0;
+
+        // Panel bound clipping
+        if(gl_FragCoord.x < panel_point_left || gl_FragCoord.x > panel_point_right)
+            discard;
+    }
+'''
+
+border_vertex_shader= '''
+    uniform mat4 ModelViewProjectionMatrix;
+
+    #ifdef UV_POS
+    in vec2 u;
+    #  define pos u
+    #else
+    in vec2 pos;
+    #endif
+
+    void main()
+    {
+        gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+    }
+'''
+border_fragment_shader= '''
+    uniform vec4 color;
+    uniform vec2 panel_point_lt;
+    uniform vec2 panel_point_rb;
+    in vec4 gl_FragCoord;
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = color;
+
+        if(gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
+            fragColor.rgba = vec4(0);
+    }
+'''
+
+lightIconShader = gpu.types.GPUShader(vertex_shader, fragment_shader)
+lightIconShader.bind()
+
+border_shader2Dcolor = gpu.types.GPUShader(border_vertex_shader, border_fragment_shader)
+border_shader2Dcolor.bind()
 
 class Rectangle:
     def __init__(self, start_point, width, height):
@@ -63,7 +220,7 @@ class Rectangle:
             y2 = sin(self.rot) * x1 + cos(self.rot) * y1
             x2 += offset.x
             y2 += offset.y
-            return (x2, y2)
+            return [x2, y2]
         
         loc = self.loc # prevent property from recomputing
         return (
@@ -74,7 +231,7 @@ class Rectangle:
         )
 
     def get_tex_coords(self):
-        return ((0, 1), (0, 0), (1, 1), (1, 0))
+        return ([0, 1], [0, 0], [1, 1], [1, 0])
 
     def move(self, loc_diff):
         rect = self.panel if hasattr(self, 'panel') else self
@@ -84,6 +241,20 @@ class Rectangle:
         new_loc.y = clamp(rect.point_rb.y, new_loc.y, rect.point_lt.y)
         self.loc = new_loc
 
+def send_light_to_bottom(light):
+    light = LightImage.selected_object if not light else light
+    if not light:
+        return
+    lights = LightImage.lights
+    lights.insert(0, lights.pop(lights.index(light)))
+
+def send_light_to_top(light):
+    light = LightImage.selected_object if not light else light
+    if not light:
+        return
+    lights = LightImage.lights
+    lights.append(lights.pop(lights.index(light)))
+
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
         super().__init__(loc, width, height)
@@ -91,10 +262,6 @@ class Panel(Rectangle):
         self.button_exit.function = lambda x: "FINISHED"
 
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
-        def send_light_to_bottom(args):
-            light = LightImage.selected_object
-            lights = LightImage.lights
-            lights.insert(0, lights.pop(lights.index(light)))
         self.button_send_to_bottom.function = send_light_to_bottom
 
         self._move_buttons()
@@ -168,15 +335,113 @@ class Border(Rectangle):
         super().__init__(Vector((0, 0)), 100, 100)
 
     def draw(self):
-        shader2Dcolor.uniform_float("color", self.color)
-        batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
+        verts = self.get_verts()
+        lleft = min(verts, key=lambda v: v[0])[0]
+        lright = max(verts, key=lambda v: v[0])[0]
+
+        bleft = self.light_image.panel.point_lt[0]
+        bright = self.light_image.panel.point_rb[0]
+
+        from mathutils import Euler
+        rot_translate = Vector((self.weight, 0, 0))
+        rot_translate.rotate(Euler((0,0,self.rot)))
+        rot_translate_ort = Vector((-rot_translate.y, rot_translate.x))
+
+                #       0   1
+        # 0  lt.x, lt.y         0 2
+        # 1  lt.x, rb.y         1 3
+        # 2  rb.x, lt.y
+        # 3  rb.x, rb.y
+
+        left_verts = [
+            verts[0],
+            verts[1],
+            [verts[0][0]+rot_translate.x, verts[0][1]+rot_translate.y],
+            [verts[1][0]+rot_translate.x, verts[1][1]+rot_translate.y]
+        ]
+
+        right_verts = [
+            [verts[2][0]-rot_translate.x, verts[2][1]-rot_translate.y],
+            [verts[3][0]-rot_translate.x, verts[3][1]-rot_translate.y],
+            verts[2],
+            verts[3]
+        ]
+
+        top_verts = [
+            verts[0],
+            [verts[0][0]-rot_translate_ort.x, verts[0][1]-rot_translate_ort.y],
+            verts[2],
+            [verts[2][0]-rot_translate_ort.x, verts[2][1]-rot_translate_ort.y]
+        ]
+
+        bottom_verts = [
+            [verts[1][0]+rot_translate_ort.x, verts[1][1]+rot_translate_ort.y],
+            verts[1],
+            [verts[3][0]+rot_translate_ort.x, verts[3][1]+rot_translate_ort.y],
+            verts[3]
+        ]
+        
+        border_shader2Dcolor.bind()
+        bgl.glEnable(bgl.GL_BLEND);
+        border_shader2Dcolor.uniform_float("color", self.color)
+        border_shader2Dcolor.uniform_float("panel_point_lt", self.light_image.panel.point_lt)
+        border_shader2Dcolor.uniform_float("panel_point_rb", self.light_image.panel.point_rb)
+        if lleft < bleft:
+            left_verts2 = deepcopy(left_verts)
+            for v in left_verts2:
+                v[0] += self.light_image.panel.width
+
+            right_verts2 = deepcopy(right_verts)
+            for v in right_verts2:
+                v[0] += self.light_image.panel.width
+            
+            top_verts2 = deepcopy(top_verts)
+            for v in top_verts2:
+                v[0] += self.light_image.panel.width
+            
+            bottom_verts2 = deepcopy(bottom_verts)
+            for v in bottom_verts2:
+                v[0] += self.light_image.panel.width
+
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
+        elif lright > bright:
+            left_verts2 = deepcopy(left_verts)
+            for v in left_verts2:
+                v[0] -= self.light_image.panel.width
+
+            right_verts2 = deepcopy(right_verts)
+            for v in right_verts2:
+                v[0] -= self.light_image.panel.width
+            
+            top_verts2 = deepcopy(top_verts)
+            for v in top_verts2:
+                v[0] -= self.light_image.panel.width
+            
+            bottom_verts2 = deepcopy(bottom_verts)
+            for v in bottom_verts2:
+                v[0] -= self.light_image.panel.width
+
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
+            batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
+        
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
+        batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(border_shader2Dcolor)
+        bgl.glDisable(bgl.GL_BLEND);
 
     def get_verts(self):
         self.point_lt = self.light_image.point_lt.copy()
+        self.point_rb = self.light_image.point_rb.copy()
+
         self.point_lt.x -= self.weight
         self.point_lt.y += self.weight
 
-        self.point_rb = self.light_image.point_rb.copy()
         self.point_rb.x += self.weight
         self.point_rb.y -= self.weight
         
@@ -217,8 +482,8 @@ class LightImage(Rectangle):
     def change_default_size(cls, value):
         cls.default_size = value
         for l in cls.lights:
-            l.width = value
-            l.height = value
+            l.width = value * l._scale.y
+            l.height = value * l._scale.z
         
     def panel_loc_to_area_px_lt(self):
         panel_px_loc = Vector((self.panel.width * self.panel_loc.x, -self.panel.height * (1-self.panel_loc.y)))
@@ -315,6 +580,39 @@ class LightImage(Rectangle):
         bpy.context.view_layer.objects.active = self._bls_mesh
         self._bls_mesh.select_set(True)
 
+    def is_mouse_over(self, mouse_x, mouse_y):
+        def rotate(x1, y1, offset):
+            x1 -= offset.x
+            y1 -= offset.y
+            x2 = cos(-self.rot) * x1 - sin(-self.rot) * y1
+            y2 = sin(-self.rot) * x1 + cos(-self.rot) * y1
+            x2 += offset.x
+            y2 += offset.y
+            return [x2, y2]
+        
+        bleft = self.panel.point_lt[0]
+        bright = self.panel.point_rb[0]
+
+        if mouse_x > bright or mouse_x < bleft:
+            return False
+
+        tmouse_x, tmouse_y = rotate(mouse_x, mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
+        
+        tmouse_x, tmouse_y = rotate(bleft-(bright-mouse_x), mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
+
+        tmouse_x, tmouse_y = rotate(bright+(mouse_x-bleft), mouse_y, self.loc)
+        if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
+            (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
+            return True
+
+        return False
+
     def draw(self):
         try:
             select = self._bls_mesh.select_get()
@@ -324,23 +622,125 @@ class LightImage(Rectangle):
         # draw something to refresh buffer?
         shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
         batch_for_shader(shader2Dcolor, 'POINTS', {"pos": [(0,0), ]}).draw(shader2Dcolor)
+
+        bleft = self.panel.point_lt[0]
+        bright = self.panel.point_rb[0]
         
+        verts = self.get_verts()
+        uv_coords = self.get_tex_coords()
+        
+        lleft = min(verts, key=lambda v: v[0])[0]
+        lright = max(verts, key=lambda v: v[0])[0]
+
         if self.mute:
             self.mute_border.draw()
         if select:
             self.select_border.draw()
 
+        lightIconShader.bind()
         bgl.glActiveTexture(bgl.GL_TEXTURE0)
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
-        shader2Dtexture.uniform_int("image", 0)
+        lightIconShader.uniform_int("image", 0)
 
-        batch_for_shader(
-            shader2Dtexture, 'TRI_STRIP',
-            {
-                "pos": self.get_verts(),
-                "texCoord": self.get_tex_coords(),
-            }
-        ).draw(shader2Dtexture)
+        lightIconShader.uniform_float("panel_point_left", self.panel.point_lt.x)
+        lightIconShader.uniform_float("panel_point_right", self.panel.point_rb.x)
+
+        try:
+            # material properties
+            bls_node = self._bls_mesh.active_material.node_tree.nodes['Group']
+            intensity = bls_node.inputs['Intensity'].default_value
+
+            texture_switch = bls_node.inputs['Texture Switch'].default_value
+            color_overlay = bls_node.inputs['Color Overlay'].default_value
+            color_saturation = bls_node.inputs['Color Saturation'].default_value
+
+            lightIconShader.uniform_float("intensity", intensity)
+            lightIconShader.uniform_float("texture_switch", texture_switch)
+            lightIconShader.uniform_float("color_overlay", color_overlay)
+            lightIconShader.uniform_float("color_saturation", color_saturation)
+
+            mask_bottom_to_top = bls_node.inputs['Mask - Bottom to Top'].default_value
+            mask_diagonal_bottom_left = bls_node.inputs['Mask - Diagonal Bottom Left'].default_value
+            mask_diagonal_bottom_right = bls_node.inputs['Mask - Diagonal Bottom Right'].default_value
+            mask_diagonal_top_left = bls_node.inputs['Mask - Diagonal Top Left'].default_value
+            mask_diagonal_top_right = bls_node.inputs['Mask - Diagonal Top Right'].default_value
+            mask_gradient_amount = bls_node.inputs['Mask - Gradient Amount'].default_value
+            mask_gradient_switch = bls_node.inputs['Mask - Gradient Switch'].default_value
+            mask_gradient_type = bls_node.inputs['Mask - Gradient Type'].default_value
+            mask_left_to_right = bls_node.inputs['Mask - Left to Right'].default_value
+            mask_right_to_left = bls_node.inputs['Mask - Right to Left'].default_value
+            mask_ring_inner_radius = bls_node.inputs['Mask - Ring Inner Radius'].default_value
+            mask_ring_outer_radius = bls_node.inputs['Mask - Ring Outer Radius'].default_value
+            mask_ring_switch = bls_node.inputs['Mask - Ring Switch'].default_value
+            mask_top_to_bottom = bls_node.inputs['Mask - Top to Bottom'].default_value
+
+            lightIconShader.uniform_float("mask_bottom_to_top", mask_bottom_to_top)
+            lightIconShader.uniform_float("mask_diagonal_bottom_left", mask_diagonal_bottom_left)
+            lightIconShader.uniform_float("mask_diagonal_bottom_right", mask_diagonal_bottom_right)
+            lightIconShader.uniform_float("mask_diagonal_top_left", mask_diagonal_top_left)
+            lightIconShader.uniform_float("mask_diagonal_top_right", mask_diagonal_top_right)
+            lightIconShader.uniform_float("mask_gradient_amount", mask_gradient_amount)
+            lightIconShader.uniform_float("mask_gradient_switch", mask_gradient_switch)
+            lightIconShader.uniform_float("mask_gradient_type", mask_gradient_type)
+            lightIconShader.uniform_float("mask_left_to_right", mask_left_to_right)
+            lightIconShader.uniform_float("mask_right_to_left", mask_right_to_left)
+            lightIconShader.uniform_float("mask_ring_inner_radius", mask_ring_inner_radius)
+            lightIconShader.uniform_float("mask_ring_outer_radius", mask_ring_outer_radius)
+            lightIconShader.uniform_float("mask_ring_switch", mask_ring_switch)
+            lightIconShader.uniform_float("mask_top_to_bottom", mask_top_to_bottom)
+        except:
+            pass
+        bgl.glEnable(bgl.GL_BLEND);
+
+        if lleft < bleft:
+            verts2 = deepcopy(verts)
+            for v in verts2:
+                v[0] += self.panel.width
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts2,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+        elif lright > bright:
+            verts2 = deepcopy(verts)
+            for v in verts2:
+                v[0] -= self.panel.width
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts2,
+                    "texCoord": uv_coords,
+                }
+            ).draw(lightIconShader)
+        else:
+            batch_for_shader(
+                lightIconShader, 'TRI_STRIP',
+                {
+                    "pos": verts,
+                    "texCoord": self.get_tex_coords(),
+                }
+            ).draw(lightIconShader)
+        bgl.glDisable(bgl.GL_BLEND);
 
     def update_visual_location(self):
         self.loc = self.panel_loc_to_area_px_lt() + Vector((self.width/2, self.height/2))
@@ -469,7 +869,7 @@ class MouseWidget:
     def _unregister_handler(self):
         try:
             bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
     
     def length(self):
