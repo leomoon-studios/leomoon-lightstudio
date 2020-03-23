@@ -6,7 +6,7 @@ LeoMoon LightStudio (formerly known as Blender Light Studio) is **[100% free and
 If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**.
 
 ## Introduction
-[![LeoMoon LightStudio 2.4.1 Beta Demo](https://img.youtube.com/vi/jwirtdK7cpQ/sddefault.jpg)](https://www.youtube.com/watch?v=jwirtdK7cpQ)
+[![LeoMoon LightStudio 2.5.0 Demo](https://img.youtube.com/vi/XT_m2E_qsaU/sddefault.jpg)](https://www.youtube.com/watch?v=XT_m2E_qsaU)
 
 LeoMoon LightStudio (formerly known as Blender Light Studio) is the easiest, fastest and most advanced lighting system for Blender 2.8x. LeoMoon LightStudio is packed with features and the new Light Node has so many options so you can customize each light exactly the way you want.
 
