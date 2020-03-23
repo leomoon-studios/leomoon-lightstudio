@@ -1,45 +1,71 @@
+* BUTTON ICONS GUIDE:
+	[+] = Add light (icon: ADD)
+	[-] = Delete light (icon: REMOVE)
+	[L] = Lock light (icon: UNLOCKED, LOCKED)
+	[V] = Show/hide light (icon: HIDE_OFF, HIDE_ON)
+	[S] = Solo selected light (icon: SOLO_OFF, SOLO_ON)
+	[C] = Copy menu (icon: DUPLICATE)
+
+New scene that doesn't have LightStudio:
 ▼ Studio
-    [Delete Studio]
-    [Prepare Layout]
+	[            Create LightStudio             ]
 
-▼ Profiles
-    ┌-------------------------┐ [+]
-    | Profile 1               | [-]
-    |                         | [c]
-    |                         |
-    |                         | [▲]
-    |                         | [▼]
-    └-------------------------┘
 
+After adding LightStudio:
+▼ Studio
+	[            Delete LightStudio             ]
+	[          Show LightStudio Panel           ]
 ▼ Lights
-    [Add Light]      [Delete Light]
-
-▼ Selected Light
-    [3D Edit]
-    ┌-----------------------------┐
-    |                             |
-    |                             |
-    |                             |
-    |                             |
-    |                             |
-    | Soft Box A                  |
-    └-----------------------------┘
-    [ ] Mute Light
-    Color:                [       ]
-    ┌-----------------------------┐
-    | ◄ Intensity:        2.000 ► |
-    | ◄ Opacity:          1.000 ► |
-    | ◄ Falloff:          1.000 ► |
-    | ◄ Color Saturation: 0.300 ► |
-    | ◄ Half:             0.000 ► |
-    | ◄ Light Distance:  30.000 ► |
-    └-----------------------------┘
-
-▼ Visibility Options
-    [Show Only This Light]
-    [Show All Lights]
-
-▼ Import / Export
-    [Export Selected Profile]
-    [Export All Profiles]
-    [Import Profile]
+    ┌---------------------------------------┐ [+]
+    | Light 1                      [L][V][S]| [-]
+    | Light 2                      [L][V][S]| [c]
+    |                                       |
+    |                                       | [▲]
+    |                                       | [▼]
+    └---------------------------------------┘
+    [                  3D Edit                  ]
+    ┌-------------------------------------------┐
+    |              ┌-------------┐              |
+    |              |             |              |
+	|              |             |              |
+	|              |             |              |
+    |              |             |              |
+    |              |             |              |
+    |              └-------------┘              |
+    | Soft Box A                                |
+	| ◄ Texture Switch                  1.000 ► |
+    └-------------------------------------------┘
+    Color Overlay:                      [       ]
+    ┌-------------------------------------------┐
+	| ◄ Color Saturation:               0.300 ► |
+    | ◄ Intensity:                      2.000 ► |
+    | ◄ Mask - Gradient Switch:         0.000 ► |
+    | ◄ Mask - Gradient Type:           0.000 ► |
+    | ◄ Mask - Gradient Amount:         0.000 ► |
+    | ◄ Mask - Ring Switch:             0.000 ► |
+    | ◄ Mask - Ring Inner Radius:       0.000 ► |
+    | ◄ Mask - Ring Outer Radius:       0.000 ► |
+    | ◄ Mask - Top to Bottom:           0.000 ► |
+    | ◄ Mask - Bottom to Top:           0.000 ► |
+    | ◄ Mask - Left to Right:           0.000 ► |
+    | ◄ Mask - Right to Left:           0.000 ► |
+    | ◄ Mask - Diagonal Top Left:       0.000 ► |
+    | ◄ Mask - Diagonal Top Right:      0.000 ► |
+    | ◄ Mask - Diagonal Bottom Right:   0.000 ► |
+    | ◄ Mask - Diagonal Bottom Left:    0.000 ► |
+    | ◄ Location:                      30.000 ► |
+    └-------------------------------------------┘
+▼ Light Profiles
+    ┌---------------------------------------┐ [+]
+    | Profile 1                             | [-]
+    |                                       | [C]
+    |                                       |
+    |                                       | [▲]
+    |                                       | [▼]
+    └---------------------------------------┘
+▼ Import/Export
+	[          Export Selected Profile          ]
+	[            Export All Profiles            ]
+	[              Import Profiles              ]
+▼ Misc
+	[            Find Missing Textures          ]

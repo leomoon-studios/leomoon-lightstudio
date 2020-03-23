@@ -28,8 +28,8 @@ def enum_previews_from_directory_items(self, context):
     if pcoll.initiated and dir_up <= pcoll.dir_update_time:
         return pcoll.tex_previews
     pcoll.dir_update_time = dir_up
-    pcoll.clear()
     
+    pcoll.clear()
 
     print("Scanning directory: %s" % directory)
 
@@ -75,7 +75,7 @@ def preview_enum_set(wm, context):
     name = preview_collections["main"].tex_previews[context][0]
     
     light = getLightMesh()
-    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), True)
+    light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), check_existing=True)
     
     return None
 
@@ -83,27 +83,25 @@ def register():
     from bpy.types import WindowManager
     from bpy.props import EnumProperty
 
-    WindowManager.bls_tex_previews = EnumProperty(
+    WindowManager.lls_tex_previews = EnumProperty(
             items=enum_previews_from_directory_items,
             get=preview_enum_get,
             set=preview_enum_set,
             )
-
     import bpy.utils.previews
     pcoll = bpy.utils.previews.new()
-    pcoll.bls_tex_previews = ()
+    pcoll.lls_tex_previews = ()
     pcoll.initiated = False
     pcoll.dir_update_time = os.path.getmtime(directory)
 
     preview_collections["main"] = pcoll
 
-
 def unregister():
     from bpy.types import WindowManager
 
-    del WindowManager.bls_tex_previews
+    del WindowManager.lls_tex_previews
 
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
+        pcoll.clear()
     preview_collections.clear()
-    
