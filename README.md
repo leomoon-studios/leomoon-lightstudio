@@ -43,7 +43,7 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
-### 2.5.0 2019-03-23:
+### 2.5.0 2020-03-23:
 * Fixed LightStudio error when opening Bledner 2.8x
 * Fixed LightStudio error when deleting studio
 * Fixed strange behaviour when clicking LightStudio Control Panel multiple times
