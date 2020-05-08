@@ -10,11 +10,11 @@ class LLS_PT_Studio(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'    
-    
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
+
     def draw(self, context):
         layout = self.layout
         col = layout.column(align=True)
@@ -31,11 +31,11 @@ class LLS_PT_Lights(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and len(context.scene.LLStudio.profile_list)
-    
+
     def draw(self, context):
         layout = self.layout
         col = layout.column(align=True)
@@ -50,24 +50,24 @@ class LLS_PT_Selected(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
-    
+
     def draw(self, context):
         if context.active_object and (context.active_object.name.startswith('LLS_CONTROLLER') or context.active_object.name.startswith('LLS_LIGHT_MESH')):
             layout = self.layout
             wm = context.window_manager
-            
+
             col = layout.column(align=True)
             col.operator('lls.light_brush', text="3D Edit", icon='PIVOT_CURSOR')
-            
+
             box = layout.box()
             col = box.column()
             col.template_icon_view(wm, "lls_tex_previews", show_labels=True)
             col.label(text=os.path.splitext(wm.lls_tex_previews)[0])
-            
+
             layout.separator()
             try:
                 lls_inputs = getLightMesh().active_material.node_tree.nodes["Group"].inputs
@@ -90,26 +90,26 @@ class LLS_PT_ProfileList(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
-            
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+
         props = scene.LLStudio
-        
+
         row = layout.row()
         col = row.column()
         col.template_list("LLS_UL_List", "Profile_List", props, "profile_list", props, "list_index", rows=5)
-        
+
         col = row.column(align=True)
         col.operator('lls_list.new_profile', icon='PLUS', text="")
         col.operator('lls_list.delete_profile', icon='TRASH', text="")
         col.operator('lls_list.copy_profile_menu', icon='DUPLICATE', text="")
-        
+
         col.separator()
         col.operator('lls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
         col.operator('lls_list.move_profile', text='', icon="TRIA_DOWN").direction = 'DOWN'
@@ -121,15 +121,15 @@ class LLS_PT_ProfileImportExport(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
-            
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-              
+
         col = layout.column(align=True)
         col.operator('lls_list.export_profiles', text="Export Selected Profile")
         col.operator('lls_list.export_profiles', text="Export All Profiles").all=True
@@ -143,19 +143,20 @@ class LLS_PT_Misc(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LightStudio"
-    
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
-                
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+
         props = scene.LLStudio
-              
+
         col = layout.column(align=True)
         col.operator('lls.find_missing_textures')
+        col.operator('lls.open_textures_folder')
         col.operator('lls.lls_keyingset')
         if context.scene.keying_sets.active and context.scene.keying_sets.active.bl_idname == "BUILTIN_KSI_LightStudio":
             box = col.box()
@@ -170,7 +171,7 @@ class LLSKeyingSet(bpy.types.Operator):
     def poll(self, context):
         """ Enable if there's something in the list """
         return len(context.scene.LLStudio.profile_list)
-    
+
     def execute(self, context):
         context.scene.keying_sets.active = [k for k in context.scene.keying_sets_all if k.bl_idname == "BUILTIN_KSI_LightStudio"][0]
         return {"FINISHED"}
@@ -183,17 +184,17 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "LightStudio"
     #bl_options = {'DEFAULT_CLOSED'}
-    
+
     #@classmethod
     #def poll(cls, context):
     #    return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
-                
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+
         props = scene.LLStudio
-        
+
         box = layout.box()
 
         box.label(text="Move light", icon='MOUSE_LMB')
@@ -207,7 +208,7 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
 
         row.label(text="Precision mode", icon='EVENT_SHIFT')
         row = box.row(align=True)
-        
+
         box.label(text="Mute light", icon='MOUSE_LMB_DRAG')
 
         box.label(text="Isolate light", icon='MOUSE_RMB')
