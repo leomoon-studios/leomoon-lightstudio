@@ -3,6 +3,7 @@ from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProper
 import os
 from . common import *
 from itertools import chain
+from . operators.modal import close_control_panel
 
 _ = os.sep
 
@@ -142,6 +143,83 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
  
         return{'FINISHED'}
     
+def duplicate_collection(collection, parent_collection):
+    new_collection = bpy.data.collections.new(collection.name)
+    
+    new_names = {}
+    matrix_data = {}
+    
+    for obj in collection.objects:
+        new_obj = obj.copy()
+        
+        new_names[obj.name] = new_obj
+        matrix_data[new_obj.name] = {
+            "matrix_basis": obj.matrix_basis.copy(),
+            "matrix_local": obj.matrix_local.copy(),
+            "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
+            "matrix_world": obj.matrix_world.copy()
+            }
+        
+        if new_obj.data:
+            new_obj.data = obj.data.copy()
+        new_obj.parent = obj.parent
+        new_collection.objects.link(new_obj)
+    
+    for obj in new_collection.objects:
+        if obj.parent:
+            if obj.parent.name in new_names:
+                obj.parent = new_names[obj.parent.name]
+            obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
+            #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
+            obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
+            #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
+    
+    
+    if parent_collection:
+        parent_collection.children.link(new_collection)
+
+    iter_list = [collection.children]
+    parent_collection = new_collection
+
+    while len(iter_list) > 0:
+        new_iter_list = []
+        
+        for iter in iter_list:
+            for collection in iter:
+            
+                new_collection = bpy.data.collections.new(collection.name)
+                
+                for obj in collection.objects:
+                    new_obj = obj.copy()
+                    
+                    new_names[obj.name] = new_obj
+                    matrix_data[new_obj.name] = {
+                        "matrix_basis": obj.matrix_basis.copy(),
+                        "matrix_local": obj.matrix_local.copy(),
+                        "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
+                        "matrix_world": obj.matrix_world.copy()
+                        }
+                    
+                    if new_obj.data:
+                        new_obj.data = obj.data.copy()
+                    new_obj.parent = obj.parent
+                    new_collection.objects.link(new_obj)
+                    
+                for obj in new_collection.objects:
+                    if obj.parent:
+                        obj.parent = new_names[obj.parent.name]
+                        obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
+                        #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
+                        obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
+                        #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
+                    
+                parent_collection.children.link(new_collection)
+                
+                if len(collection.children) > 0:
+                    new_iter_list.append(collection.children)
+
+        iter_list = new_iter_list
+    return parent_collection
 
 class LIST_OT_CopyItem(bpy.types.Operator):
 
@@ -160,101 +238,25 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         index = props.list_index
         
         scene = context.scene
-        
-        # all objects on all layers visible
-        oldlaysArea = context.area.spaces[0].layers[:]
-        oldlaysScene = context.scene.layers[:]
-        context.area.spaces[0].layers = [True]*20
-        context.scene.layers = [True]*20
-        
-        obsToCopy = family(context.scene.objects[props.last_empty])
-        
-        for ob in context.selected_objects: ob.select = False
-        for ob in obsToCopy:
-            if ob.name.startswith('LLS_PROFILE.'): continue
-            ob.hide_select = False
-            ob.hide = False
-            ob.select = True
-            
-            
-        # before
-        A = set(scene.objects[:])
-        
-        bpy.ops.object.duplicate()
-        
-        # after operation
-        B = set(scene.objects[:])
 
-        # whats the difference
-        new_objects = (A ^ B)
+        lls_collection, profile_collection = llscol_profilecol(context)
+
+        profile_copy = duplicate_collection(profile_collection, None)
+        profile = [ob for ob in profile_copy.objects if ob.name.startswith('LLS_PROFILE')][0]
+        handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
         
-        # make light material single user and update selection drivers]
-        bpy.ops.group.objects_remove_all()
-        bpy.ops.group.create(name='LLS_Light')
-        
-        for lg in new_objects:
-            if lg.name.startswith('LLS_LIGHT_GRP.'):
-                controller = [c for c in family(lg) if c.name.startswith("LLS_CONTROLLER.")][0]
-                lmesh = [l for l in family(lg) if l.name.startswith("LLS_LIGHT_MESH.")][0]
-                
-                light_mat = None
-                for id, mat in enumerate(controller.data.materials):
-                    if mat.name.startswith('LLS_icon_ctrl'):
-                        mat = mat.copy()
-                        controller.data.materials[id] = mat
-                        
-                        for d in mat.animation_data.drivers:
-                            d.driver.variables[0].targets[0].id = scene.objects['LLS_LIGHT_MESH.'+controller.name.split('.')[1]]
-                        
-                        for d in mat.node_tree.animation_data.drivers:
-                            for v in d.driver.variables:
-                                v.targets[0].id = scene.objects['LLS_LIGHT_MESH.'+controller.name.split('.')[1]]
-                                
-                    elif mat.name.startswith('LLS_light'):
-                        #mat = mat.copy()
-                        light_mat = mat.copy()
-                        controller.data.materials[id] = light_mat
-                        light_mat.node_tree.nodes['Light Texture'].image = light_mat.node_tree.nodes['Light Texture'].image.copy()
-                        
-                for id, mat in enumerate(lmesh.data.materials):
-                    if mat.name.startswith('LLS_light'):
-                        lmesh.data.materials[id] = light_mat               
-                            
-        # revert visibility
-        for ob in chain(obsToCopy, new_objects):
-            ob.hide = True
-            ob.hide_select = True
-            
-            if ob.name.startswith('LLS_LIGHT_MESH.') or \
-               ob.name.startswith('LLS_HANDLE') or \
-               ob.name.startswith('LLS_CONTROLLER.'):
-                ob.hide = False
-                ob.hide_select = False
-                
-        profileName = props.profile_list[props.list_index].name
-        
-        bpy.ops.lls_list.new_profile(handle=False)
-        lastItemId = len(props.profile_list)-1
-        
-        # parent objects to new profile
-        for ob in new_objects:
-            scene.objects.unlink(ob)
-            if ob.name.startswith('LLS_LIGHT_GRP.'):
-                ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
-            elif ob.name.startswith('LLS_HANDLE.'):
-                ob.parent = bpy.data.objects[props.profile_list[lastItemId].empty_name]
-                
-            
-        props.profile_list[len(props.profile_list)-1].name = profileName + ' Copy'
-        
-        
+        for l in [lm for lc in profile_copy.children if lc.name.startswith('LLS_Light') for lm in lc.objects if lm.name.startswith('LLS_LIGHT_MESH')]:
+            l.constraints['Copy Location'].target = handle
+
+        new_list_item = props.profile_list.add()
+        new_list_item.empty_name = profile_copy.name_full
+        new_list_item.name = props.profile_list[props.list_index].name + ' Copy'
+
         # place copied profile next to source profile
+        lastItemId = len(props.profile_list)-1
         while lastItemId > props.list_index+1:
             list.move(lastItemId-1, lastItemId)
             lastItemId -= 1
-        
-        context.area.spaces[0].layers = oldlaysArea
-        context.scene.layers = oldlaysScene
         
         return{'FINISHED'}
     
@@ -313,7 +315,6 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
 def update_list_index(self, context):
     props = context.scene.LLStudio
-    lls_collection = get_lls_collection(context)
     
     if len(props.profile_list) == 0: return
         
@@ -324,9 +325,10 @@ def update_list_index(self, context):
     print('Index update {}'.format(self.list_index))
         
     #unlink current profile
-    prof_idx = context.scene.objects.find(props.last_empty)
-    if prof_idx > -1: # in case of update after deletion
-        profile_collection = context.scene.objects[prof_idx].users_collection[0]
+    lls_collection = get_lls_collection(context)
+    profile_collection = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')]
+    profile_collection = profile_collection[0] if profile_collection else None
+    if profile_collection:
         lls_collection.children.unlink(profile_collection)
         
     #link selected profile
@@ -335,7 +337,8 @@ def update_list_index(self, context):
     props.last_empty = selected_profile.empty_name
 
     from . operators.modal import update_light_sets, panel_global
-    update_light_sets(panel_global, bpy.context, always=True)
+    if panel_global:
+        update_light_sets(panel_global, bpy.context, always=True)
         
 # import/export
 import json, time
@@ -591,12 +594,14 @@ class CopyProfileToScene(bpy.types.Operator):
         
         profiles = [compose_profile(index),]
         
-        context.screen.scene = bpy.data.scenes[self.sceneprop]
+        context.window.scene = bpy.data.scenes[self.sceneprop]
         context.scene.render.engine = 'CYCLES'
         if not context.scene.LLStudio.initialized:
             bpy.ops.scene.create_leomoon_light_studio()
         
         parse_profile(context, context.scene.LLStudio, profiles, internal_copy=True)
+
+        close_control_panel()
         
         return{'FINISHED'}
         
