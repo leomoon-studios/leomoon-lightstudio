@@ -43,6 +43,12 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
+### 2.5.1 2020-05-08:
+* Fixed Copy Profile function
+* Fixed Copy Profile to Scene function
+* Fixed LightStudio world node from being created again if it exists
+* Added Open Textures Folder button
+
 ### 2.5.0 2020-03-23:
 * Fixed LightStudio error when opening Bledner 2.8x
 * Fixed LightStudio error when deleting studio
