@@ -355,7 +355,12 @@ class LLS_OT_control_panel(bpy.types.Operator):
                             self.clicked_object.mute = not self.clicked_object.mute
 
                     if hasattr(self.clicked_object, 'select'):
-                        self.clicked_object.select()
+                        try:
+                            self.clicked_object.select()
+                        except RuntimeError:
+                            print("Stale panel context. Panel closed.")
+                            close_control_panel()
+
                         if self.ctrl and len(overlapped)>1:
                             send_light_to_bottom(self.clicked_object)
                             self.find_clicked(area_mouse_x, area_mouse_y).select()
