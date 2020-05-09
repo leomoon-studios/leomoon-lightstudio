@@ -99,12 +99,13 @@ class SetBackground(bpy.types.Operator):
     bl_description = "Darken background and disable background influence"
     bl_label = "Background Setup (Optional)"
     bl_options = {"REGISTER", "UNDO"}
-    @classmethod
-    def poll(self, context):
-        """ Enable if there's something in the list """
-        return len(context.scene.LLStudio.profile_list)
+    # @classmethod
+    # def poll(self, context):
+        # """ Enable if there's something in the list """
+        # return len(context.scene.LLStudio.profile_list)
 
     def execute(self, context):
+        bpy.context.scene.render.engine = 'CYCLES'
         if bpy.data.worlds.get('LightStudio') is None:
             bpy.context.scene.world = bpy.data.worlds.new('LightStudio')
         else:
