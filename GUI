@@ -1,20 +1,20 @@
 * BUTTON ICONS GUIDE:
-	[+] = Add light (icon: ADD)
-	[-] = Delete light (icon: REMOVE)
-	[L] = Lock light (icon: UNLOCKED, LOCKED)
-	[V] = Show/hide light (icon: HIDE_OFF, HIDE_ON)
-	[S] = Solo selected light (icon: SOLO_OFF, SOLO_ON)
-	[C] = Copy menu (icon: DUPLICATE)
+    [+] = Add light (icon: ADD)
+    [-] = Delete light (icon: REMOVE)
+    [L] = Lock light (icon: UNLOCKED, LOCKED)
+    [V] = Show/hide light (icon: HIDE_OFF, HIDE_ON)
+    [S] = Solo selected light (icon: SOLO_OFF, SOLO_ON)
+    [C] = Copy menu (icon: DUPLICATE)
 
 New scene that doesn't have LightStudio:
 ▼ Studio
-	[            Create LightStudio             ]
+    [            Create LightStudio             ]
 
 
 After adding LightStudio:
 ▼ Studio
-	[            Delete LightStudio             ]
-	[          Show LightStudio Panel           ]
+    [            Delete LightStudio             ]
+    [          Show LightStudio Panel           ]
 ▼ Lights
     ┌---------------------------------------┐ [+]
     | Light 1                      [L][V][S]| [-]
@@ -27,17 +27,17 @@ After adding LightStudio:
     ┌-------------------------------------------┐
     |              ┌-------------┐              |
     |              |             |              |
-	|              |             |              |
-	|              |             |              |
+    |              |             |              |
+    |              |             |              |
     |              |             |              |
     |              |             |              |
     |              └-------------┘              |
     | Soft Box A                                |
-	| ◄ Texture Switch                  1.000 ► |
+    | ◄ Texture Switch                  1.000 ► |
     └-------------------------------------------┘
     Color Overlay:                      [       ]
     ┌-------------------------------------------┐
-	| ◄ Color Saturation:               0.300 ► |
+    | ◄ Color Saturation:               0.300 ► |
     | ◄ Intensity:                      2.000 ► |
     | ◄ Mask - Gradient Switch:         0.000 ► |
     | ◄ Mask - Gradient Type:           0.000 ► |
@@ -64,8 +64,8 @@ After adding LightStudio:
     |                                       | [▼]
     └---------------------------------------┘
 ▼ Import/Export
-	[          Export Selected Profile          ]
-	[            Export All Profiles            ]
-	[              Import Profiles              ]
+    [          Export Selected Profile          ]
+    [            Export All Profiles            ]
+    [              Import Profiles              ]
 ▼ Misc
-	[            Find Missing Textures          ]
+    [            Find Missing Textures          ]
