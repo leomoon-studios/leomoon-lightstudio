@@ -36,8 +36,8 @@ fragment_shader = '''
     layout(location = 1) out vec4 trash;
 
     uniform sampler2D image;
-    uniform float panel_point_left;
-    uniform float panel_point_right;
+    uniform vec2 panel_point_lt;
+    uniform vec2 panel_point_rb;
 
     uniform vec4 color_overlay = vec4(0);
     uniform float intensity = 1;
@@ -62,7 +62,7 @@ fragment_shader = '''
     void main()
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(panel_point_left+panel_point_right+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
+        trash = vec4(panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
         
         // Texture Switch + Intensity
         // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
@@ -127,7 +127,8 @@ fragment_shader = '''
         fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_left ? fragColor.a : 0;
 
         // Panel bound clipping
-        if(gl_FragCoord.x < panel_point_left || gl_FragCoord.x > panel_point_right)
+        if((gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
+         || (gl_FragCoord.y < panel_point_rb.y || gl_FragCoord.y > panel_point_lt.y))
             discard;
     }
 '''
@@ -158,8 +159,9 @@ border_fragment_shader= '''
     {
         fragColor = color;
 
-        if(gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
-            fragColor.rgba = vec4(0);
+        if((gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
+         || (gl_FragCoord.y < panel_point_rb.y || gl_FragCoord.y > panel_point_lt.y))
+            discard;
     }
 '''
 
@@ -645,8 +647,8 @@ class LightImage(Rectangle):
         bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
         lightIconShader.uniform_int("image", 0)
 
-        lightIconShader.uniform_float("panel_point_left", self.panel.point_lt.x)
-        lightIconShader.uniform_float("panel_point_right", self.panel.point_rb.x)
+        lightIconShader.uniform_float("panel_point_lt", self.panel.point_lt)
+        lightIconShader.uniform_float("panel_point_rb", self.panel.point_rb)
 
         try:
             # material properties
