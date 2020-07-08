@@ -379,7 +379,9 @@ class LLS_OT_control_panel(bpy.types.Operator):
                         self.clicked_object = overlapped
 
                     # Resize
+                    # Find border touch point. 0 when no point found
                     touch_point = self.border_touch_point(context, area_mouse_x, area_mouse_y)
+                    # Make sure border touch point is not obstructed by other objects
                     if touch_point and not isinstance(self.clicked_object, Button):
                         self.border_touch = touch_point
                         return {"RUNNING_MODAL"}
