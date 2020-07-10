@@ -45,7 +45,7 @@ Thank you.
 ## Changelog
 ### 2.5.2 2020-07-10:
 * Fixed light going outside of LightPanel
-* Added LighPanel resizing
+* Added resizing to LighPanel
 * Minor bugfixes
 
 ### 2.5.1 2020-05-08:
