@@ -43,6 +43,11 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
+### 2.5.2 2020-07-10:
+* Fixed light going outside of LightPanel
+* Added LighPanel resizing
+* Minor bugfixes
+
 ### 2.5.1 2020-05-08:
 * Fixed Copy Profile function
 * Fixed Copy Profile to Scene function
