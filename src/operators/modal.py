@@ -4,6 +4,7 @@ from mathutils import *
 
 from . modal_utils import *
 from . import *
+from .. import light_list
 
 from .modal_utils import shader2Dcolor
 from gpu_extras.batch import batch_for_shader
@@ -55,6 +56,8 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget):
         bpy.context.workspace.status_text_set(f"Rot: {self.angle():.3f}")
         #context.area.header_text_set(text=f"Rot: {self.angle():.3f}")
 
+        if not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
+            return {"RUNNING_MODAL"}
         return {"PASS_THROUGH"}
 
 class LLS_OT_Scale(bpy.types.Operator, MouseWidget):
@@ -161,6 +164,7 @@ W_LEFT = 1
 W_RIGHT = 2
 W_TOP = 4
 W_BOTTOM = 8
+# CTRL, SHIFT, ALT = False
 class LLS_OT_control_panel(bpy.types.Operator):
     bl_idname = "light_studio.control_panel"
     bl_label = "LightStudio Control Panel"
@@ -205,6 +209,8 @@ class LLS_OT_control_panel(bpy.types.Operator):
         return dx, dy, area_mouse_x, area_mouse_y
 
     def invoke(self, context, event):
+        light_list.update_light_list_set(context)
+
         global running_modals
         running_modals += 1
         if running_modals > 1:
@@ -233,6 +239,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
         #context.area.header_text_set(text=textinfo)
 
         self.ctrl = False
+        self.modifier_key = False
 
         return {"RUNNING_MODAL"}
     
@@ -242,6 +249,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
         for b in Button.buttons:
             if is_in_rect(b, Vector((area_mouse_x, area_mouse_y))):
+                context.window.cursor_set('DEFAULT')
                 return 0
 
         if area_mouse_x < self.panel.point_lt.x+treshold and area_mouse_x >= self.panel.point_lt.x-treshold:
@@ -274,7 +282,9 @@ class LLS_OT_control_panel(bpy.types.Operator):
             context.area.tag_redraw()
             return {"FINISHED"}
 
-        # print(event.type, event.value)
+        if event.type != "MOUSEMOVE":
+            print(event.type, event.value)
+
         if not context.area or (context.object and not context.object.mode == 'OBJECT'):
             self._unregister_handler()
             return {"CANCELLED"}
@@ -284,7 +294,10 @@ class LLS_OT_control_panel(bpy.types.Operator):
             update_light_sets(self.panel, context)
             LightImage.refresh()
 
-            if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
+            if event.type in {"TIMER", "NONE", "WINDOW_DEACTIVATE"}:
+                self.ctrl = False
+                self.modifier_key = False
+            elif event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
                 dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
                 
                 # Draw resize cursor
@@ -318,8 +331,10 @@ class LLS_OT_control_panel(bpy.types.Operator):
             if event.value == "PRESS":
                 if event.type in {"LEFT_CTRL"}:
                     self.ctrl = True
-
-                if event.type in {"R"}:
+                if event.type in {"LEFT_CTRL", "RIGHT_CTRL", "LEFT_SHIFT", "RIGHT_SHIFT", "LEFT_ALT", "RIGHT_ALT"}:
+                    self.modifier_key = True
+                
+                if event.type in {"R"} and not self.modifier_key:
                     active_object = None
                     if LightImage.selected_object:
                         active_object = LightImage.selected_object
@@ -327,7 +342,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
                     if active_object:
                         bpy.ops.light_studio.rotate('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
                         return {'RUNNING_MODAL'}
-                elif event.type in {"S"}:
+                elif event.type in {"S"} and not self.modifier_key:
                     active_object = None
                     if LightImage.selected_object:
                         active_object = LightImage.selected_object
@@ -463,10 +478,9 @@ class LLS_OT_control_panel(bpy.types.Operator):
                 elif event.type == "LEFT_SHIFT":
                     self.precision_mode = False
                     return {'RUNNING_MODAL'}
-                elif event.type in {"LEFT_CTRL"}:
-                    self.ctrl = False
-
-            if event.value == "CLICK":
+                if event.type in {"LEFT_CTRL", "RIGHT_CTRL", "LEFT_SHIFT", "RIGHT_SHIFT", "LEFT_ALT", "RIGHT_ALT"}:
+                    self.modifier_key = False
+            elif event.value == "CLICK":
                 # Left mouse button clicked
                 if event.type == "LEFTMOUSE":
                     return {"PASS_THROUGH"}
@@ -512,7 +526,12 @@ def update_light_sets(panel, context, always=False):
                 LightImage.remove(col)
 
             for col in to_add:
-                LightImage(context, panel, col)
+                try:
+                    LightImage(context, panel, col)
+                except:
+                    # Some crucial objects are missing. Delete whole light collection
+                    bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
+                    bpy.data.collections.remove(col)
 
             update_clear()
 

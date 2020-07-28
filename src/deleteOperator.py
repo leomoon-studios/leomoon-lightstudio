@@ -1,6 +1,7 @@
 import bpy
 from bpy.props import BoolProperty
 from . common import findLightGrp
+from . import light_list
 
 class DeleteOperator(bpy.types.Operator):
     """ Custom delete """
@@ -15,7 +16,6 @@ class DeleteOperator(bpy.types.Operator):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
     
     def execute(self, context):
-        protected_groups = [findLightGrp(ob) for ob in context.selected_objects if ob.protected]
         protected_objects = (ob for ob in context.selected_objects if ob.protected)
         
         for obj in protected_objects:
@@ -27,6 +27,8 @@ class DeleteOperator(bpy.types.Operator):
                 self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
         
         bpy.ops.object.delete(use_global=self.use_global)
+
+        light_list.update_light_list_set(context)
 
         return {'FINISHED'}
 

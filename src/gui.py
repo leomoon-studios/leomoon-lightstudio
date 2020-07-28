@@ -40,8 +40,17 @@ class LLS_PT_Lights(bpy.types.Panel):
         layout = self.layout
         col = layout.column(align=True)
         row = col.row(align=True)
-        row.operator('scene.add_leomoon_studio_light', text='Add Light')
-        row.operator('scene.delete_leomoon_studio_light', text='Delete Light')
+        
+        props = context.scene.LLStudio
+
+        row = layout.row()
+        col = row.column()
+        col.template_list("LLS_UL_LightList", "Light_List", props, "light_list", props, "light_list_index", rows=5)
+
+        col = row.column(align=True)
+        col.operator('scene.add_leomoon_studio_light', icon='PLUS', text="")
+        col.operator('scene.delete_leomoon_studio_light', icon='TRASH', text="")
+
 
 @force_register
 class LLS_PT_Selected(bpy.types.Panel):
@@ -103,7 +112,7 @@ class LLS_PT_ProfileList(bpy.types.Panel):
 
         row = layout.row()
         col = row.column()
-        col.template_list("LLS_UL_List", "Profile_List", props, "profile_list", props, "list_index", rows=5)
+        col.template_list("UI_UL_list", "Profile_List", props, "profile_list", props, "list_index", rows=5)
 
         col = row.column(align=True)
         col.operator('lls_list.new_profile', icon='PLUS', text="")
