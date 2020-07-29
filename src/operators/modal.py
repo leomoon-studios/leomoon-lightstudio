@@ -252,18 +252,21 @@ class LLS_OT_control_panel(bpy.types.Operator):
                 context.window.cursor_set('DEFAULT')
                 return 0
 
-        if area_mouse_x < self.panel.point_lt.x+treshold and area_mouse_x >= self.panel.point_lt.x-treshold:
-            touch_point |= W_LEFT
-            context.window.cursor_set('MOVE_X')
-        elif area_mouse_x > self.panel.point_rb.x-treshold and area_mouse_x <= self.panel.point_rb.x+treshold:
-            touch_point |= W_RIGHT
-            context.window.cursor_set('MOVE_X')
-        if area_mouse_y > self.panel.point_lt.y-treshold and area_mouse_y <= self.panel.point_lt.y+treshold:
-            touch_point |= W_TOP
-            context.window.cursor_set('MOVE_Y')
-        elif area_mouse_y < self.panel.point_rb.y+treshold and area_mouse_y >= self.panel.point_rb.y-treshold:
-            touch_point |= W_BOTTOM
-            context.window.cursor_set('MOVE_Y')
+        if area_mouse_y >= self.panel.point_rb.y-treshold and area_mouse_y <= self.panel.point_lt.y+treshold:
+            if area_mouse_x < self.panel.point_lt.x+treshold and area_mouse_x >= self.panel.point_lt.x-treshold:
+                touch_point |= W_LEFT
+                context.window.cursor_set('MOVE_X')
+            elif area_mouse_x > self.panel.point_rb.x-treshold and area_mouse_x <= self.panel.point_rb.x+treshold:
+                touch_point |= W_RIGHT
+                context.window.cursor_set('MOVE_X')
+        
+        if area_mouse_x >= self.panel.point_lt.x-treshold and area_mouse_x <= self.panel.point_rb.x+treshold:
+            if area_mouse_y > self.panel.point_lt.y-treshold and area_mouse_y <= self.panel.point_lt.y+treshold:
+                touch_point |= W_TOP
+                context.window.cursor_set('MOVE_Y')
+            elif area_mouse_y < self.panel.point_rb.y+treshold and area_mouse_y >= self.panel.point_rb.y-treshold:
+                touch_point |= W_BOTTOM
+                context.window.cursor_set('MOVE_Y')
 
         if touch_point == W_LEFT | W_TOP\
             or touch_point == W_LEFT | W_BOTTOM\

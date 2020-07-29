@@ -23,7 +23,6 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
 
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
-    # protected: bpy.props.BoolProperty(name = 'protected', default = False)
     light_name: bpy.props.StringProperty()
 
 class CreateBlenderLightStudio(bpy.types.Operator):
