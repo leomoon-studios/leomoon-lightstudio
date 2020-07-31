@@ -71,6 +71,7 @@ def set_list_index(self, index):
     ob.select_set(True)
 
 def update_light_list_set(context):
+    '''Update light list set. Use when the light list needs to be synced with real object hierarchy. '''
     props = context.scene.LLStudio
     lls_collection, profile_collection = llscol_profilecol(context)
     if profile_collection is not None:

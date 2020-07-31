@@ -285,8 +285,8 @@ class LLS_OT_control_panel(bpy.types.Operator):
             context.area.tag_redraw()
             return {"FINISHED"}
 
-        if event.type != "MOUSEMOVE":
-            print(event.type, event.value)
+        # if event.type != "MOUSEMOVE":
+        #     print(event.type, event.value)
 
         if not context.area or (context.object and not context.object.mode == 'OBJECT'):
             self._unregister_handler()
