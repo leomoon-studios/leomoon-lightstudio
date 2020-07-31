@@ -4,6 +4,7 @@ import os, sys, subprocess
 from . common import *
 from itertools import chain
 from . operators.modal import close_control_panel
+from . import light_list
 
 _ = os.sep
 
@@ -20,19 +21,6 @@ class ListItem(bpy.types.PropertyGroup):
             name="Name of Empty that holds the profile",
             description="",
             default="")
-
-class LLS_UL_List(bpy.types.UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.list_index else 'LIGHT'
-
-        # Make sure your code supports all 3 layout types
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.prop(item, 'name', text='', icon = custom_icon, emboss=False, translate=False)
-
-        elif self.layout_type in {'GRID'}:
-            layout.alignment = 'CENTER'
-            layout.label("", icon = custom_icon)
-
 
 class LIST_OT_NewItem(bpy.types.Operator):
 
@@ -105,6 +93,8 @@ class LIST_OT_NewItem(bpy.types.Operator):
         props.last_empty = profile.name
         props.list_index = len(props.profile_list)-1
 
+        light_list.update_light_list_set(context)
+
         return{'FINISHED'}
 
 class LIST_OT_DeleteItem(bpy.types.Operator):
@@ -140,6 +130,8 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         if index > 0:
             index = index - 1
         props.list_index = index
+
+        light_list.update_light_list_set(context)
 
         return{'FINISHED'}
 
@@ -312,7 +304,6 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-
 def update_list_index(self, context):
     props = context.scene.LLStudio
 
@@ -340,12 +331,14 @@ def update_list_index(self, context):
     if panel_global:
         update_light_sets(panel_global, bpy.context, always=True)
 
+    light_list.update_light_list_set(context)
+
 # import/export
 import json, time
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
 
-VERSION = 2.00
+VERSION = 2.01
 def parse_profile(context, props, profiles, version=VERSION, internal_copy=False):
     plist = props.profile_list
     for profile in profiles:
@@ -390,6 +383,9 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
             lmesh.scale.z = light['scale'][2]
 
             lmesh.rotation_euler.x = light['rotation']
+
+            if 'light_name' in light:
+                lmesh.LLStudio.light_name = light['light_name']
 
             lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[2].default_value = light['Texture Switch']
             lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[0] = light['Color Overlay'][0]
@@ -465,6 +461,7 @@ def compose_profile(list_index):
         lmesh = [ob for ob in light_collection.objects if ob.name.startswith('LLS_LIGHT_MESH')][0]
         actuator = [ob for ob in light_collection.objects if ob.name.startswith('LLS_ROTATION')][0]
         light = {}
+        light['light_name'] = lmesh.LLStudio.light_name
         light['radius'] = lmesh.location.x
         light['position'] = [actuator.rotation_euler.x, actuator.rotation_euler.y]
         light['scale'] = [lmesh.scale.x, lmesh.scale.y, lmesh.scale.z]

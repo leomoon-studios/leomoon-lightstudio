@@ -47,7 +47,9 @@ def get_view_layers(layer_collection):
             
 def isFamily(ob=None):
     if not ob:
-        ob = bpy.context.scene.objects.active
+        ob = bpy.context.view_layer.objects.active
+        if not ob:
+            return False
 
     if ob.name.startswith('LEOMOON_LIGHT_STUDIO'): return True
     if not ob.name.startswith('LLS_'): return False

@@ -4,6 +4,7 @@ from . light_profiles import ListItem, update_list_index
 from . common import *
 import os
 from . import operators
+from . import light_list
 
 _ = os.sep
 
@@ -18,6 +19,11 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     list_index: IntProperty(name = "Index for profile_list", default = 0, update=update_list_index)
     last_empty: StringProperty(name="Name of last Empty holding profile", default="")
 
+    light_list: CollectionProperty(type = light_list.LightListItem)
+    light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
+
+class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
+    light_name: bpy.props.StringProperty()
 
 class CreateBlenderLightStudio(bpy.types.Operator):
     bl_idname = "scene.create_leomoon_light_studio"
@@ -167,6 +173,8 @@ class AddBSLight(bpy.types.Operator):
         # refreshMaterials()
 
         operators.update()
+        light_list.update_light_list_set(context)
+
         return {"FINISHED"}
 
 class DeleteBSLight(bpy.types.Operator):
@@ -195,6 +203,8 @@ class DeleteBSLight(bpy.types.Operator):
                 bpy.data.collections.remove(collection)
 
         operators.update()
+        light_list.update_light_list_set(context)
+
         return {"FINISHED"}
 
     def invoke(self, context, event):

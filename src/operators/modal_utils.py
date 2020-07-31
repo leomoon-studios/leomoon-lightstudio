@@ -470,6 +470,8 @@ class LightImage(Rectangle):
     
     @classmethod
     def refresh(cls):
+        props = bpy.context.scene.LLStudio
+
         cls.selected_object = None
         for l in cls.lights:
             try:
@@ -534,10 +536,13 @@ class LightImage(Rectangle):
         self.panel = panel
         self.__panel_loc = Vector((.5, .5))
 
+        # try:
         self._collection = lls_light_collection
         self._lls_mesh = [m for m in lls_light_collection.objects if m.name.startswith("LLS_LIGHT_MESH")][0]
         self._lls_actuator = self._lls_mesh.parent
         self._view_layer = find_view_layer(self._collection, context.view_layer.layer_collection)
+        # except Exception:
+        #     raise Exception
         
         self._image_path = ""
         self._lls_rot = None
