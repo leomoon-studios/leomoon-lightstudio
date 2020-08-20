@@ -43,6 +43,13 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
+### 2.6.0 2020-07-31:
+* Replaced Add Light and Delete Light buttons with a light list
+* Lights can be renamed in the light list
+* Lights can be toggled in the light list
+* Lights can be isolated in the light list
+* Light selection is syncronized with the LightPanel
+
 ### 2.5.2 2020-07-10:
 * Fixed light going outside of LightPanel
 * Added resizing to LighPanel
