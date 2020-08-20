@@ -164,7 +164,6 @@ W_LEFT = 1
 W_RIGHT = 2
 W_TOP = 4
 W_BOTTOM = 8
-# CTRL, SHIFT, ALT = False
 class LLS_OT_control_panel(bpy.types.Operator):
     bl_idname = "light_studio.control_panel"
     bl_label = "LightStudio Control Panel"
@@ -246,6 +245,16 @@ class LLS_OT_control_panel(bpy.types.Operator):
     def border_touch_point(self, context, area_mouse_x, area_mouse_y):
         touch_point = 0
         treshold = 5
+
+        # decrease clickable size by UI tools region
+        r_ui = [r for r in context.area.regions if r.type == 'UI'][0]
+        if r_ui.alignment=='RIGHT':
+            if area_mouse_x >= context.area.width - r_ui.width - 2:
+                return touch_point
+        else:
+            if area_mouse_x <= r_ui.width + 2:
+                return touch_point
+
 
         for b in Button.buttons:
             if is_in_rect(b, Vector((area_mouse_x, area_mouse_y))):
@@ -496,6 +505,16 @@ class LLS_OT_control_panel(bpy.types.Operator):
         return {"PASS_THROUGH"}
 
     def find_clicked(self, area_mouse_x, area_mouse_y, overlapping=False):
+        # decrease clickable size by UI tools region
+        r_ui = [r for r in bpy.context.area.regions if r.type == 'UI'][0]
+        if r_ui.alignment=='RIGHT':
+            if area_mouse_x >= bpy.context.area.width - r_ui.width - 2:
+                return None
+        else:
+            if area_mouse_x <= r_ui.width + 2:
+                return None
+
+        
         overlapped = []
         for l in reversed(LightImage.lights):
             if l.is_mouse_over(area_mouse_x, area_mouse_y):

@@ -127,3 +127,85 @@ def refreshMaterials():
         mat = [m for m in cntrl.data.materials if m.name.startswith('LLS_icon_ctrl')][0]
         mixNode = mat.node_tree.nodes['Mix Shader'].inputs['Fac']
         mixNode.default_value = mixNode.default_value
+
+def duplicate_collection(collection, parent_collection):
+    new_collection = bpy.data.collections.new(collection.name)
+
+    new_names = {}
+    matrix_data = {}
+
+    for obj in collection.objects:
+        new_obj = obj.copy()
+
+        new_names[obj.name] = new_obj
+        matrix_data[new_obj.name] = {
+            "matrix_basis": obj.matrix_basis.copy(),
+            "matrix_local": obj.matrix_local.copy(),
+            "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
+            "matrix_world": obj.matrix_world.copy()
+            }
+
+        if new_obj.data:
+            new_obj.data = obj.data.copy()
+        for slot in new_obj.material_slots:
+            slot.material = slot.material.copy()
+        new_obj.parent = obj.parent
+        new_collection.objects.link(new_obj)
+
+    for obj in new_collection.objects:
+        if obj.parent:
+            if obj.parent.name in new_names:
+                obj.parent = new_names[obj.parent.name]
+            obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
+            #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
+            obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
+            #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
+
+
+    if parent_collection:
+        parent_collection.children.link(new_collection)
+
+    iter_list = [collection.children]
+    parent_collection = new_collection
+
+    while len(iter_list) > 0:
+        new_iter_list = []
+
+        for iter in iter_list:
+            for collection in iter:
+
+                new_collection = bpy.data.collections.new(collection.name)
+
+                for obj in collection.objects:
+                    new_obj = obj.copy()
+
+                    new_names[obj.name] = new_obj
+                    matrix_data[new_obj.name] = {
+                        "matrix_basis": obj.matrix_basis.copy(),
+                        "matrix_local": obj.matrix_local.copy(),
+                        "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
+                        "matrix_world": obj.matrix_world.copy()
+                        }
+
+                    if new_obj.data:
+                        new_obj.data = obj.data.copy()
+                    for slot in new_obj.material_slots:
+                        slot.material = slot.material.copy()
+                    new_obj.parent = obj.parent
+                    new_collection.objects.link(new_obj)
+
+                for obj in new_collection.objects:
+                    if obj.parent:
+                        obj.parent = new_names[obj.parent.name]
+                        obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
+                        #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
+                        obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
+                        #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
+
+                parent_collection.children.link(new_collection)
+
+                if len(collection.children) > 0:
+                    new_iter_list.append(collection.children)
+
+        iter_list = new_iter_list
+    return parent_collection

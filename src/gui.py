@@ -48,8 +48,13 @@ class LLS_PT_Lights(bpy.types.Panel):
         col.template_list("LLS_UL_LightList", "Light_List", props, "light_list", props, "light_list_index", rows=5)
 
         col = row.column(align=True)
-        col.operator('scene.add_leomoon_studio_light', icon='PLUS', text="")
-        col.operator('scene.delete_leomoon_studio_light', icon='TRASH', text="")
+        col.operator('scene.add_leomoon_studio_light', icon='ADD', text="")
+        col.operator('scene.delete_leomoon_studio_light', icon='REMOVE', text="")
+        col.operator('lls_list.copy_light', icon='DUPLICATE', text="")
+
+        col.separator()
+        col.operator('lls_list.move_light', text='', icon="TRIA_UP").direction = 'UP'
+        col.operator('lls_list.move_light', text='', icon="TRIA_DOWN").direction = 'DOWN'
 
 
 @force_register
@@ -115,8 +120,8 @@ class LLS_PT_ProfileList(bpy.types.Panel):
         col.template_list("UI_UL_list", "Profile_List", props, "profile_list", props, "list_index", rows=5)
 
         col = row.column(align=True)
-        col.operator('lls_list.new_profile', icon='PLUS', text="")
-        col.operator('lls_list.delete_profile', icon='TRASH', text="")
+        col.operator('lls_list.new_profile', icon='ADD', text="")
+        col.operator('lls_list.delete_profile', icon='REMOVE', text="")
         col.operator('lls_list.copy_profile_menu', icon='DUPLICATE', text="")
 
         col.separator()

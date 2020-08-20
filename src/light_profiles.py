@@ -135,84 +135,6 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-def duplicate_collection(collection, parent_collection):
-    new_collection = bpy.data.collections.new(collection.name)
-
-    new_names = {}
-    matrix_data = {}
-
-    for obj in collection.objects:
-        new_obj = obj.copy()
-
-        new_names[obj.name] = new_obj
-        matrix_data[new_obj.name] = {
-            "matrix_basis": obj.matrix_basis.copy(),
-            "matrix_local": obj.matrix_local.copy(),
-            "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
-            "matrix_world": obj.matrix_world.copy()
-            }
-
-        if new_obj.data:
-            new_obj.data = obj.data.copy()
-        new_obj.parent = obj.parent
-        new_collection.objects.link(new_obj)
-
-    for obj in new_collection.objects:
-        if obj.parent:
-            if obj.parent.name in new_names:
-                obj.parent = new_names[obj.parent.name]
-            obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
-            #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
-            obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
-            #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
-
-
-    if parent_collection:
-        parent_collection.children.link(new_collection)
-
-    iter_list = [collection.children]
-    parent_collection = new_collection
-
-    while len(iter_list) > 0:
-        new_iter_list = []
-
-        for iter in iter_list:
-            for collection in iter:
-
-                new_collection = bpy.data.collections.new(collection.name)
-
-                for obj in collection.objects:
-                    new_obj = obj.copy()
-
-                    new_names[obj.name] = new_obj
-                    matrix_data[new_obj.name] = {
-                        "matrix_basis": obj.matrix_basis.copy(),
-                        "matrix_local": obj.matrix_local.copy(),
-                        "matrix_parent_inverse": obj.matrix_parent_inverse.copy(),
-                        "matrix_world": obj.matrix_world.copy()
-                        }
-
-                    if new_obj.data:
-                        new_obj.data = obj.data.copy()
-                    new_obj.parent = obj.parent
-                    new_collection.objects.link(new_obj)
-
-                for obj in new_collection.objects:
-                    if obj.parent:
-                        obj.parent = new_names[obj.parent.name]
-                        obj.matrix_basis = matrix_data[obj.name]["matrix_basis"]
-                        #obj.matrix_local = matrix_data[obj.name]["matrix_local"]
-                        obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
-                        #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
-
-                parent_collection.children.link(new_collection)
-
-                if len(collection.children) > 0:
-                    new_iter_list.append(collection.children)
-
-        iter_list = new_iter_list
-    return parent_collection
-
 class LIST_OT_CopyItem(bpy.types.Operator):
 
     bl_idname = "lls_list.copy_profile"
@@ -227,9 +149,6 @@ class LIST_OT_CopyItem(bpy.types.Operator):
     def execute(self, context):
         props = context.scene.LLStudio
         list = props.profile_list
-        index = props.list_index
-
-        scene = context.scene
 
         lls_collection, profile_collection = llscol_profilecol(context)
 
@@ -386,6 +305,8 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
 
             if 'light_name' in light:
                 lmesh.LLStudio.light_name = light['light_name']
+            if 'order_index' in light:
+                lmesh.LLStudio.order_index = light['order_index']
 
             lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[2].default_value = light['Texture Switch']
             lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[0] = light['Color Overlay'][0]
@@ -462,6 +383,7 @@ def compose_profile(list_index):
         actuator = [ob for ob in light_collection.objects if ob.name.startswith('LLS_ROTATION')][0]
         light = {}
         light['light_name'] = lmesh.LLStudio.light_name
+        light['order_index'] = lmesh.LLStudio.order_index
         light['radius'] = lmesh.location.x
         light['position'] = [actuator.rotation_euler.x, actuator.rotation_euler.y]
         light['scale'] = [lmesh.scale.x, lmesh.scale.y, lmesh.scale.z]
@@ -500,6 +422,7 @@ def compose_profile(list_index):
         # light['Half'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[6].default_value
 
         profile_dict['lights'].append(light)
+        profile_dict['lights'].sort(key=lambda x: x["order_index"])
 
     return profile_dict
 

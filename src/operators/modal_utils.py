@@ -243,14 +243,14 @@ class Rectangle:
         new_loc.y = clamp(rect.point_rb.y, new_loc.y, rect.point_lt.y)
         self.loc = new_loc
 
-def send_light_to_bottom(light):
+def send_light_to_bottom(light=None):
     light = LightImage.selected_object if not light else light
     if not light:
         return
     lights = LightImage.lights
     lights.insert(0, lights.pop(lights.index(light)))
 
-def send_light_to_top(light):
+def send_light_to_top(light=None):
     light = LightImage.selected_object if not light else light
     if not light:
         return
