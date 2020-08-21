@@ -8,7 +8,6 @@ from . import light_list
 
 _ = os.sep
 
-from . extensions_framework import util as efutil
 from . import bl_info
 
 class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
@@ -23,7 +22,8 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
 
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
-    light_name: bpy.props.StringProperty()
+    light_name: StringProperty()
+    order_index: IntProperty()
 
 class CreateBlenderLightStudio(bpy.types.Operator):
     bl_idname = "scene.create_leomoon_light_studio"
@@ -160,6 +160,7 @@ class AddBSLight(bpy.types.Operator):
                 light = [p for p in new_objects if p.name.startswith('LLS_LIGHT_MESH')][0]
                 light.select_set(True)
                 context.view_layer.objects.active = light
+                light.LLStudio.order_index = len(context.scene.LLStudio.light_list)
 
         #####
 
@@ -190,8 +191,7 @@ class DeleteBSLight(bpy.types.Operator):
                context.mode == 'OBJECT' and \
                context.scene.LLStudio.initialized and \
                light and \
-               light.name.startswith('LLS_LIGHT') and \
-               not light.name.startswith('LLS_PROFILE')
+               light.name.startswith('LLS_LIGHT')
 
     def execute(self, context):
         scene = context.scene
