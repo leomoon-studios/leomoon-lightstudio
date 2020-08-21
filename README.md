@@ -43,6 +43,13 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
+### 2.6.1 2020-08-21:
+* Added "Up" and "Down" buttons to sort lights in the light list
+* Added button to copy light in the light list
+* Send light to top in the LightPanel when selected in the light list
+* Lights in copied profiles do not have shared materials any more
+* Constrained clickable area of the control panel by 3D viewport properties area
+
 ### 2.6.0 2020-07-31:
 * Replaced Add Light and Delete Light buttons with a light list
 * Lights can be renamed in the light list
