@@ -46,7 +46,7 @@ Thank you.
 ### 2.6.1 2020-08-21:
 * Added "Up" and "Down" buttons to sort lights in the light list
 * Added button to copy a light in the light list
-* Selected in the light list will bring that light to top in the LightPanel
+* Selecting a light in the light list will bring that light to top in the LightPanel
 * Lights in copied profiles do not have shared materials any more
 * Constrained clickable area of the control panel by 3D viewport properties area
 
