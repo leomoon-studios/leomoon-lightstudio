@@ -362,6 +362,7 @@ class ImportProfiles(bpy.types.Operator):
 
         file = json.loads(file)
         parse_profile(context, props, file["profiles"], float(file["version"]))
+        light_list.update_light_list_set(context)
 
         return{'FINISHED'}
 

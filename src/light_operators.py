@@ -8,7 +8,6 @@ from . import light_list
 
 _ = os.sep
 
-from . extensions_framework import util as efutil
 from . import bl_info
 
 class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
