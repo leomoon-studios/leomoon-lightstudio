@@ -235,3 +235,47 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
         box.label(text="(numpad) Icon scale up", icon='ADD')
 
         box.label(text="(numpad) Icon scale down", icon='REMOVE')
+
+def get_user_keymap_item(keymap_name, keymap_item_idname, multiple_entries=False):
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.user
+
+    km = kc.keymaps.get(keymap_name)
+    if multiple_entries:
+        return km, [i[1] for i in km.keymap_items.items() if i[0] == keymap_item_idname]
+    else:
+        return km, km.keymap_items.get(keymap_item_idname)
+
+import rna_keymap_ui
+from . common import get_user_keymap_item
+from . import light_brush, deleteOperator
+from . operators import modal
+class LLSPreferences(bpy.types.AddonPreferences):
+    # this must match the addon name, use '__package__'
+    # when defining this in a submodule of a python package.
+    bl_idname = __package__
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column()
+        kc = bpy.context.window_manager.keyconfigs.user
+        for km, kmi in light_brush.addon_keymaps + modal.addon_keymaps:
+            km = km.active()
+            col.context_pointer_set("keymap", km)
+            user_km, user_kmi = get_user_keymap_item(km.name, kmi.idname)
+            rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, user_kmi, col, 0)
+        
+        col.separator()
+        box = layout.box()
+        box.label(text="Internal object.delete operator wrappers to handle deleting of Light Studio objects.")
+        box.label(text="Wrapper operators copy their counterparts's settings during addon start.")
+        user_keymap_items = set()
+        for km, kmi in deleteOperator.addon_keymaps:
+            km = km.active()
+            box.context_pointer_set("keymap", km)
+            user_km, user_kmis = get_user_keymap_item(km.name, kmi.idname, multiple_entries=True)
+            new_set = set(user_kmis) - user_keymap_items
+            for new_item in new_set:
+                rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, new_item, box, 0)
+            user_keymap_items |= new_set

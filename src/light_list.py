@@ -12,7 +12,11 @@ _ = os.sep
 class LightListItem(bpy.types.PropertyGroup):
     """ Group of properties representing an item in the list """
     def update_name(self, context):
-        bpy.data.objects[self.mesh_name].LLStudio.light_name = self.name
+        name = self.name
+        if self.name == '':
+            name = self.mesh_name
+            self.name = name
+        bpy.data.objects[self.mesh_name].LLStudio.light_name = name
 
     name: StringProperty(
             name="Profile Name",
@@ -73,7 +77,7 @@ def set_list_index(self, index):
         bpy.context.view_layer.objects.active = ob
         ob.select_set(True)
 
-    if modal.panel_global:
+    if modal.running_modals:
         light_icon = [l for l in LightImage.lights if l._lls_mesh == ob][0]
         send_light_to_top(light_icon)
 

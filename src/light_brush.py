@@ -5,7 +5,7 @@ from mathutils.geometry import intersect_line_sphere
 from mathutils import Vector
 from bpy.props import *
 from . common import isFamily, family, findLightGrp, getLightMesh, getLightController
-
+from . operators import LightOperator
 
            
 def raycast(context, event, diff):
@@ -109,33 +109,23 @@ def raycast(context, event, diff):
     deg = copysign(degrees(Vector.angle(Vector((x,y,z)), Vector((x,y,0)))), z)
     actuator.rotation_euler.y = copysign(Vector.angle(Vector((x,y,z)), Vector((x,y,0))), z)
 
-class LLSLightBrush(bpy.types.Operator):
+class LLSLightBrush(bpy.types.Operator, LightOperator):
     """Click on object to position light and reflection"""
     bl_idname = "lls.light_brush"
     bl_label = "Light Brush"
     bl_options = {"UNDO"}
     
     aux: BoolProperty(default=False) # is aux operator working
-    diffuse_type: BoolProperty(default=False)
-    
-    @classmethod
-    def poll(cls, context):
-        light = context.active_object
-        return context.area.type == 'VIEW_3D' and \
-               context.mode == 'OBJECT' and \
-               context.scene.LLStudio.initialized and \
-               light and \
-               isFamily(light) and \
-               not (light.name.startswith('LLS_PANEL') or light.name.startswith('LLS_PROFILE') or light.name.startswith('LLS_LIGHT_GRP'))
+    normal_type: BoolProperty(default=False)
 
     def modal(self, context, event):
-        print(event.type, event.value)
+        # print(event.type, event.value)
         if self.aux:
             if event.type in {'LEFTMOUSE', 'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
                 self.aux = False
             return {'RUNNING_MODAL'}
         
-        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.diffuse_type else '[Reflection] | Normal'}")
+        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
         
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'Z', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
             # allow navigation
@@ -145,16 +135,16 @@ class LLSLightBrush(bpy.types.Operator):
             return {'FINISHED'}
         elif event.type == 'LEFTMOUSE':
             if event.value == 'PRESS':
-                raycast(context, event, self.diffuse_type)
+                raycast(context, event, self.normal_type)
                 return {'RUNNING_MODAL'}
             elif event.value == 'RELEASE':
                 return {'PASS_THROUGH'}
         elif event.type == 'MOUSEMOVE':
             if event.value == 'PRESS':
-                raycast(context, event, self.diffuse_type)
+                raycast(context, event, self.normal_type)
                 return {'PASS_THROUGH'}
         elif event.type == 'N' and event.value == 'PRESS':
-            self.diffuse_type = not self.diffuse_type
+            self.normal_type = not self.normal_type
 
         #return {'PASS_THROUGH'}
         return {'RUNNING_MODAL'}
@@ -166,3 +156,83 @@ class LLSLightBrush(bpy.types.Operator):
         else:
             self.report({'WARNING'}, "Active space must be a View3d")
             return {'CANCELLED'}
+
+key_released = False
+class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
+    """Point on object to position light and reflection"""
+    bl_idname = "light_studio.fast_3d_edit"
+    bl_label = "Fast 3D Edit"
+    bl_options = {"UNDO"}
+    
+    continuous: BoolProperty(default=False, name="Hold to use", description="Button behaviour.\n ON: Hold button to use. Release button to stop.\n OFF: Hold LMB to use, release LMB to stop.")
+    normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
+    
+    def modal(self, context, event):
+        global key_released
+        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
+        # print(event.type, event.value)
+        
+        if self.continuous:
+            if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
+                # allow navigation
+                return {'PASS_THROUGH'}
+            elif event.type in {'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
+                context.area.header_text_set(text=None)
+                return {'FINISHED'}
+            elif event.type == 'N' and event.value == 'PRESS':
+                self.normal_type = not self.normal_type
+                return {'RUNNING_MODAL'}
+            elif event.type == 'MOUSEMOVE':
+                raycast(context, event, self.normal_type)
+                return {'PASS_THROUGH'}
+            elif event.value == 'RELEASE' and not event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE', 'N'}:
+                context.area.header_text_set(text=None)
+                return {'FINISHED'}
+            elif event.value == 'RELEASE':
+                key_released = True
+                return {'PASS_THROUGH'}
+        else:
+            if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
+                # allow navigation
+                return {'PASS_THROUGH'}
+            elif event.type in {'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
+                context.area.header_text_set(text=None)
+                return {'FINISHED'}
+            elif event.type == 'N' and event.value == 'PRESS':
+                self.normal_type = not self.normal_type
+                return {'RUNNING_MODAL'}
+            elif event.type == 'MOUSEMOVE' and event.value == 'PRESS' and key_released:
+                raycast(context, event, self.normal_type)
+                return {'PASS_THROUGH'}
+            elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and key_released:
+                context.area.header_text_set(text=None)
+                return {'FINISHED'}
+            elif event.type in {'F', 'LEFTMOUSE'} and event.value == 'RELEASE':
+                key_released = True
+                return {'PASS_THROUGH'}
+
+        #return {'PASS_THROUGH'}
+        return {'RUNNING_MODAL'}
+
+    def invoke(self, context, event):
+        context.window_manager.modal_handler_add(self)
+        global key_released
+        key_released = False
+        return {'RUNNING_MODAL'}
+
+addon_keymaps = []
+def add_shortkeys():
+    wm = bpy.context.window_manager
+    addon_km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type="EMPTY")
+    
+    addon_kmi = addon_km.keymap_items.new(OT_LLSFast3DEdit.bl_idname, 'F', 'PRESS')
+    addon_kmi.properties.continuous = False
+    
+    addon_keymaps.append((addon_km, addon_kmi))
+
+def remove_shortkeys():
+    wm = bpy.context.window_manager
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+        
+    addon_keymaps.clear()

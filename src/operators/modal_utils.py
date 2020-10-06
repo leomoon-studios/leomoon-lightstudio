@@ -257,6 +257,14 @@ def send_light_to_top(light=None):
     lights = LightImage.lights
     lights.append(lights.pop(lights.index(light)))
 
+def fast_3d_edit(light=None):
+    try:
+        bpy.ops.light_studio.fast_3d_edit('INVOKE_DEFAULT', continuous=False)
+    except:
+        pass
+
+from .. common import get_user_keymap_item
+from .. light_brush import OT_LLSFast3DEdit
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
         super().__init__(loc, width, height)
@@ -265,6 +273,10 @@ class Panel(Rectangle):
 
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
         self.button_send_to_bottom.function = send_light_to_bottom
+
+        km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
+        self.button_fast_3d_edit = Button(Vector((0,0)), f'Fast 3D Edit [{kmi.type}]')
+        self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()
 
@@ -276,6 +288,11 @@ class Panel(Rectangle):
 
         self.button_send_to_bottom.loc = Vector((
             self.point_lt.x + self.button_send_to_bottom.dimensions[0]/2,
+            self.point_rb.y - self.button_exit.dimensions[1]/2,
+        ))
+
+        self.button_fast_3d_edit.loc = Vector((
+            self.point_lt.x + self.button_send_to_bottom.dimensions[0] + self.button_fast_3d_edit.dimensions[0]/2 + 15,
             self.point_rb.y - self.button_exit.dimensions[1]/2,
         ))
 
@@ -384,7 +401,7 @@ class Border(Rectangle):
         ]
         
         border_shader2Dcolor.bind()
-        bgl.glEnable(bgl.GL_BLEND);
+        bgl.glEnable(bgl.GL_BLEND)
         border_shader2Dcolor.uniform_float("color", self.color)
         border_shader2Dcolor.uniform_float("panel_point_lt", self.light_image.panel.point_lt)
         border_shader2Dcolor.uniform_float("panel_point_rb", self.light_image.panel.point_rb)
@@ -435,7 +452,7 @@ class Border(Rectangle):
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(border_shader2Dcolor)
-        bgl.glDisable(bgl.GL_BLEND);
+        bgl.glDisable(bgl.GL_BLEND)
 
     def get_verts(self):
         self.point_lt = self.light_image.point_lt.copy()
@@ -700,7 +717,7 @@ class LightImage(Rectangle):
             lightIconShader.uniform_float("mask_top_to_bottom", mask_top_to_bottom)
         except:
             pass
-        bgl.glEnable(bgl.GL_BLEND);
+        bgl.glEnable(bgl.GL_BLEND)
 
         if lleft < bleft:
             verts2 = deepcopy(verts)
@@ -750,7 +767,7 @@ class LightImage(Rectangle):
                     "texCoord": self.get_tex_coords(),
                 }
             ).draw(lightIconShader)
-        bgl.glDisable(bgl.GL_BLEND);
+        bgl.glDisable(bgl.GL_BLEND)
 
     def update_visual_location(self):
         self.loc = self.panel_loc_to_area_px_lt() + Vector((self.width/2, self.height/2))
@@ -795,7 +812,7 @@ class MouseWidget:
     mouse_y: bpy.props.IntProperty()
     
     def __init__(self):
-        self._start_position = Vector((0, 0))
+        self._start_position = None
         self._end_position = Vector((0, 0))
         self._reference_end_position = Vector((0, 0))
         self._base_rotation = 0
@@ -806,12 +823,17 @@ class MouseWidget:
         self.allow_xy_keys = False
         self.x_key = False
         self.y_key = False
+        self.z_key = False
 
         self.continous = False
 
         self.allow_precision_mode = False
         self.precision_mode = False
         self.precision_offset = Vector((0,0))
+        self.precision_factor = 0.1
+
+        self.z_start_position = Vector((0,0))
+        self.z_end_position = Vector((0,0))
 
     def invoke(self, context, event):
         mouse_x = event.mouse_x - context.area.x
@@ -860,9 +882,15 @@ class MouseWidget:
                 if event.type == "X":
                     self.x_key = not self.x_key
                     self.y_key = False
+                    self.z_key = False
                 if event.type == "Y":
                     self.y_key = not self.y_key
                     self.x_key = False
+                    self.z_key = False
+                if event.type == "Z":
+                    self.z_key = not self.z_key
+                    self.x_key = False
+                    self.y_key = False
 
         if self.allow_precision_mode and event.value == "PRESS" and event.type == "LEFT_SHIFT":
             self.precision_mode = True
@@ -886,15 +914,16 @@ class MouseWidget:
         return (self._start_position - self._reference_end_position - self.delta_vector()).length
     
     def delta_vector(self):
+        precision_factor_inv = 1 - self.precision_factor
         if self.precision_mode:
-            return self._precision_mode_mid_stop - self._reference_end_position - self.precision_offset*.9 + (self._end_position - self._precision_mode_mid_stop) * .1
-        return self._end_position - self._reference_end_position - self.precision_offset*.9
+            return self._precision_mode_mid_stop - self._reference_end_position - self.precision_offset * precision_factor_inv + (self._end_position - self._precision_mode_mid_stop) * self.precision_factor
+        return self._end_position - self._reference_end_position - self.precision_offset * precision_factor_inv
     
     def delta_length_factor(self):
         return self.length() / ((self._start_position - self._reference_end_position).length)
 
     def angle(self):
-        vec = self._reference_end_position - self._start_position + self.delta_vector() + self.precision_offset*.9
+        vec = self._reference_end_position - self._start_position + self.delta_vector() + self.precision_offset * (1 - self.precision_factor)
         return atan2(vec.y, vec.x) - self._base_rotation
 
     def _draw(self, context, event):
@@ -913,3 +942,6 @@ class MouseWidget:
             elif self.y_key:
                 shader2Dcolor.uniform_float("color", (0, 1, 0, .5))
                 batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position.x, 0), (self._start_position.x, context.area.height))}).draw(shader2Dcolor)
+            elif self.z_key:
+                shader2Dcolor.uniform_float("color", (0, 0, 1, .5))
+                batch_for_shader(shader2Dcolor, 'LINES', {"pos": (self.z_start_position, self.z_end_position)}).draw(shader2Dcolor)
