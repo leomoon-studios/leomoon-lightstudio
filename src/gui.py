@@ -3,6 +3,7 @@ import os
 from . common import getLightMesh
 from . auto_load import force_register
 from . import operators
+import traceback
 
 @force_register
 class LLS_PT_Studio(bpy.types.Panel):
@@ -94,8 +95,8 @@ class LLS_PT_Selected(bpy.types.Panel):
                         col.prop(input, 'default_value', text=input.name)
             except:
                 col.label(text="LLS_light material is not valid.")
-                #import traceback
-                #traceback.print_exc()
+                if operators.VERBOSE:
+                    traceback.print_exc()
             col.prop(getLightMesh(), 'location', index=0) #light radius
 
 @force_register
@@ -241,15 +242,6 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
 
         box.label(text="(numpad) Icon scale down", icon='REMOVE')
 
-def get_user_keymap_item(keymap_name, keymap_item_idname, multiple_entries=False):
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.user
-
-    km = kc.keymaps.get(keymap_name)
-    if multiple_entries:
-        return km, [i[1] for i in km.keymap_items.items() if i[0] == keymap_item_idname]
-    else:
-        return km, km.keymap_items.get(keymap_item_idname)
 
 import rna_keymap_ui
 from . common import get_user_keymap_item
@@ -291,6 +283,6 @@ def register():
         LLS_PT_Hotkeys.scale_kmi_type = f'EVENT_{kmi.type}'
         km, kmi = get_user_keymap_item('Object Mode', 'light_studio.rotate')
         LLS_PT_Hotkeys.rotate_kmi_type = f'EVENT_{kmi.type}'
-    except Exception as e:
+    except Exception:
         if operators.VERBOSE:
-            print(e)
+            traceback.print_exc()
