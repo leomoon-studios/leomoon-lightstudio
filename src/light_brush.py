@@ -4,7 +4,7 @@ from math import *
 from mathutils.geometry import intersect_line_sphere
 from mathutils import Vector
 from bpy.props import *
-from . common import isFamily, family, findLightGrp, getLightMesh, getLightController
+from . common import isFamily, family, findLightGrp, getLightMesh, getLightController, get_user_keymap_item
 from . operators import LightOperator
 
            
@@ -192,7 +192,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
         override_event = OverrideEvent()
         override_event.mouse_region_x = event.mouse_x - active_region.x
         override_event.mouse_region_y = event.mouse_y - active_region.y
-        
+
         
         global key_released
         context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
@@ -232,7 +232,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
             elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and key_released:
                 context.area.header_text_set(text=None)
                 return {'FINISHED'}
-            elif event.type in {'F', 'LEFTMOUSE'} and event.value == 'RELEASE':
+            elif event.type in {self.keymap_key, 'LEFTMOUSE'} and event.value == 'RELEASE':
                 key_released = True
                 return {'PASS_THROUGH'}
 
@@ -241,6 +241,8 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
+        km, kmi = get_user_keymap_item('Object Mode', self.__class__.bl_idname)
+        self.keymap_key = kmi.type if kmi else 'F'
         global key_released
         key_released = False
         if self.continuous:
