@@ -274,9 +274,9 @@ class Panel(Rectangle):
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
         self.button_send_to_bottom.function = send_light_to_bottom
 
-        km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
-        self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
-        self.button_fast_3d_edit.function = fast_3d_edit
+        # km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
+        # self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        # self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()
 
@@ -291,10 +291,10 @@ class Panel(Rectangle):
             self.point_rb.y - self.button_exit.dimensions[1]/2,
         ))
 
-        self.button_fast_3d_edit.loc = Vector((
-            self.point_lt.x + self.button_send_to_bottom.dimensions[0] + self.button_fast_3d_edit.dimensions[0]/2 + 15,
-            self.point_rb.y - self.button_exit.dimensions[1]/2,
-        ))
+        # self.button_fast_3d_edit.loc = Vector((
+        #     self.point_lt.x + self.button_send_to_bottom.dimensions[0] + self.button_fast_3d_edit.dimensions[0]/2 + 15,
+        #     self.point_rb.y - self.button_exit.dimensions[1]/2,
+        # ))
 
     def draw(self):
         shader2Dcolor.uniform_float("color", (0.05, 0.05, 0.05, 1))
