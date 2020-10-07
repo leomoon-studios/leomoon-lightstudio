@@ -7,7 +7,7 @@ from bpy.props import *
 from . common import isFamily, family, findLightGrp, getLightMesh, getLightController, get_user_keymap_item
 from . operators import LightOperator
 
-           
+
 def raycast(context, event, diff):
     """Run this function on left mouse, execute the ray cast"""
     # get the context arguments
@@ -18,16 +18,16 @@ def raycast(context, event, diff):
     # get the ray from the viewport and mouse
     view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
     ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
-    
+
     ray_target = ray_origin + view_vector
-    
+
     def visible_objects_and_duplis():
         """Loop over (object, matrix) pairs (mesh only)"""
 
         for obj in context.visible_objects:
             if isFamily(obj):
                 continue
-            
+
             if obj.type == 'MESH':
                 yield (obj, obj.matrix_world.copy())
 
@@ -54,7 +54,7 @@ def raycast(context, event, diff):
             return location, normal, face_index
         else:
             return None, None, None
-    
+
     # cast rays and find the closest object
     best_length_squared = -1.0
     best_obj = None
@@ -72,17 +72,17 @@ def raycast(context, event, diff):
                     best_obj = obj
                     normal = hit_normal # local space
                     location = hit_world
-                    
+
 
     if best_obj is None:
         return {'RUNNING_MODAL'}
-    
+
     # convert normal from local space to global
     matrix = best_obj.matrix_world
     matrix_new = matrix.to_3x3().inverted().transposed()
     normal = matrix_new @ normal
     normal.normalize()
-    
+
     #####
     profile = findLightGrp(context.active_object).parent
     handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
@@ -95,15 +95,15 @@ def raycast(context, event, diff):
         lightmesh.location.x,
         False,
         )[0]
-    
-    
+
+
     if not position:
         return {'RUNNING_MODAL'}
-   
+
     # ctrl x
     x,y,z = position
     actuator.rotation_euler.x = atan2(x, -y)
-    
+
     # ctrl y
     deg = copysign(degrees(Vector.angle(Vector((x,y,z)), Vector((x,y,0)))), z)
     actuator.rotation_euler.y = copysign(Vector.angle(Vector((x,y,z)), Vector((x,y,0))), z)
@@ -113,7 +113,7 @@ class LLSLightBrush(bpy.types.Operator, LightOperator):
     bl_idname = "lls.light_brush"
     bl_label = "Light Brush"
     bl_options = {"UNDO"}
-    
+
     aux: BoolProperty(default=False) # is aux operator working
     normal_type: BoolProperty(default=False)
 
@@ -123,9 +123,9 @@ class LLSLightBrush(bpy.types.Operator, LightOperator):
             if event.type in {'LEFTMOUSE', 'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
                 self.aux = False
             return {'RUNNING_MODAL'}
-        
+
         context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
-        
+
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'Z', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
             # allow navigation
             return {'PASS_THROUGH'}
@@ -164,12 +164,12 @@ key_released = False
 class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
     """Point on object to position light and reflection"""
     bl_idname = "light_studio.fast_3d_edit"
-    bl_label = "Fast 3D Edit"
+    bl_label = "Light Brush"
     bl_options = {"UNDO"}
-    
+
     continuous: BoolProperty(default=False, name="Hold to use", description="Button behaviour.\n ON: Hold button to use. Release button to stop.\n OFF: Hold LMB to use, release LMB to stop.")
     normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
-    
+
     def modal(self, context, event):
         screens = [window.screen for window in context.window_manager.windows]
         regions3d = [(area.spaces[0].region_3d, region) for screen in screens for area in screen.areas if area.type == context.area.type for region in area.regions if region.type == context.region.type]
@@ -193,7 +193,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
         override_event.mouse_region_x = event.mouse_x - active_region.x
         override_event.mouse_region_y = event.mouse_y - active_region.y
 
-        
+
         global key_released
         context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
         # print(event.type, event.value)
@@ -253,15 +253,15 @@ addon_keymaps = []
 def add_shortkeys():
     wm = bpy.context.window_manager
     addon_km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type="EMPTY")
-    
+
     addon_kmi = addon_km.keymap_items.new(OT_LLSFast3DEdit.bl_idname, 'F', 'PRESS')
     addon_kmi.properties.continuous = False
-    
+
     addon_keymaps.append((addon_km, addon_kmi))
 
 def remove_shortkeys():
     wm = bpy.context.window_manager
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-        
+
     addon_keymaps.clear()

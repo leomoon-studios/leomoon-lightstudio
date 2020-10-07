@@ -63,15 +63,15 @@ fragment_shader = '''
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
         trash = vec4(panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
-        
+
         // Texture Switch + Intensity
         // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
         fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
-        
+
         // Color Overlay
         float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
         vec4 colored = color_overlay * gray;
-        
+
         // Color Saturation
         fragColor = mix(fragColor, colored, color_saturation);
         fragColor.a = gray;
@@ -101,25 +101,25 @@ fragment_shader = '''
         float ring = d < (1-mask_ring_outer_radius)*.575f ? 1 : 0;
         ring = d < (1-mask_ring_inner_radius)*.55f ? 0 : ring;
         fragColor.a = mix(fragColor.a, fragColor.a*ring, mask_ring_switch);
-        
+
         // Top-Bottom
         fragColor.a = texCoord_interp.y < (1-mask_top_to_bottom) ? fragColor.a : 0;
-        
+
         // Bottom-Top
         fragColor.a = texCoord_interp.y > mask_bottom_to_top ? fragColor.a : 0;
 
         // Left-Right
         fragColor.a = texCoord_interp.x > mask_left_to_right ? fragColor.a : 0;
-        
+
         // Right-Left
         fragColor.a = texCoord_interp.x < (1-mask_right_to_left) ? fragColor.a : 0;
 
         // Diagonal Top-Right
         fragColor.a = 1-(texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_right ? fragColor.a : 0;
-        
+
         // Diagonal Top-Left
         fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_left ? fragColor.a : 0;
-        
+
         // Diagonal Bottom-Right
         fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_right ? fragColor.a : 0;
 
@@ -193,7 +193,7 @@ class Rectangle:
         d = loc - self.loc
         self.point_lt += d
         self.point_rb += d
-    
+
     @property
     def width(self):
         return self.point_rb.x - self.point_lt.x
@@ -223,7 +223,7 @@ class Rectangle:
             x2 += offset.x
             y2 += offset.y
             return [x2, y2]
-        
+
         loc = self.loc # prevent property from recomputing
         return (
             rotate(self.point_lt.x, self.point_lt.y, loc),
@@ -275,7 +275,7 @@ class Panel(Rectangle):
         self.button_send_to_bottom.function = send_light_to_bottom
 
         km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
-        self.button_fast_3d_edit = Button(Vector((0,0)), f'Fast 3D Edit [{kmi.type}]')
+        self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
         self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()
@@ -305,7 +305,7 @@ class Panel(Rectangle):
 
         for l in LightImage.lights:
             l.update_visual_location()
-        
+
         self._move_buttons()
 
 class Button(Rectangle):
@@ -399,7 +399,7 @@ class Border(Rectangle):
             [verts[3][0]+rot_translate_ort.x, verts[3][1]+rot_translate_ort.y],
             verts[3]
         ]
-        
+
         border_shader2Dcolor.bind()
         bgl.glEnable(bgl.GL_BLEND)
         border_shader2Dcolor.uniform_float("color", self.color)
@@ -413,11 +413,11 @@ class Border(Rectangle):
             right_verts2 = deepcopy(right_verts)
             for v in right_verts2:
                 v[0] += self.light_image.panel.width
-            
+
             top_verts2 = deepcopy(top_verts)
             for v in top_verts2:
                 v[0] += self.light_image.panel.width
-            
+
             bottom_verts2 = deepcopy(bottom_verts)
             for v in bottom_verts2:
                 v[0] += self.light_image.panel.width
@@ -434,11 +434,11 @@ class Border(Rectangle):
             right_verts2 = deepcopy(right_verts)
             for v in right_verts2:
                 v[0] -= self.light_image.panel.width
-            
+
             top_verts2 = deepcopy(top_verts)
             for v in top_verts2:
                 v[0] -= self.light_image.panel.width
-            
+
             bottom_verts2 = deepcopy(bottom_verts)
             for v in bottom_verts2:
                 v[0] -= self.light_image.panel.width
@@ -447,7 +447,7 @@ class Border(Rectangle):
             batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts2}).draw(border_shader2Dcolor)
             batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
             batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
-        
+
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
@@ -463,7 +463,7 @@ class Border(Rectangle):
 
         self.point_rb.x += self.weight
         self.point_rb.y -= self.weight
-        
+
         self.rot = self.light_image.rot
 
         return super().get_verts()
@@ -484,7 +484,7 @@ class LightImage(Rectangle):
 
     def delete(self):
         del LightImage.lights[LightImage.lights.index(self)]
-    
+
     @classmethod
     def refresh(cls):
         props = bpy.context.scene.LLStudio
@@ -496,8 +496,8 @@ class LightImage(Rectangle):
                     l.update_visual_location()
             except ReferenceError:
                 l.delete()
-            
-    
+
+
     default_size = 100
     @classmethod
     def change_default_size(cls, value):
@@ -505,11 +505,11 @@ class LightImage(Rectangle):
         for l in cls.lights:
             l.width = value * l._scale.y
             l.height = value * l._scale.z
-        
+
     def panel_loc_to_area_px_lt(self):
         panel_px_loc = Vector((self.panel.width * self.panel_loc.x, -self.panel.height * (1-self.panel_loc.y)))
         return panel_px_loc + self.panel.point_lt - Vector((LightImage.default_size*self._scale.y/2, LightImage.default_size*self._scale.z/2))
-    
+
     def _update_panel_loc(self):
         self.panel_loc.x = (self._lls_rot.x + pi) % (2*pi) / (2*pi)
         self.panel_loc.y = fmod(self._lls_rot.y + pi/2, pi) / (pi)
@@ -530,7 +530,7 @@ class LightImage(Rectangle):
             self._scale = self._lls_mesh.scale.copy()
             self.width = LightImage.default_size * self._scale.y
             self.height = LightImage.default_size * self._scale.z
-        
+
         if updated:
             self._update_panel_loc()
 
@@ -541,7 +541,7 @@ class LightImage(Rectangle):
         # this should run when image changes but sometimes Blender looses images... so it's run every time to be safe
         if self.image.gl_load():
             raise Exception
-        
+
 
         return updated
 
@@ -560,7 +560,7 @@ class LightImage(Rectangle):
         self._view_layer = find_view_layer(self._collection, context.view_layer.layer_collection)
         # except Exception:
         #     raise Exception
-        
+
         self._image_path = ""
         self._lls_rot = None
         self._scale = None
@@ -568,18 +568,18 @@ class LightImage(Rectangle):
         super().__init__(Vector((0,0)), LightImage.default_size, LightImage.default_size)
         self.update_from_lls()
         self.update_visual_location()
-        
+
         LightImage.lights.append(self)
 
         self.default_border = Border(self, (.2, .35, .2, 1))
         self.mute_border = Border(self, (.7, 0, 0, 1))
         self.select_border = Border(self, (.2, .9, .2, 1))
         #self.select_border.weight = 2
-    
+
     @property
     def mute(self):
         return self._view_layer.exclude
-    
+
     @mute.setter
     def mute(self, value):
         self._view_layer.exclude = value
@@ -587,7 +587,7 @@ class LightImage(Rectangle):
     @property
     def panel_loc(self):
         return self.__panel_loc
-    
+
     @panel_loc.setter
     def panel_loc(self, pos):
         self.__panel_loc = pos
@@ -614,7 +614,7 @@ class LightImage(Rectangle):
             x2 += offset.x
             y2 += offset.y
             return [x2, y2]
-        
+
         bleft = self.panel.point_lt[0]
         bright = self.panel.point_rb[0]
 
@@ -625,7 +625,7 @@ class LightImage(Rectangle):
         if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
             (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
             return True
-        
+
         tmouse_x, tmouse_y = rotate(bleft-(bright-mouse_x), mouse_y, self.loc)
         if (tmouse_y <= self.point_lt[1] and tmouse_y >= self.point_rb[1]) and\
             (tmouse_x <= self.point_rb[0] and tmouse_x >= self.point_lt[0]):
@@ -643,17 +643,17 @@ class LightImage(Rectangle):
             select = self._lls_mesh.select_get()
         except ReferenceError:
             return
-        
+
         # draw something to refresh buffer?
         shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
         batch_for_shader(shader2Dcolor, 'POINTS', {"pos": [(0,0), ]}).draw(shader2Dcolor)
 
         bleft = self.panel.point_lt[0]
         bright = self.panel.point_rb[0]
-        
+
         verts = self.get_verts()
         uv_coords = self.get_tex_coords()
-        
+
         lleft = min(verts, key=lambda v: v[0])[0]
         lright = max(verts, key=lambda v: v[0])[0]
 
@@ -792,14 +792,14 @@ class ClickManager:
     def __init__(self):
         self.times = [0, 0, 0]
         self.objects = [None, None, None]
-    
+
     def click(self, object):
         self.times.append(time.time())
         self.objects.append(object)
         if len(self.times) > 3:
             del self.times[0]
             del self.objects[0]
-        
+
         if self.objects[0] == self.objects[1] == self.objects[2]:
             if self.times[2] - self.times[0] <= .5:
                 return "TRIPLE"
@@ -810,7 +810,7 @@ class ClickManager:
 class MouseWidget:
     mouse_x: bpy.props.IntProperty()
     mouse_y: bpy.props.IntProperty()
-    
+
     def __init__(self):
         self._start_position = None
         self._end_position = Vector((0, 0))
@@ -876,7 +876,7 @@ class MouseWidget:
         self.mouse_x = event.mouse_x - context.area.x
         self.mouse_y = event.mouse_y - context.area.y
         self._end_position = Vector((self.mouse_x, self.mouse_y))
-        
+
         if self.allow_xy_keys:
             if event.value == "PRESS":
                 if event.type == "X":
@@ -909,16 +909,16 @@ class MouseWidget:
             bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
         except (ValueError, AttributeError):
             pass
-    
+
     def length(self):
         return (self._start_position - self._reference_end_position - self.delta_vector()).length
-    
+
     def delta_vector(self):
         precision_factor_inv = 1 - self.precision_factor
         if self.precision_mode:
             return self._precision_mode_mid_stop - self._reference_end_position - self.precision_offset * precision_factor_inv + (self._end_position - self._precision_mode_mid_stop) * self.precision_factor
         return self._end_position - self._reference_end_position - self.precision_offset * precision_factor_inv
-    
+
     def delta_length_factor(self):
         return self.length() / ((self._start_position - self._reference_end_position).length)
 
@@ -930,7 +930,7 @@ class MouseWidget:
         # first draw to reset buffer
         shader2Dcolor.uniform_float("color", (.5, .5, .5, .5))
         batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((0,0), (0,0))}).draw(shader2Dcolor)
-        
+
         if self.draw_guide:
             shader2Dcolor.uniform_float("color", (.5, .5, .5, .5))
             batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position[:]), (self._end_position[:]))}).draw(shader2Dcolor)
