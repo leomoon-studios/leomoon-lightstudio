@@ -1,5 +1,15 @@
 import bpy
 
+def get_user_keymap_item(keymap_name, keymap_item_idname, multiple_entries=False):
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.user
+
+    km = kc.keymaps.get(keymap_name)
+    if multiple_entries:
+        return km, [i[1] for i in km.keymap_items.items() if i[0] == keymap_item_idname]
+    else:
+        return km, km.keymap_items.get(keymap_item_idname)
+
 def replace_link(object, collection_name):
     if isinstance(object, bpy.types.Collection):
         bpy.context.scene.collection.children.unlink(bpy.context.scene.collection.children[object.name])

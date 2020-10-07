@@ -1,10 +1,10 @@
-#Created by Striam Sp. z o.o.
+#Created by Styriam sp. z o.o.
 
 bl_info = {
     "name": "LeoMoon LightStudio",
     "description": "Easy setup for complex studio lighting",
     "author": "LeoMoon Studios",
-    "version": (2, 6, 1),
+    "version": (2, 6, 2),
     "blender": (2, 80, 0),
     "location": "View3D -> Tools -> LightStudio",
     "wiki_url": "",
@@ -25,7 +25,8 @@ auto_load.init()
 ################################## 
 
 from . light_operators import LeoMoon_Light_Studio_Properties, LeoMoon_Light_Studio_Object_Properties
-from . import deleteOperator
+from . import deleteOperator, light_brush
+from . operators import modal
 
 def register():
     auto_load.register()
@@ -33,8 +34,16 @@ def register():
     bpy.types.Scene.LLStudio = bpy.props.PointerProperty(name="LeoMoon LightStudio Properties", type = LeoMoon_Light_Studio_Properties)
     bpy.types.Object.LLStudio = bpy.props.PointerProperty(name="LeoMoon LightStudio Object Properties", type = LeoMoon_Light_Studio_Object_Properties)
     deleteOperator.add_shortkeys()
+    light_brush.add_shortkeys()
+    modal.add_shortkeys()
+    bpy.app.handlers.load_post.append(modal.load_handler)
+    bpy.app.handlers.frame_change_pre.append(modal.frame_change_handler)
     
 
 def unregister():
     deleteOperator.remove_shortkeys()
+    light_brush.remove_shortkeys()
+    modal.remove_shortkeys()
     auto_load.unregister()
+    bpy.app.handlers.load_post.remove(modal.load_handler)
+    bpy.app.handlers.frame_change_pre.remove(modal.frame_change_handler)

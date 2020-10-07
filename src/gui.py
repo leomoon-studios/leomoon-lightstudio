@@ -2,6 +2,8 @@ import bpy
 import os
 from . common import getLightMesh
 from . auto_load import force_register
+from . import operators
+import traceback
 
 @force_register
 class LLS_PT_Studio(bpy.types.Panel):
@@ -93,8 +95,8 @@ class LLS_PT_Selected(bpy.types.Panel):
                         col.prop(input, 'default_value', text=input.name)
             except:
                 col.label(text="LLS_light material is not valid.")
-                #import traceback
-                #traceback.print_exc()
+                if operators.VERBOSE:
+                    traceback.print_exc()
             col.prop(getLightMesh(), 'location', index=0) #light radius
 
 @force_register
@@ -203,6 +205,10 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
     #def poll(cls, context):
     #    return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
 
+    scale_kmi_type = 'X'
+    rotate_kmi_type = 'X'
+
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
@@ -214,10 +220,10 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
         box.label(text="Move light", icon='MOUSE_LMB')
         row = box.row(align=True)
 
-        row.label(text="Scale light", icon='EVENT_S')
+        row.label(text="Scale light", icon=self.__class__.scale_kmi_type)
         row = box.row(align=True)
 
-        row.label(text="Rotate light", icon='EVENT_R')
+        row.label(text="Rotate light", icon=self.__class__.rotate_kmi_type)
         row = box.row(align=True)
 
         row.label(text="Precision mode", icon='EVENT_SHIFT')
@@ -235,3 +241,63 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
         box.label(text="(numpad) Icon scale up", icon='ADD')
 
         box.label(text="(numpad) Icon scale down", icon='REMOVE')
+
+
+import rna_keymap_ui
+from . common import get_user_keymap_item
+from . import light_brush, deleteOperator
+from . operators import modal
+class LLSPreferences(bpy.types.AddonPreferences):
+    # this must match the addon name, use '__package__'
+    # when defining this in a submodule of a python package.
+    bl_idname = __package__
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column()
+        kc = bpy.context.window_manager.keyconfigs.user
+        keymap_modified = False
+        for km, kmi in light_brush.addon_keymaps + modal.addon_keymaps:
+            km = km.active()
+            col.context_pointer_set("keymap", km)
+            user_km, user_kmi = get_user_keymap_item(km.name, kmi.idname)
+            if user_kmi:
+                rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, user_kmi, col, 0)
+            else:
+                keymap_modified = True
+        if keymap_modified:
+            col.operator("preferences.keymap_restore", text="Restore")
+        
+        col.separator()
+        box = layout.box()
+        box.label(text="Internal object.delete operator wrappers to handle deleting of Light Studio objects.")
+        box.label(text="Wrapper operators copy their counterparts's settings during addon start.")
+        user_keymap_items = set()
+        for km, kmi in deleteOperator.addon_keymaps:
+            km = km.active()
+            box.context_pointer_set("keymap", km)
+            user_km, user_kmis = get_user_keymap_item(km.name, kmi.idname, multiple_entries=True)
+            new_set = set(user_kmis) - user_keymap_items
+            for new_item in new_set:
+                rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, new_item, box, 0)
+            user_keymap_items |= new_set
+
+def register():
+    import functools
+    def read_keymaps(counter):
+        if counter == 0:
+            print("Keymaps not read.")
+            return
+
+        try:
+            km, kmi = get_user_keymap_item('Object Mode', 'light_studio.scale')
+            LLS_PT_Hotkeys.scale_kmi_type = f'EVENT_{kmi.type}'
+            km, kmi = get_user_keymap_item('Object Mode', 'light_studio.rotate')
+            LLS_PT_Hotkeys.rotate_kmi_type = f'EVENT_{kmi.type}'
+        except Exception:
+            if operators.VERBOSE:
+                traceback.print_exc()
+            bpy.app.timers.register(functools.partial(read_keymaps, counter-1), first_interval=0.1)
+
+    bpy.app.timers.register(functools.partial(read_keymaps, 10), first_interval=0.1)
