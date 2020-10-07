@@ -43,6 +43,13 @@ If you think this plugin speeds up your workflow, consider funding the developme
 Thank you.
 
 ## Changelog
+### 2.6.2 2020-10-07:
+* Added custom hotkeys to addon preferences
+* Major improvements added to Light Brush with F hotkey (3D Edit)
+* Added G hotkey to move lights in the light panel and 3D view
+* R and S hotkeys can now rotate and scale lights in the 3D view also
+* Improved undo
+
 ### 2.6.1 2020-08-21:
 * Added "Up" and "Down" buttons to sort lights in the light list
 * Added button to copy a light in the light list
