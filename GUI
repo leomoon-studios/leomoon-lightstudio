@@ -1,7 +1,6 @@
 * BUTTON ICONS GUIDE:
     [+] = Add light (icon: ADD)
     [-] = Delete light (icon: REMOVE)
-    [L] = Lock light (icon: UNLOCKED, LOCKED)
     [V] = Show/hide light (icon: HIDE_OFF, HIDE_ON)
     [S] = Solo selected light (icon: SOLO_OFF, SOLO_ON)
     [C] = Copy menu (icon: DUPLICATE)
@@ -17,19 +16,22 @@ After adding LightStudio:
     [          Show LightStudio Panel           ]
 ▼ Lights
     ┌---------------------------------------┐ [+]
-    | Light 1                      [L][V][S]| [-]
-    | Light 2                      [L][V][S]| [c]
+    | Light 1                         [V][S]| [-]
+    | Light 2                         [V][S]| [c]
     |                                       |
     |                                       | [▲]
     |                                       | [▼]
     └---------------------------------------┘
-    [                  3D Edit                  ]
-    ┌-------------------------------------------┐
-    |              ┌-------------┐              |
-    |              |             |              |
-    |              |             |              |
-    |              |             |              |
-    |              |             |              |
+▼ Selected Light
+    Light Type      [ Advanced (Cycles Only) ▼ ]     Light Type      [ Basic (EEVEE and Cycles) ▼ ]
+                    | Basic (EEVEE and Cycles) |                     | Advanced (Cycles Only)     |
+                    ----------------------------                     ----------------------------
+    ┌-------------------------------------------┐    Color Overlay:                      [       ]
+    |              ┌-------------┐              |    ┌-------------------------------------------┐
+    |              |             |              |    | ◄ Color Saturation:               0.000 ► |
+    |              |             |              |    | ◄ Intensity:                      2.000 ► |
+    |              |             |              |    | ◄ Location:                      30.000 ► |
+    |              |             |              |    └-------------------------------------------┘
     |              |             |              |
     |              └-------------┘              |
     | Soft Box A                                |
@@ -37,7 +39,7 @@ After adding LightStudio:
     └-------------------------------------------┘
     Color Overlay:                      [       ]
     ┌-------------------------------------------┐
-    | ◄ Color Saturation:               0.300 ► |
+    | ◄ Color Saturation:               0.000 ► |
     | ◄ Intensity:                      2.000 ► |
     | ◄ Mask - Gradient Switch:         0.000 ► |
     | ◄ Mask - Gradient Type:           0.000 ► |
@@ -69,3 +71,7 @@ After adding LightStudio:
     [              Import Profiles              ]
 ▼ Misc
     [            Find Missing Textures          ]
+    [            Open Textures Folder           ]
+    [           LightStudio Keying Set          ]
+▼ Hotkeys
+...
