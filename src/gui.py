@@ -278,11 +278,20 @@ class LLSPreferences(bpy.types.AddonPreferences):
             user_keymap_items |= new_set
 
 def register():
-    try:
-        km, kmi = get_user_keymap_item('Object Mode', 'light_studio.scale')
-        LLS_PT_Hotkeys.scale_kmi_type = f'EVENT_{kmi.type}'
-        km, kmi = get_user_keymap_item('Object Mode', 'light_studio.rotate')
-        LLS_PT_Hotkeys.rotate_kmi_type = f'EVENT_{kmi.type}'
-    except Exception:
-        if operators.VERBOSE:
-            traceback.print_exc()
+    import functools
+    def read_keymaps(counter):
+        if counter == 0:
+            print("Keymaps not read.")
+            return
+
+        try:
+            km, kmi = get_user_keymap_item('Object Mode', 'light_studio.scale')
+            LLS_PT_Hotkeys.scale_kmi_type = f'EVENT_{kmi.type}'
+            km, kmi = get_user_keymap_item('Object Mode', 'light_studio.rotate')
+            LLS_PT_Hotkeys.rotate_kmi_type = f'EVENT_{kmi.type}'
+        except Exception:
+            if operators.VERBOSE:
+                traceback.print_exc()
+            bpy.app.timers.register(functools.partial(read_keymaps, counter-1), first_interval=0.1)
+
+    read_keymaps(10)
