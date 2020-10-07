@@ -294,4 +294,4 @@ def register():
                 traceback.print_exc()
             bpy.app.timers.register(functools.partial(read_keymaps, counter-1), first_interval=0.1)
 
-    read_keymaps(10)
+    bpy.app.timers.register(functools.partial(read_keymaps, 10), first_interval=0.1)

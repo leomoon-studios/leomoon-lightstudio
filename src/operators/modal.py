@@ -51,7 +51,11 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
-        if not running_modals:
+        if running_modals:
+            active_object = LightImage.selected_object
+            self.mouse_x=active_object.loc.x
+            self.mouse_y=active_object.loc.y
+        else:
             # override starting mouse position
             self.mouse_x = context.area.width/2
             self.mouse_y = context.area.height/2
@@ -106,7 +110,11 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
-        if not running_modals:
+        if running_modals:
+            active_object = LightImage.selected_object
+            self.mouse_x=active_object.loc.x
+            self.mouse_y=active_object.loc.y
+        else:
             # override starting mouse position
             self.mouse_x = context.area.width/2
             self.mouse_y = context.area.height/2
@@ -156,8 +164,6 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
     bl_label = "Grab Light"
     bl_options = {"UNDO", "GRAB_CURSOR", "BLOCKING", "INTERNAL"}
 
-    canvas_width: bpy.props.FloatProperty()
-    canvas_height: bpy.props.FloatProperty()
 
     def __init__(self):
         super().__init__()
@@ -168,26 +174,34 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
         self.draw_guide = False
         self.allow_precision_mode = True
         self.precision_factor = 0.05
+        self.canvas_width = 1
+        self.canvas_height = 1
 
 
     def invoke(self, context, event):
         global running_modals
-        if not running_modals:
-            # override starting mouse position
-            self.mouse_x = context.area.width/2
-            self.mouse_y = context.area.height/2
-        super().invoke(context, event)
-        
+
         if running_modals:
+            global panel_global
+            # override starting mouse position
+            self.mouse_x = LightImage.selected_object.loc.x
+            self.mouse_y = LightImage.selected_object.loc.y
             self.light_mesh = LightImage.selected_object._lls_mesh
             self.light_actuator = LightImage.selected_object._lls_actuator
             self.base_object_rotation = self.light_actuator.rotation_euler.copy()
             self.base_object_distance = self.light_mesh.location.x
+            global panel_global
+            self.canvas_width = panel_global.width
+            self.canvas_height = panel_global.height
         else:
+            # override starting mouse position
+            self.mouse_x = context.area.width/2
+            self.mouse_y = context.area.height/2
             self.light_actuator = context.object.parent
             self.light_mesh = context.object
             self.base_object_rotation = context.object.parent.rotation_euler.copy()
             self.base_object_distance = context.object.location.x
+        super().invoke(context, event)
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
@@ -294,7 +308,6 @@ class LLS_OT_control_panel(bpy.types.Operator):
         self.panel = None
         self.panel_moving = False
         self.clicked_object = None
-        self.profile_collection = None
         self.click_manager = ClickManager()
         self.active_feature = None
         self.precision_mode = False
@@ -450,7 +463,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
                     else:
                         active_object = LightImage.selected_object
                         if active_object and not GRABBING:
-                            bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y, canvas_width=self.panel.width, canvas_height=self.panel.height)
+                            bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
                             self.panel_moving = False                    
                     
                     return {"RUNNING_MODAL"}
@@ -462,23 +475,23 @@ class LLS_OT_control_panel(bpy.types.Operator):
                     self.modifier_key = True
                 if event.type in {"LEFT_CTRL"}:
                     self.ctrl = True
-                elif event.type in {"G"} and not self.modifier_key:
-                    active_object = LightImage.selected_object
-                    if active_object:
-                        bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y, canvas_width=self.panel.width, canvas_height=self.panel.height)
-                        return {"RUNNING_MODAL"}
-                elif event.type in {"R"} and not self.modifier_key:
-                    active_object = LightImage.selected_object
+                # elif event.type in {"G"} and not self.modifier_key:
+                #     active_object = LightImage.selected_object
+                #     if active_object:
+                #         bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y, canvas_width=self.panel.width, canvas_height=self.panel.height)
+                #         return {"RUNNING_MODAL"}
+                # elif event.type in {"R"} and not self.modifier_key:
+                #     active_object = LightImage.selected_object
                     
-                    if active_object:
-                        bpy.ops.light_studio.rotate('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
-                        return {'RUNNING_MODAL'}
-                elif event.type in {"S"} and not self.modifier_key:
-                    active_object = LightImage.selected_object
+                #     if active_object:
+                #         bpy.ops.light_studio.rotate('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
+                #         return {'RUNNING_MODAL'}
+                # elif event.type in {"S"} and not self.modifier_key:
+                #     active_object = LightImage.selected_object
                     
-                    if active_object:
-                        bpy.ops.light_studio.scale('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
-                        return {'RUNNING_MODAL'}
+                #     if active_object:
+                #         bpy.ops.light_studio.scale('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
+                #         return {'RUNNING_MODAL'}
 
                 elif event.type == "RIGHTMOUSE":
                     dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
