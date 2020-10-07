@@ -257,11 +257,17 @@ class LLSPreferences(bpy.types.AddonPreferences):
 
         col = layout.column()
         kc = bpy.context.window_manager.keyconfigs.user
+        keymap_modified = False
         for km, kmi in light_brush.addon_keymaps + modal.addon_keymaps:
             km = km.active()
             col.context_pointer_set("keymap", km)
             user_km, user_kmi = get_user_keymap_item(km.name, kmi.idname)
-            rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, user_kmi, col, 0)
+            if user_kmi:
+                rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, user_kmi, col, 0)
+            else:
+                keymap_modified = True
+        if keymap_modified:
+            col.operator("preferences.keymap_restore", text="Restore")
         
         col.separator()
         box = layout.box()

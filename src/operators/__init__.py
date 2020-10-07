@@ -12,7 +12,7 @@ def update_clear():
     global UPDATED
     UPDATED = False
 
-VERBOSE = True
+VERBOSE = False
 
 from .. common import isFamily
 class LightOperator:

@@ -475,23 +475,6 @@ class LLS_OT_control_panel(bpy.types.Operator):
                     self.modifier_key = True
                 if event.type in {"LEFT_CTRL"}:
                     self.ctrl = True
-                # elif event.type in {"G"} and not self.modifier_key:
-                #     active_object = LightImage.selected_object
-                #     if active_object:
-                #         bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y, canvas_width=self.panel.width, canvas_height=self.panel.height)
-                #         return {"RUNNING_MODAL"}
-                # elif event.type in {"R"} and not self.modifier_key:
-                #     active_object = LightImage.selected_object
-                    
-                #     if active_object:
-                #         bpy.ops.light_studio.rotate('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
-                #         return {'RUNNING_MODAL'}
-                # elif event.type in {"S"} and not self.modifier_key:
-                #     active_object = LightImage.selected_object
-                    
-                #     if active_object:
-                #         bpy.ops.light_studio.scale('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
-                #         return {'RUNNING_MODAL'}
 
                 elif event.type == "RIGHTMOUSE":
                     dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
