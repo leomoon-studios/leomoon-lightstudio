@@ -11,7 +11,6 @@ from . operators import LightOperator
 def raycast(context, event, diff):
     """Run this function on left mouse, execute the ray cast"""
     # get the context arguments
-    scene = context.scene
     region = context.region
     rv3d = context.region_data
     coord = event.mouse_region_x, event.mouse_region_y
@@ -157,6 +156,10 @@ class LLSLightBrush(bpy.types.Operator, LightOperator):
             self.report({'WARNING'}, "Active space must be a View3d")
             return {'CANCELLED'}
 
+class OverrideContext:
+    pass
+class OverrideEvent:
+    pass
 key_released = False
 class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
     """Point on object to position light and reflection"""
@@ -168,10 +171,32 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
     normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
     
     def modal(self, context, event):
+        screens = [window.screen for window in context.window_manager.windows]
+        regions3d = [(area.spaces[0].region_3d, region) for screen in screens for area in screen.areas if area.type == context.area.type for region in area.regions if region.type == context.region.type]
+        active_region = context.region
+        active_region_data = context.region_data
+        for region_data, region in regions3d:
+            if event.mouse_x >= region.x and event.mouse_x <= region.x + region.width and \
+                event.mouse_y >= region.y and event.mouse_y <= region.y + region.height:
+                active_region = region
+                active_region_data = region_data
+                break
+
+        override_context = OverrideContext()
+        override_context.region = active_region
+        override_context.region_data = active_region_data
+        override_context.visible_objects = context.visible_objects
+        override_context.active_object = context.active_object
+        if hasattr(context, 'depsgraph'):
+            override_context.depsgraph = context.depsgraph
+        override_event = OverrideEvent()
+        override_event.mouse_region_x = event.mouse_x - active_region.x
+        override_event.mouse_region_y = event.mouse_y - active_region.y
+        
+        
         global key_released
         context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
         # print(event.type, event.value)
-        
         if self.continuous:
             if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
                 # allow navigation
@@ -183,7 +208,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 self.normal_type = not self.normal_type
                 return {'RUNNING_MODAL'}
             elif event.type == 'MOUSEMOVE':
-                raycast(context, event, self.normal_type)
+                raycast(override_context, override_event, self.normal_type)
                 return {'PASS_THROUGH'}
             elif event.value == 'RELEASE' and not event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE', 'N'}:
                 context.area.header_text_set(text=None)
@@ -201,8 +226,8 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
             elif event.type == 'N' and event.value == 'PRESS':
                 self.normal_type = not self.normal_type
                 return {'RUNNING_MODAL'}
-            elif event.type == 'MOUSEMOVE' and event.value == 'PRESS' and key_released:
-                raycast(context, event, self.normal_type)
+            elif event.type in {'MOUSEMOVE', 'LEFTMOUSE'} and event.value == 'PRESS' and key_released:
+                raycast(override_context, override_event, self.normal_type)
                 return {'PASS_THROUGH'}
             elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and key_released:
                 context.area.header_text_set(text=None)
@@ -218,6 +243,8 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
         context.window_manager.modal_handler_add(self)
         global key_released
         key_released = False
+        if self.continuous:
+            raycast(context, event, self.normal_type)
         return {'RUNNING_MODAL'}
 
 addon_keymaps = []

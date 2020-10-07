@@ -2,6 +2,7 @@ import bpy
 import os
 from . common import getLightMesh
 from . auto_load import force_register
+from . import operators
 
 @force_register
 class LLS_PT_Studio(bpy.types.Panel):
@@ -203,6 +204,10 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
     #def poll(cls, context):
     #    return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
 
+    scale_kmi_type = 'X'
+    rotate_kmi_type = 'X'
+
+
     def draw(self, context):
         layout = self.layout
         scene = context.scene
@@ -214,10 +219,10 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
         box.label(text="Move light", icon='MOUSE_LMB')
         row = box.row(align=True)
 
-        row.label(text="Scale light", icon='EVENT_S')
+        row.label(text="Scale light", icon=self.__class__.scale_kmi_type)
         row = box.row(align=True)
 
-        row.label(text="Rotate light", icon='EVENT_R')
+        row.label(text="Rotate light", icon=self.__class__.rotate_kmi_type)
         row = box.row(align=True)
 
         row.label(text="Precision mode", icon='EVENT_SHIFT')
@@ -279,3 +284,13 @@ class LLSPreferences(bpy.types.AddonPreferences):
             for new_item in new_set:
                 rna_keymap_ui.draw_kmi(["ADDON", "USER", "DEFAULT"], kc, user_km, new_item, box, 0)
             user_keymap_items |= new_set
+
+def register():
+    try:
+        km, kmi = get_user_keymap_item('Object Mode', 'light_studio.scale')
+        LLS_PT_Hotkeys.scale_kmi_type = f'EVENT_{kmi.type}'
+        km, kmi = get_user_keymap_item('Object Mode', 'light_studio.rotate')
+        LLS_PT_Hotkeys.rotate_kmi_type = f'EVENT_{kmi.type}'
+    except Exception as e:
+        if operators.VERBOSE:
+            print(e)

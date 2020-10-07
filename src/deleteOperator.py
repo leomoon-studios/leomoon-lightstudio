@@ -1,7 +1,8 @@
 import bpy
 from bpy.props import BoolProperty
-from . common import findLightGrp
+from . common import findLightGrp, isFamily
 from . import light_list
+from . operators import modal
 
 class DeleteOperator(bpy.types.Operator):
     """ Custom delete """
@@ -27,11 +28,19 @@ class DeleteOperator(bpy.types.Operator):
             if 'CANCELLED' in ret:
                 self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
         
-        bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=self.confirm)
+        bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 
         light_list.update_light_list_set(context)
 
         return {'FINISHED'}
+    
+    def invoke(self, context, event):
+        if self.confirm:
+            if not modal.running_modals:
+                return context.window_manager.invoke_confirm(self, event)
+            if modal.running_modals and not isFamily(context.object):
+                return context.window_manager.invoke_confirm(self, event)
+        return self.execute(context)
 
 
 
