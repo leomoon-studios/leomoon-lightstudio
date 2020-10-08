@@ -62,7 +62,7 @@ Thank you.
 * Lights can be renamed in the light list
 * Lights can be toggled in the light list
 * Lights can be isolated in the light list
-* Light selection is syncronized with the LightPanel
+* Light selection is synchronized with the LightPanel
 
 ### 2.5.2 2020-07-10:
 * Fixed light going outside of LightPanel
@@ -78,7 +78,7 @@ Thank you.
 ### 2.5.0 2020-03-23:
 * Fixed LightStudio error when opening Bledner 2.8x
 * Fixed LightStudio error when deleting studio
-* Fixed strange behaviour when clicking LightStudio Control Panel multiple times
+* Fixed strange behavior when clicking LightStudio Control Panel multiple times
 * Fixed the ordering of LightStudio side panel
 * Improved the light node
 * Added all the light effect previews to the LightStudio Control Panel
