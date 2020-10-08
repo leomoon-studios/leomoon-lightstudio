@@ -268,33 +268,33 @@ from .. light_brush import OT_LLSFast3DEdit
 class Panel(Rectangle):
     def __init__(self, loc, width, height):
         super().__init__(loc, width, height)
-        self.button_exit = Button(Vector((0,0)), 'x', 30)
+        self.button_exit = Button(Vector((0,0)), 'X')
         self.button_exit.function = lambda x: "FINISHED"
 
         self.button_send_to_bottom = Button(Vector((0,0)), 'Send to Bottom')
         self.button_send_to_bottom.function = send_light_to_bottom
 
-        # km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
-        # self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
-        # self.button_fast_3d_edit.function = fast_3d_edit
+        km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
+        self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()
 
     def _move_buttons(self):
         self.button_exit.loc = Vector((
             self.point_rb.x - self.button_exit.dimensions[0]/4,
-            self.point_lt.y - self.button_exit.dimensions[1]/4,
+            self.point_lt.y - self.button_exit.dimensions[1]/4+3,
         ))
 
         self.button_send_to_bottom.loc = Vector((
-            self.point_lt.x + self.button_send_to_bottom.dimensions[0]/2,
-            self.point_rb.y - self.button_exit.dimensions[1]/2,
+            self.point_lt.x + self.button_send_to_bottom.dimensions[0]/2 + 5,
+            self.point_rb.y - self.button_exit.dimensions[1]/2 - 10,
         ))
 
-        # self.button_fast_3d_edit.loc = Vector((
-        #     self.point_lt.x + self.button_send_to_bottom.dimensions[0] + self.button_fast_3d_edit.dimensions[0]/2 + 15,
-        #     self.point_rb.y - self.button_exit.dimensions[1]/2,
-        # ))
+        self.button_fast_3d_edit.loc = Vector((
+            self.point_lt.x + self.button_send_to_bottom.dimensions[0] + self.button_fast_3d_edit.dimensions[0]/2 + 23,
+            self.point_rb.y - self.button_exit.dimensions[1]/2 - 10,
+        ))
 
     def draw(self):
         shader2Dcolor.uniform_float("color", (0.05, 0.05, 0.05, 1))
@@ -312,7 +312,7 @@ class Button(Rectangle):
     buttons = []
     def __init__(self, loc, text, size=15):
         self.font_size = size
-        self.font_color = (.25, .25, .25, 1)
+        self.font_color = (0, 0, 0, 1)
         self.bg_color = (.5, .5, .5, 1)
         self.bg_color_selected = (.7, .7, .7, 1)
         self.font_id = len(Button.buttons)
@@ -323,7 +323,7 @@ class Button(Rectangle):
         self.dimensions = blf.dimensions(self.font_id, text)
         self.function = lambda args : None
 
-        super().__init__(loc, self.dimensions[0]+5, self.dimensions[1]+5)
+        super().__init__(loc, self.dimensions[0]+10, size+3)
         Button.buttons.append(self)
 
     def draw(self, mouse_x, mouse_y):
@@ -337,7 +337,8 @@ class Button(Rectangle):
             shader2Dcolor.uniform_float("color", self.bg_color)
         batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
         blf.size(self.font_id, self.font_size, 72)
-        blf.position(self.font_id, self.point_lt.x + 2.5, self.point_rb.y + 2.5, 0)
+        blf.position(self.font_id, self.point_lt.x + 5, self.point_rb.y + 4, 0)
+        blf.color(self.font_id, *self.font_color)
         blf.draw(self.font_id, self.text)
 
     def click(self, args=None):
