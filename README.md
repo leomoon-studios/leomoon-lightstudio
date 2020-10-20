@@ -35,13 +35,6 @@ LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh 
 ## Background HDR vs Manual Lighting
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
-## Why Are You Selling This "Free" Plugin?
-Me and some generous donors, we've been funding LightStudio so far. This plugin is getting harder to develop and we need your help.
-
-If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**.
-
-Thank you.
-
 ## Changelog
 ### 2.6.2 2020-10-07:
 * Added custom hotkeys to addon preferences
