@@ -42,7 +42,7 @@ class LLS_PT_Lights(bpy.types.Panel):
         layout = self.layout
         col = layout.column(align=True)
         row = col.row(align=True)
-        
+
         props = context.scene.LLStudio
 
         row = layout.row()
@@ -77,7 +77,7 @@ class LLS_PT_Selected(bpy.types.Panel):
             wm = context.window_manager
 
             col = layout.column(align=True)
-            col.operator('lls.light_brush', text="3D Edit", icon='PIVOT_CURSOR')
+            # col.operator('lls.light_brush', text="3D Edit", icon='PIVOT_CURSOR')
 
             box = layout.box()
             col = box.column()
@@ -268,7 +268,7 @@ class LLSPreferences(bpy.types.AddonPreferences):
                 keymap_modified = True
         if keymap_modified:
             col.operator("preferences.keymap_restore", text="Restore")
-        
+
         col.separator()
         box = layout.box()
         box.label(text="Internal object.delete operator wrappers to handle deleting of Light Studio objects.")

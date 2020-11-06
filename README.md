@@ -1,6 +1,6 @@
 # LeoMoon LightStudio
 ## Important Notice
-LeoMoon LightStudio (formerly known as Blender Light Studio) is **[100% free and open-source](https://leomoon.com/downloads/plugins/leomoon-lightstudio/)**. You can **[download](https://leomoon.com/downloads/plugins/leomoon-lightstudio/)** and use it without any limitations.
+LeoMoon LightStudio (formerly known as Blender Light Studio) is 100% free and open-source. You can download and use it from here without any limitations.
 
 ## Development Fund
 If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**. This will help to fix bugs, improve user interface and add new features.
@@ -35,14 +35,14 @@ LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh 
 ## Background HDR vs Manual Lighting
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
-## Why Are You Selling This "Free" Plugin?
-Me and some generous donors, we've been funding LightStudio so far. This plugin is getting harder to develop and we need your help.
-
-If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**.
-
-Thank you.
-
 ## Changelog
+### 2.6.2 2020-10-07:
+* Added custom hotkeys to addon preferences
+* Major improvements added to Light Brush with F hotkey (3D Edit)
+* Added G hotkey to move lights in the light panel and 3D view
+* R and S hotkeys can now rotate and scale lights in the 3D view also
+* Improved undo
+
 ### 2.6.1 2020-08-21:
 * Added "Up" and "Down" buttons to sort lights in the light list
 * Added button to copy a light in the light list
@@ -55,7 +55,7 @@ Thank you.
 * Lights can be renamed in the light list
 * Lights can be toggled in the light list
 * Lights can be isolated in the light list
-* Light selection is syncronized with the LightPanel
+* Light selection is synchronized with the LightPanel
 
 ### 2.5.2 2020-07-10:
 * Fixed light going outside of LightPanel
@@ -71,7 +71,7 @@ Thank you.
 ### 2.5.0 2020-03-23:
 * Fixed LightStudio error when opening Bledner 2.8x
 * Fixed LightStudio error when deleting studio
-* Fixed strange behaviour when clicking LightStudio Control Panel multiple times
+* Fixed strange behavior when clicking LightStudio Control Panel multiple times
 * Fixed the ordering of LightStudio side panel
 * Improved the light node
 * Added all the light effect previews to the LightStudio Control Panel
