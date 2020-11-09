@@ -114,6 +114,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
         update=active_light_type_update,
     ) 
 
+from . operators import AREA_DEFAULT_SIZE
 class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
     def color_update(self, context):
         bpy.context.object.data.color = Vector((1,1,1)).lerp(Vector(self.color), self.color_saturation)
@@ -133,10 +134,9 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
         max=1,
         update=color_update,
     )
-
     def light_power_formula(self, context):
         try:
-            bpy.context.object.data.energy = self.intensity * context.object.data.size * context.object.data.size_y * 250
+            bpy.context.object.data.energy = self.intensity * context.object.data.size / AREA_DEFAULT_SIZE * context.object.data.size_y / AREA_DEFAULT_SIZE * 250
         except:
             bpy.context.object.data.energy = self.intensity
 
@@ -298,14 +298,24 @@ class AddBSLight(bpy.types.Operator):
                 basic_light_layer = find_view_layer(basic_light_collection, context.view_layer.layer_collection)
                 advanced_light_layer = find_view_layer(advanced_light_collection, context.view_layer.layer_collection)
                 if context.scene.render.engine == "BLENDER_EEVEE":
-                    basic_light_layer.exclude = False
-                    advanced_light_layer.exclude = True
+                    # basic_light_layer.exclude = False
+                    # advanced_light_layer.exclude = True
+                    light_object = basic_light_collection.objects[0]
+                    light_handle.LLStudio.type = 'BASIC'
                 else:
-                    basic_light_layer.exclude = True
-                    advanced_light_layer.exclude = False
+                    # basic_light_layer.exclude = True
+                    # advanced_light_layer.exclude = False
+                    light_object = advanced_light_collection.objects[0]
+                    light_handle.LLStudio.type = 'ADVANCED'
+                
+                context.view_layer.objects.active = light_object
+                light_object.select_set(True)
+                print(light_object)
 
-                light = advanced_light_layer.collection.objects[0]
+                # light = advanced_light_layer.collection.objects[0]
                 # light.LLStudio.order_index = len(context.scene.LLStudio.light_list)
+                # light_handle.LLStudio.order_index = len(context.scene.LLStudio.light_list)
+
 
 
 

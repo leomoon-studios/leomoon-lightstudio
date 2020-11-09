@@ -177,7 +177,7 @@ lightIconShader.bind()
 border_shader2Dcolor = gpu.types.GPUShader(border_vertex_shader, border_fragment_shader)
 border_shader2Dcolor.bind()
 
-AREA_DEFAULT_SIZE = 8.91651
+from . import AREA_DEFAULT_SIZE
 
 class Rectangle:
     def __init__(self, start_point, width, height):
@@ -580,14 +580,13 @@ class LightImage(Rectangle):
         if self._lls_object.type == 'MESH':
             return self._lls_object.scale
         else:
-            return Vector((self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE, 1))
+            return Vector((1, self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE))
     
     @light_scale.setter
     def light_scale(self, vec):
         if self._lls_object.type == 'MESH':
             self._lls_object.scale = vec
         else:
-            print(vec)
             self._lls_object.data.size = vec[1] * AREA_DEFAULT_SIZE
             self._lls_object.data.size_y = vec[2] * AREA_DEFAULT_SIZE
 

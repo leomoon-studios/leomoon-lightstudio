@@ -14,6 +14,8 @@ def update_clear():
 
 VERBOSE = True
 
+AREA_DEFAULT_SIZE = 9
+
 from .. common import isFamily
 class LightOperator:
     @classmethod
@@ -25,4 +27,5 @@ class LightOperator:
                context.scene.LLStudio.initialized and \
                object and \
                object.name.startswith('LLS_LIGHT_') and \
-               isFamily(object)
+               isFamily(object) and \
+               object.select_get()
