@@ -15,6 +15,8 @@ class DeleteOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
+        if not context.area:
+            return True
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
     
     def execute(self, context):

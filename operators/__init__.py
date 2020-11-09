@@ -12,7 +12,7 @@ def update_clear():
     global UPDATED
     UPDATED = False
 
-VERBOSE = False
+VERBOSE = True
 
 from .. common import isFamily
 class LightOperator:
@@ -24,5 +24,5 @@ class LightOperator:
                context.space_data.type == 'VIEW_3D' and \
                context.scene.LLStudio.initialized and \
                object and \
-               object.name.startswith('LLS_LIGHT_MESH') and \
+               object.name.startswith('LLS_LIGHT_') and \
                isFamily(object)

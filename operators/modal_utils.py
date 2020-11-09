@@ -35,6 +35,7 @@ fragment_shader = '''
     layout(location = 0) out vec4 fragColor;
     layout(location = 1) out vec4 trash;
 
+    uniform bool advanced = false;
     uniform sampler2D image;
     uniform vec2 panel_point_lt;
     uniform vec2 panel_point_rb;
@@ -62,69 +63,74 @@ fragment_shader = '''
     void main()
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom);
+        trash = vec4(panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom+int(advanced));
 
-        // Texture Switch + Intensity
-        // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
-        fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
+        if(advanced){
+            // Texture Switch + Intensity
+            // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
+            fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
 
-        // Color Overlay
-        float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
-        vec4 colored = color_overlay * gray;
+            // Color Overlay
+            float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
+            vec4 colored = color_overlay * gray;
 
-        // Color Saturation
-        fragColor = mix(fragColor, colored, color_saturation);
-        fragColor.a = gray;
-        fragColor.rgb *= fragColor.a;
+            // Color Saturation
+            fragColor = mix(fragColor, colored, color_saturation);
+            fragColor.a = gray;
+            fragColor.rgb *= fragColor.a;
 
-        // MASKS //
+            // MASKS //
 
-        // Vertical gradient + mask_gradient_amount
-        float vg = sqrt(texCoord_interp.y);
-        vg = (texCoord_interp.y <= mask_gradient_amount+.05f) ? mix(0, vg, (texCoord_interp.y-mask_gradient_amount)/.05f) : vg;
-        vg = texCoord_interp.y >= mask_gradient_amount ? vg : 0;
+            // Vertical gradient + mask_gradient_amount
+            float vg = sqrt(texCoord_interp.y);
+            vg = (texCoord_interp.y <= mask_gradient_amount+.05f) ? mix(0, vg, (texCoord_interp.y-mask_gradient_amount)/.05f) : vg;
+            vg = texCoord_interp.y >= mask_gradient_amount ? vg : 0;
 
-        // Spherical gradient + mask_gradient_amount
-        float d = distance(texCoord_interp.xy, vec2(0.5f, 0.5f));
-        float m = (1.0f-mask_gradient_amount)*.5f;
-        float sg = 1-pow(d*2, 2.f);
-        sg = (d >= m-.05f) ? mix(0, sg, (m-d)/.05f) : sg;
-        sg = (d <= m) ? sg : 0;
+            // Spherical gradient + mask_gradient_amount
+            float d = distance(texCoord_interp.xy, vec2(0.5f, 0.5f));
+            float m = (1.0f-mask_gradient_amount)*.5f;
+            float sg = 1-pow(d*2, 2.f);
+            sg = (d >= m-.05f) ? mix(0, sg, (m-d)/.05f) : sg;
+            sg = (d <= m) ? sg : 0;
 
-        // Gradient Type
-        float grad = mix(sg, vg, mask_gradient_type);
+            // Gradient Type
+            float grad = mix(sg, vg, mask_gradient_type);
 
-        // Gradient Switch
-        fragColor.a = mix(fragColor.a, grad*fragColor.a, mask_gradient_switch);
+            // Gradient Switch
+            fragColor.a = mix(fragColor.a, grad*fragColor.a, mask_gradient_switch);
 
-        // Gradient Ring Switch
-        float ring = d < (1-mask_ring_outer_radius)*.575f ? 1 : 0;
-        ring = d < (1-mask_ring_inner_radius)*.55f ? 0 : ring;
-        fragColor.a = mix(fragColor.a, fragColor.a*ring, mask_ring_switch);
+            // Gradient Ring Switch
+            float ring = d < (1-mask_ring_outer_radius)*.575f ? 1 : 0;
+            ring = d < (1-mask_ring_inner_radius)*.55f ? 0 : ring;
+            fragColor.a = mix(fragColor.a, fragColor.a*ring, mask_ring_switch);
 
-        // Top-Bottom
-        fragColor.a = texCoord_interp.y < (1-mask_top_to_bottom) ? fragColor.a : 0;
+            // Top-Bottom
+            fragColor.a = texCoord_interp.y < (1-mask_top_to_bottom) ? fragColor.a : 0;
 
-        // Bottom-Top
-        fragColor.a = texCoord_interp.y > mask_bottom_to_top ? fragColor.a : 0;
+            // Bottom-Top
+            fragColor.a = texCoord_interp.y > mask_bottom_to_top ? fragColor.a : 0;
 
-        // Left-Right
-        fragColor.a = texCoord_interp.x > mask_left_to_right ? fragColor.a : 0;
+            // Left-Right
+            fragColor.a = texCoord_interp.x > mask_left_to_right ? fragColor.a : 0;
 
-        // Right-Left
-        fragColor.a = texCoord_interp.x < (1-mask_right_to_left) ? fragColor.a : 0;
+            // Right-Left
+            fragColor.a = texCoord_interp.x < (1-mask_right_to_left) ? fragColor.a : 0;
 
-        // Diagonal Top-Right
-        fragColor.a = 1-(texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_right ? fragColor.a : 0;
+            // Diagonal Top-Right
+            fragColor.a = 1-(texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_right ? fragColor.a : 0;
 
-        // Diagonal Top-Left
-        fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_left ? fragColor.a : 0;
+            // Diagonal Top-Left
+            fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_top_left ? fragColor.a : 0;
 
-        // Diagonal Bottom-Right
-        fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_right ? fragColor.a : 0;
+            // Diagonal Bottom-Right
+            fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_right ? fragColor.a : 0;
 
-        // Diagonal Bottom-Left
-        fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_left ? fragColor.a : 0;
+            // Diagonal Bottom-Left
+            fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > mask_diagonal_bottom_left ? fragColor.a : 0;
+        }else{
+            //fragColor = vec4(1.0f);
+            fragColor = mix(vec4(1.0f), color_overlay, color_saturation) * log(1+intensity);
+        }
 
         // Panel bound clipping
         if((gl_FragCoord.x < panel_point_lt.x || gl_FragCoord.x > panel_point_rb.x)
@@ -170,6 +176,8 @@ lightIconShader.bind()
 
 border_shader2Dcolor = gpu.types.GPUShader(border_vertex_shader, border_fragment_shader)
 border_shader2Dcolor.bind()
+
+AREA_DEFAULT_SIZE = 8.91651
 
 class Rectangle:
     def __init__(self, start_point, width, height):
@@ -469,7 +477,6 @@ class Border(Rectangle):
 
         return super().get_verts()
 
-
 class LightImage(Rectangle):
     selected_object = None
     lights = []
@@ -516,39 +523,73 @@ class LightImage(Rectangle):
         self.panel_loc.y = fmod(self._lls_rot.y + pi/2, pi) / (pi)
 
     def update_from_lls(self):
-        if self._lls_mesh.select_get():
+        if not self._lls_object:
+            return False
+        
+        if self._lls_object.select_get():
             LightImage.selected_object = self
 
         updated = False
         if self._lls_rot != self._lls_actuator.rotation_euler:
             updated |= True
             self._lls_rot = self._lls_actuator.rotation_euler.copy()
-        if self.rot != self._lls_mesh.rotation_euler.x:
+        if self.rot != self._lls_handle.rotation_euler.y:
             updated |= True
-            self.rot = self._lls_mesh.rotation_euler.x
-        if self._scale != self._lls_mesh.scale:
+            self.rot = self._lls_handle.rotation_euler.y
+        if self._scale != self.light_scale:
             updated |= True
-            self._scale = self._lls_mesh.scale.copy()
+            self._scale = self.light_scale.copy()
             self.width = LightImage.default_size * self._scale.y
             self.height = LightImage.default_size * self._scale.z
 
         if updated:
             self._update_panel_loc()
 
-        if self._image_path != self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath:
-            updated |= True
-            self.image = self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image
-            self._image_path = self._lls_mesh.active_material.node_tree.nodes["Light Texture"].image.filepath
-        # this should run when image changes but sometimes Blender looses images... so it's run every time to be safe
-        if self.image.gl_load():
-            raise Exception
+        if self._lls_object.type == 'MESH':
+            if self._image_path != self._lls_object.active_material.node_tree.nodes["Light Texture"].image.filepath:
+                updated |= True
+                self.image = self._lls_object.active_material.node_tree.nodes["Light Texture"].image
+                self._image_path = self._lls_object.active_material.node_tree.nodes["Light Texture"].image.filepath
+            # this should run when image changes but sometimes Blender looses images... so it's run every time to be safe
+            if self.image.gl_load():
+                raise Exception
 
 
         return updated
 
     def update_lls(self):
         self._lls_actuator.rotation_euler = self._lls_rot
-        self._lls_mesh.rotation_euler.x = self.rot
+        self._lls_handle.rotation_euler.y = self.rot
+
+    @property
+    def _lls_object(self):
+        type = self._lls_handle.LLStudio.type
+        try:
+            if type == 'ADVANCED':
+                return [ob for ob in self._lls_handle.children if ob.name.startswith("LLS_LIGHT_MESH")][0]
+            elif type == 'BASIC':
+                return [ob for ob in self._lls_handle.children if ob.name.startswith("LLS_LIGHT_AREA")][0]
+        except:
+            # override = {'selected_objects': [self._lls_handle,]}
+            # bpy.ops.scene.delete_leomoon_studio_light(override, confirm=False)
+            raise Exception("Malformed light")
+        return None
+
+    @property
+    def light_scale(self):
+        if self._lls_object.type == 'MESH':
+            return self._lls_object.scale
+        else:
+            return Vector((self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE, 1))
+    
+    @light_scale.setter
+    def light_scale(self, vec):
+        if self._lls_object.type == 'MESH':
+            self._lls_object.scale = vec
+        else:
+            print(vec)
+            self._lls_object.data.size = vec[1] * AREA_DEFAULT_SIZE
+            self._lls_object.data.size_y = vec[2] * AREA_DEFAULT_SIZE
 
     def __init__(self, context, panel, lls_light_collection):
         self.panel = panel
@@ -556,13 +597,22 @@ class LightImage(Rectangle):
 
         # try:
         self._collection = lls_light_collection
-        self._lls_mesh = [m for m in lls_light_collection.objects if m.name.startswith("LLS_LIGHT_MESH")][0]
-        self._lls_actuator = self._lls_mesh.parent
+        self._lls_handle = [m for m in lls_light_collection.objects if m.name.startswith("LLS_LIGHT_HANDLE")][0]
+        self._lls_actuator = self._lls_object.parent.parent
         self._view_layer = find_view_layer(self._collection, context.view_layer.layer_collection)
+
+        self._lls_basic_collection = [m for m in lls_light_collection.children if m.name.startswith("LLS_Basic")][0]
+        self._lls_advanced_collection = [m for m in lls_light_collection.children if m.name.startswith("LLS_Advanced")][0]
+        self._basic_view_layer = find_view_layer(self._lls_basic_collection, context.view_layer.layer_collection)
+        self._advanced_view_layer = find_view_layer(self._lls_advanced_collection, context.view_layer.layer_collection)
         # except Exception:
         #     raise Exception
 
-        self._image_path = ""
+
+        # self._image_path = ""
+        print('__Init__')
+        self.image = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image
+        self._image_path = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image.filepath
         self._lls_rot = None
         self._scale = None
 
@@ -582,8 +632,10 @@ class LightImage(Rectangle):
         return self._view_layer.exclude
 
     @mute.setter
-    def mute(self, value):
-        self._view_layer.exclude = value
+    def mute(self, exclude):
+        self._view_layer.exclude = exclude
+        if not exclude:
+            self._lls_handle.LLStudio.type = self._lls_handle.LLStudio.type
 
     @property
     def panel_loc(self):
@@ -603,8 +655,10 @@ class LightImage(Rectangle):
         if self.mute:
             return
         bpy.ops.object.select_all(action='DESELECT')
-        bpy.context.view_layer.objects.active = self._lls_mesh
-        self._lls_mesh.select_set(True)
+        # if self._lls_object.name in bpy.context.view_layer.objects:
+        self._lls_handle.LLStudio.type = self._lls_handle.LLStudio.type
+        bpy.context.view_layer.objects.active = self._lls_object
+        self._lls_object.select_set(True)
 
     def is_mouse_over(self, mouse_x, mouse_y):
         def rotate(x1, y1, offset):
@@ -641,9 +695,11 @@ class LightImage(Rectangle):
 
     def draw(self):
         try:
-            select = self._lls_mesh.select_get()
+            select = self._lls_object.select_get()
         except ReferenceError:
             return
+        except AttributeError:
+            select = False
 
         # draw something to refresh buffer?
         shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
@@ -666,58 +722,68 @@ class LightImage(Rectangle):
             self.default_border.draw()
 
         lightIconShader.bind()
-        bgl.glActiveTexture(bgl.GL_TEXTURE0)
-        bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
-        lightIconShader.uniform_int("image", 0)
-
         lightIconShader.uniform_float("panel_point_lt", self.panel.point_lt)
         lightIconShader.uniform_float("panel_point_rb", self.panel.point_rb)
+        
+        if self._lls_handle.LLStudio.type == 'ADVANCED':
+            lightIconShader.uniform_bool("advanced", [True,])
+            bgl.glActiveTexture(bgl.GL_TEXTURE0)
+            bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
+            lightIconShader.uniform_int("image", 0)
 
-        try:
-            # material properties
-            lls_node = self._lls_mesh.active_material.node_tree.nodes['Group']
-            intensity = lls_node.inputs['Intensity'].default_value
+            try:
+                # material properties
+                lls_node = self._lls_object.active_material.node_tree.nodes['Group']
+                intensity = lls_node.inputs['Intensity'].default_value
 
-            texture_switch = lls_node.inputs['Texture Switch'].default_value
-            color_overlay = lls_node.inputs['Color Overlay'].default_value
-            color_saturation = lls_node.inputs['Color Saturation'].default_value
+                texture_switch = lls_node.inputs['Texture Switch'].default_value
+                color_overlay = lls_node.inputs['Color Overlay'].default_value
+                color_saturation = lls_node.inputs['Color Saturation'].default_value
 
-            lightIconShader.uniform_float("intensity", intensity)
-            lightIconShader.uniform_float("texture_switch", texture_switch)
-            lightIconShader.uniform_float("color_overlay", color_overlay)
-            lightIconShader.uniform_float("color_saturation", color_saturation)
+                lightIconShader.uniform_float("intensity", intensity)
+                lightIconShader.uniform_float("texture_switch", texture_switch)
+                lightIconShader.uniform_float("color_overlay", color_overlay)
+                lightIconShader.uniform_float("color_saturation", color_saturation)
 
-            mask_bottom_to_top = lls_node.inputs['Mask - Bottom to Top'].default_value
-            mask_diagonal_bottom_left = lls_node.inputs['Mask - Diagonal Bottom Left'].default_value
-            mask_diagonal_bottom_right = lls_node.inputs['Mask - Diagonal Bottom Right'].default_value
-            mask_diagonal_top_left = lls_node.inputs['Mask - Diagonal Top Left'].default_value
-            mask_diagonal_top_right = lls_node.inputs['Mask - Diagonal Top Right'].default_value
-            mask_gradient_amount = lls_node.inputs['Mask - Gradient Amount'].default_value
-            mask_gradient_switch = lls_node.inputs['Mask - Gradient Switch'].default_value
-            mask_gradient_type = lls_node.inputs['Mask - Gradient Type'].default_value
-            mask_left_to_right = lls_node.inputs['Mask - Left to Right'].default_value
-            mask_right_to_left = lls_node.inputs['Mask - Right to Left'].default_value
-            mask_ring_inner_radius = lls_node.inputs['Mask - Ring Inner Radius'].default_value
-            mask_ring_outer_radius = lls_node.inputs['Mask - Ring Outer Radius'].default_value
-            mask_ring_switch = lls_node.inputs['Mask - Ring Switch'].default_value
-            mask_top_to_bottom = lls_node.inputs['Mask - Top to Bottom'].default_value
+                mask_bottom_to_top = lls_node.inputs['Mask - Bottom to Top'].default_value
+                mask_diagonal_bottom_left = lls_node.inputs['Mask - Diagonal Bottom Left'].default_value
+                mask_diagonal_bottom_right = lls_node.inputs['Mask - Diagonal Bottom Right'].default_value
+                mask_diagonal_top_left = lls_node.inputs['Mask - Diagonal Top Left'].default_value
+                mask_diagonal_top_right = lls_node.inputs['Mask - Diagonal Top Right'].default_value
+                mask_gradient_amount = lls_node.inputs['Mask - Gradient Amount'].default_value
+                mask_gradient_switch = lls_node.inputs['Mask - Gradient Switch'].default_value
+                mask_gradient_type = lls_node.inputs['Mask - Gradient Type'].default_value
+                mask_left_to_right = lls_node.inputs['Mask - Left to Right'].default_value
+                mask_right_to_left = lls_node.inputs['Mask - Right to Left'].default_value
+                mask_ring_inner_radius = lls_node.inputs['Mask - Ring Inner Radius'].default_value
+                mask_ring_outer_radius = lls_node.inputs['Mask - Ring Outer Radius'].default_value
+                mask_ring_switch = lls_node.inputs['Mask - Ring Switch'].default_value
+                mask_top_to_bottom = lls_node.inputs['Mask - Top to Bottom'].default_value
 
-            lightIconShader.uniform_float("mask_bottom_to_top", mask_bottom_to_top)
-            lightIconShader.uniform_float("mask_diagonal_bottom_left", mask_diagonal_bottom_left)
-            lightIconShader.uniform_float("mask_diagonal_bottom_right", mask_diagonal_bottom_right)
-            lightIconShader.uniform_float("mask_diagonal_top_left", mask_diagonal_top_left)
-            lightIconShader.uniform_float("mask_diagonal_top_right", mask_diagonal_top_right)
-            lightIconShader.uniform_float("mask_gradient_amount", mask_gradient_amount)
-            lightIconShader.uniform_float("mask_gradient_switch", mask_gradient_switch)
-            lightIconShader.uniform_float("mask_gradient_type", mask_gradient_type)
-            lightIconShader.uniform_float("mask_left_to_right", mask_left_to_right)
-            lightIconShader.uniform_float("mask_right_to_left", mask_right_to_left)
-            lightIconShader.uniform_float("mask_ring_inner_radius", mask_ring_inner_radius)
-            lightIconShader.uniform_float("mask_ring_outer_radius", mask_ring_outer_radius)
-            lightIconShader.uniform_float("mask_ring_switch", mask_ring_switch)
-            lightIconShader.uniform_float("mask_top_to_bottom", mask_top_to_bottom)
-        except:
-            pass
+                lightIconShader.uniform_float("mask_bottom_to_top", mask_bottom_to_top)
+                lightIconShader.uniform_float("mask_diagonal_bottom_left", mask_diagonal_bottom_left)
+                lightIconShader.uniform_float("mask_diagonal_bottom_right", mask_diagonal_bottom_right)
+                lightIconShader.uniform_float("mask_diagonal_top_left", mask_diagonal_top_left)
+                lightIconShader.uniform_float("mask_diagonal_top_right", mask_diagonal_top_right)
+                lightIconShader.uniform_float("mask_gradient_amount", mask_gradient_amount)
+                lightIconShader.uniform_float("mask_gradient_switch", mask_gradient_switch)
+                lightIconShader.uniform_float("mask_gradient_type", mask_gradient_type)
+                lightIconShader.uniform_float("mask_left_to_right", mask_left_to_right)
+                lightIconShader.uniform_float("mask_right_to_left", mask_right_to_left)
+                lightIconShader.uniform_float("mask_ring_inner_radius", mask_ring_inner_radius)
+                lightIconShader.uniform_float("mask_ring_outer_radius", mask_ring_outer_radius)
+                lightIconShader.uniform_float("mask_ring_switch", mask_ring_switch)
+                lightIconShader.uniform_float("mask_top_to_bottom", mask_top_to_bottom)
+            except:
+                pass
+        else:
+            lightIconShader.uniform_bool("advanced", [False,])
+            lightIconShader.uniform_float("intensity", self._lls_object.data.LLStudio.intensity)
+            lightIconShader.uniform_float("color_saturation", self._lls_object.data.LLStudio.color_saturation)
+            lightIconShader.uniform_float("color_overlay", Vector((self._lls_object.data.LLStudio.color[:]+(1,))))
+
+
+        
         bgl.glEnable(bgl.GL_BLEND)
 
         if lleft < bleft:
