@@ -516,7 +516,7 @@ class LightImage(Rectangle):
 
     def panel_loc_to_area_px_lt(self):
         panel_px_loc = Vector((self.panel.width * self.panel_loc.x, -self.panel.height * (1-self.panel_loc.y)))
-        return panel_px_loc + self.panel.point_lt - Vector((LightImage.default_size*self._scale.y/2, LightImage.default_size*self._scale.z/2))
+        return panel_px_loc + self.panel.point_lt - Vector((LightImage.default_size*self._scale.x/2, LightImage.default_size*self._scale.z/2))
 
     def _update_panel_loc(self):
         self.panel_loc.x = (self._lls_rot.x + pi) % (2*pi) / (2*pi)
@@ -539,8 +539,9 @@ class LightImage(Rectangle):
         if self._scale != self.light_scale:
             updated |= True
             self._scale = self.light_scale.copy()
-            self.width = LightImage.default_size * self._scale.y
+            self.width = LightImage.default_size * self._scale.x
             self.height = LightImage.default_size * self._scale.z
+            self._lls_basic_collection.objects[0].data.LLStudio.intensity = self._lls_basic_collection.objects[0].data.LLStudio.intensity
 
         if updated:
             self._update_panel_loc()
@@ -577,18 +578,20 @@ class LightImage(Rectangle):
 
     @property
     def light_scale(self):
-        if self._lls_object.type == 'MESH':
-            return self._lls_object.scale
-        else:
-            return Vector((1, self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE))
+        return self._lls_handle.scale
+        # if self._lls_object.type == 'MESH':
+        #     return self._lls_object.scale
+        # else:
+        #     return Vector((1, self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE))
     
     @light_scale.setter
     def light_scale(self, vec):
-        if self._lls_object.type == 'MESH':
-            self._lls_object.scale = vec
-        else:
-            self._lls_object.data.size = vec[1] * AREA_DEFAULT_SIZE
-            self._lls_object.data.size_y = vec[2] * AREA_DEFAULT_SIZE
+        self._lls_handle.scale = vec
+        # if self._lls_object.type == 'MESH':
+        #     self._lls_object.scale = vec
+        # else:
+        #     self._lls_object.data.size = vec[1] * AREA_DEFAULT_SIZE
+        #     self._lls_object.data.size_y = vec[2] * AREA_DEFAULT_SIZE
 
     def __init__(self, context, panel, lls_light_collection):
         self.panel = panel

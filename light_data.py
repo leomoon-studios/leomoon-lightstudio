@@ -6,11 +6,6 @@ import os
 class LightDict:
     _dict = {
         "advanced": {
-            "scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
             "tex": "Soft Box A.exr",
             "Texture Switch": 1.0,
             "Color Overlay": [
@@ -44,8 +39,6 @@ class LightDict:
             ],
             "color_saturation": 0.0,
             "intensity": 2.0,
-            "size": 9.0,
-            "size_y": 9.0
         },
         "light_name": "",
         "order_index": 0,
@@ -55,6 +48,11 @@ class LightDict:
             0.0
         ],
         "rotation": 0.0,
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ],
         "type": "ADVANCED"
     }
 
@@ -106,8 +104,9 @@ def salvage_data(lls_collection):
             light['light_name'] = lls_mesh.LLStudio.light_name
             light['order_index'] = lls_mesh.LLStudio.order_index
 
+            light['scale'] = [lls_mesh.scale.y, lls_mesh.scale.x, lls_mesh.scale.z]
+
             # advanced
-            light['advanced']['scale'] = [lls_mesh.scale.x, lls_mesh.scale.y, lls_mesh.scale.z]
             texpath = lls_mesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath
             light['advanced']['tex'] = texpath.split(bpy.path.native_pathsep("\\textures_real_lights\\"))[-1]
 
@@ -143,6 +142,7 @@ def salvage_data(lls_collection):
             light['radius'] = lls_handle.location.z
             light['position'] = [lls_handle.parent.rotation_euler.x, lls_handle.parent.rotation_euler.y]
             light['rotation'] = lls_handle.rotation_euler.y
+            light['scale'] = lls_handle.scale
             light['type'] = lls_handle.LLStudio.type
         except:
             print("Handled error while parsing lls_handle")
@@ -152,8 +152,6 @@ def salvage_data(lls_collection):
             light['basic']['color'] = [lls_basic.data.LLStudio.color.r, lls_basic.data.LLStudio.color.g, lls_basic.data.LLStudio.color.b]
             light['basic']['color_saturation'] = lls_basic.data.LLStudio.color_saturation
             light['basic']['intensity'] = lls_basic.data.LLStudio.intensity
-            light['basic']['size'] = lls_basic.data.size
-            light['basic']['size_y'] = lls_basic.data.size_y
         except:
             print("Handled error while parsing Light Handle")
     else:
@@ -161,8 +159,6 @@ def salvage_data(lls_collection):
             light['basic']['color'] = light['advanced']['Color Overlay'][:3]
             light['basic']['color_saturation'] = light['advanced']['Color Saturation']
             light['basic']['intensity'] = light['advanced']['Intensity']
-            light['basic']['size'] = light['advanced']['scale'][0] * 9
-            light['basic']['size_y'] = light['advanced']['scale'][1] * 9
         except:
             print("Handled error while parsing Area Light")
     
@@ -207,16 +203,13 @@ def light_from_dict(light_dict, profile_collection):
     
     lbasic_object.data.LLStudio.color_saturation = light_dict['basic']['color_saturation']
     lbasic_object.data.LLStudio.intensity = light_dict['basic']['intensity']
-    lbasic_object.data.size = light_dict['basic']['size']
-    lbasic_object.data.size_y = light_dict['basic']['size_y']
     
     lhandle.LLStudio.type = light_dict['type']
 
     # Advanced
-    ladvanced_object.scale = light_dict['advanced']['scale']
-
     lhandle.LLStudio.light_name = light_dict['light_name']
     lhandle.LLStudio.order_index = light_dict['order_index']
+    lhandle.scale = light_dict['scale']
 
     new_mat_nodes = ladvanced_object.material_slots[0].material.node_tree.nodes
     new_mat_nodes["Group"].inputs[2].default_value = light_dict['advanced']['Texture Switch']

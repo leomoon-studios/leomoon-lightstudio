@@ -97,17 +97,22 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
         return {"PASS_THROUGH"}
 
 def get_scale_adapter(light_object):
-    if light_object.type == 'MESH':
-        return light_object.scale.copy()
-    elif light_object.type == 'LIGHT':
-        return Vector((light_object.data.size / 9, light_object.data.size / 9, light_object.data.size_y / 9))
+    return light_object.parent.scale.copy()
+    # if light_object.type == 'MESH':
+    #     return light_object.scale.copy()
+    # elif light_object.type == 'LIGHT':
+    #     return Vector((light_object.data.size / 9, light_object.data.size / 9, light_object.data.size_y / 9))
 
 def set_scale_adapter(light_object, new_scale):
-    if light_object.type == 'MESH':
-        light_object.scale = new_scale
-    elif light_object.type == 'LIGHT':
-        light_object.data.size = new_scale.y * 9
-        light_object.data.size_y = new_scale.z * 9
+    light_object.parent.scale = new_scale
+    if light_object.type == 'LIGHT':
+        light_object.data.LLStudio.intensity = light_object.data.LLStudio.intensity
+
+    # if light_object.type == 'MESH':
+    #     light_object.scale = new_scale
+    # elif light_object.type == 'LIGHT':
+    #     light_object.data.size = new_scale.y * 9
+    #     light_object.data.size_y = new_scale.z * 9
 
 class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     bl_idname = "light_studio.scale"
@@ -156,8 +161,10 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     def _modal(self, context, event):
         new_scale = self.base_object_scale * self.delta_length_factor()
         if self.x_key:
+            new_scale.y = self.base_object_scale.y
             new_scale.z = self.base_object_scale.z
         if self.y_key:
+            new_scale.x = self.base_object_scale.x
             new_scale.y = self.base_object_scale.y
 
         global running_modals
@@ -165,7 +172,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
             LightImage.selected_object.light_scale = new_scale
         else:
             set_scale_adapter(context.object, new_scale)
-        bpy.context.workspace.status_text_set(f"Scale X: {new_scale.y:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
+        bpy.context.workspace.status_text_set(f"Scale X: {new_scale.x:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
         #context.area.header_text_set(text=f"Scale X: {new_scale.y:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
 
         if event.value == "PRESS" and not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:

@@ -77,7 +77,11 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
         #     print(light_handle)
         # else:
         #     light_handle = context.object.parent
-        light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
+        try:
+            light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
+        except:
+            return
+        
         try:
             basic_col = [l.users_collection[0] for l in light_handle.children if l.type == 'LIGHT'][0]
             advanced_col = [l.users_collection[0] for l in light_handle.children if l.type == 'MESH'][0]
@@ -89,11 +93,14 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
                 basic_view.exclude = True
                 advanced_view.exclude = False
                 bpy.context.view_layer.objects.active = advanced_col.objects[0]
+                advanced_col.objects[0].select_set(True)
             elif self.type == 'BASIC':
                 # BASIC
                 basic_view.exclude = False
                 advanced_view.exclude = True
                 bpy.context.view_layer.objects.active = basic_col.objects[0]
+                basic_col.objects[0].select_set(True)
+                basic_col.objects[0].data.LLStudio.intensity = basic_col.objects[0].data.LLStudio.intensity
         except IndexError:
             lls_col = light_handle.users_collection[0]
             light = salvage_data(lls_col)
@@ -135,8 +142,11 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
         update=color_update,
     )
     def light_power_formula(self, context):
+        if not bpy.context.object.type == 'LIGHT':
+            return
+        
         try:
-            bpy.context.object.data.energy = self.intensity * context.object.data.size / AREA_DEFAULT_SIZE * context.object.data.size_y / AREA_DEFAULT_SIZE * 250
+            bpy.context.object.data.energy = self.intensity * context.object.parent.scale.x * context.object.parent.scale.z * 250
         except:
             bpy.context.object.data.energy = self.intensity
 
