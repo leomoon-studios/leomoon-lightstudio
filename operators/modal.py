@@ -51,6 +51,11 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+        if LightImage.selected_object is None:
+            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+            LightImage.selected_object = LightImage.lights[idx]
+
         if running_modals:
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
@@ -128,6 +133,11 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+        if LightImage.selected_object is None:
+            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+            LightImage.selected_object = LightImage.lights[idx]
+
         if running_modals:
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
@@ -139,7 +149,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
         super().invoke(context, event)
         
         if running_modals:
-            self.base_object_scale = LightImage.selected_object.light_scale.copy()
+            self.base_object_scale = LightImage.selected_object._lls_handle.scale.copy()
         else:
             self.base_object_scale = get_scale_adapter(context.object)
         return {"RUNNING_MODAL"}
@@ -147,7 +157,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     def _cancel(self, context, event):
         global running_modals
         if running_modals:
-            LightImage.selected_object.light_scale = self.base_object_scale
+            LightImage.selected_object._lls_handle.scale = self.base_object_scale
         else:
             # context.object.scale = self.base_object_scale
             set_scale_adapter(context.object, self.base_object_scale)
@@ -169,7 +179,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
         global running_modals
         if running_modals:
-            LightImage.selected_object.light_scale = new_scale
+            LightImage.selected_object._lls_handle.scale = new_scale
         else:
             set_scale_adapter(context.object, new_scale)
         bpy.context.workspace.status_text_set(f"Scale X: {new_scale.x:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
@@ -201,6 +211,10 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+        if LightImage.selected_object is None:
+            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+            LightImage.selected_object = LightImage.lights[idx]
 
         if running_modals:
             # override starting mouse position

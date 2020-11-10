@@ -142,7 +142,7 @@ def salvage_data(lls_collection):
             light['radius'] = lls_handle.location.z
             light['position'] = [lls_handle.parent.rotation_euler.x, lls_handle.parent.rotation_euler.y]
             light['rotation'] = lls_handle.rotation_euler.y
-            light['scale'] = lls_handle.scale
+            light['scale'] = lls_handle.scale[:]
             light['type'] = lls_handle.LLStudio.type
         except:
             print("Handled error while parsing lls_handle")
@@ -165,19 +165,27 @@ def salvage_data(lls_collection):
     if VERBOSE: print(light)
     return light
 
-def light_from_dict(light_dict, profile_collection):
-    if isinstance(light_dict, dict):
-        light_dict = LightDict(light_dict)
-        light_dict['basic']['color'] = light_dict['advanced']['Color Overlay'][:3]
-        light_dict['basic']['color_saturation'] = light_dict['advanced']['Color Saturation']
-        light_dict['basic']['intensity'] = light_dict['advanced']['Intensity']
-        if VERBOSE: print(light_dict)
+def light_from_dict(from_dict, profile_collection):
+    if isinstance(from_dict, dict):
+        light_dict = LightDict(from_dict)
+        if not 'basic' in from_dict:
+            light_dict['basic']['color'] = light_dict['advanced']['Color Overlay'][:3]
+            light_dict['basic']['color_saturation'] = light_dict['advanced']['Color Saturation']
+            light_dict['basic']['intensity'] = light_dict['advanced']['Intensity']
+            if VERBOSE:
+                print('_'*5, 'LightDict', '_'*5)
+                print(light_dict)
+        if not 'order_index' in from_dict:
+            light_dict['order_index'] = None
+    else:
+        light_dict = from_dict
 
     profile_empty = [ob for ob in profile_collection.objects if ob.name.startswith('LLS_PROFILE')][0]
     # before
     A = set(profile_empty.children)
 
     bpy.ops.scene.add_leomoon_studio_light()
+    print(f"Added light: {light_dict['light_name']}")
 
     # after operation
     B = set(profile_empty.children)
@@ -197,7 +205,13 @@ def light_from_dict(light_dict, profile_collection):
     actuator.rotation_euler.y = light_dict['position'][1]
     actuator.rotation_euler.z = 0
 
+    lhandle.LLStudio.light_name = light_dict['light_name']
+    if light_dict['order_index'] is not None:
+        lhandle.LLStudio.order_index = light_dict['order_index']
+    lhandle.scale = light_dict['scale']
+
     lhandle.LLStudio.type = 'BASIC'
+
     bpy.context.view_layer.objects.active = lbasic_object
     lbasic_object.data.LLStudio.color = light_dict['basic']['color']
     
@@ -207,10 +221,6 @@ def light_from_dict(light_dict, profile_collection):
     lhandle.LLStudio.type = light_dict['type']
 
     # Advanced
-    lhandle.LLStudio.light_name = light_dict['light_name']
-    lhandle.LLStudio.order_index = light_dict['order_index']
-    lhandle.scale = light_dict['scale']
-
     new_mat_nodes = ladvanced_object.material_slots[0].material.node_tree.nodes
     new_mat_nodes["Group"].inputs[2].default_value = light_dict['advanced']['Texture Switch']
     new_mat_nodes["Group"].inputs[3].default_value[0] = light_dict['advanced']['Color Overlay'][0]
@@ -245,147 +255,11 @@ def light_from_dict(light_dict, profile_collection):
 def convert_old_light(lls_mesh, profile_collection):
     # Salvage data
     col = lls_mesh.users_collection[0]
-    '''
-    context = bpy.context
-    objects = [ob for ob in col.objects]
-    light_handle = [ob for ob in objects if ob.name.startswith("LLS_LIGHT.")]
-    if light_handle: light_handle = light_handle[0]
-    family_obs = family(light_handle)
-
-    # old version
-    light = {}
-    mat_nodes = lls_mesh.active_material.node_tree.nodes
-    light['light_name'] = lls_mesh.LLStudio.light_name
-    light['order_index'] = lls_mesh.LLStudio.order_index
-    light['radius'] = lls_mesh.location.x
-    light['position'] = [lls_mesh.parent.rotation_euler.x, lls_mesh.parent.rotation_euler.y]
-    light['rotation'] = lls_mesh.rotation_euler.x
-    light['type'] = 'ADVANCED'
-
-    light['light_name'] = lls_mesh.LLStudio.light_name
-    light['order_index'] = lls_mesh.LLStudio.order_index
-
-    # advanced
-    light['scale'] = [lls_mesh.scale.x, lls_mesh.scale.y, lls_mesh.scale.z]
-    texpath = lls_mesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath
-    light['tex'] = texpath.split(bpy.path.native_pathsep("\\textures_real_lights\\"))[-1]
-
-    light['Texture Switch'] = mat_nodes["Group"].inputs[2].default_value
-    light['Color Overlay'] = [mat_nodes["Group"].inputs[3].default_value[0],
-                            mat_nodes["Group"].inputs[3].default_value[1],
-                            mat_nodes["Group"].inputs[3].default_value[2],
-                            mat_nodes["Group"].inputs[3].default_value[3]]
-    light['Color Saturation'] = mat_nodes["Group"].inputs[4].default_value
-    light['Intensity'] = mat_nodes["Group"].inputs[5].default_value
-    light['Mask - Gradient Switch'] = mat_nodes["Group"].inputs[6].default_value
-    light['Mask - Gradient Type'] = mat_nodes["Group"].inputs[7].default_value
-    light['Mask - Gradient Amount'] = mat_nodes["Group"].inputs[8].default_value
-    light['Mask - Ring Switch'] = mat_nodes["Group"].inputs[9].default_value
-    light['Mask - Ring Inner Radius'] = mat_nodes["Group"].inputs[10].default_value
-    light['Mask - Ring Outer Radius'] = mat_nodes["Group"].inputs[11].default_value
-    light['Mask - Top to Bottom'] = mat_nodes["Group"].inputs[12].default_value
-    light['Mask - Bottom to Top'] = mat_nodes["Group"].inputs[13].default_value
-    light['Mask - Left to Right'] = mat_nodes["Group"].inputs[14].default_value
-    light['Mask - Right to Left'] = mat_nodes["Group"].inputs[15].default_value
-    light['Mask - Diagonal Top Left'] = mat_nodes["Group"].inputs[16].default_value
-    light['Mask - Diagonal Top Right'] = mat_nodes["Group"].inputs[17].default_value
-    light['Mask - Diagonal Bottom Right'] = mat_nodes["Group"].inputs[18].default_value
-    light['Mask - Diagonal Bottom Left'] = mat_nodes["Group"].inputs[19].default_value
-    '''
 
     light = salvage_data(col)
     if VERBOSE: print(light)
 
-
     # Some crucial objects are missing. Delete whole light collection
     bpy.ops.object.delete_custom({"selected_objects": [lls_mesh,]}, use_global=False, confirm=True)
-    # bpy.ops.object.delete_custom({"active_object": lls_mesh, "object": lls_mesh, "selected_objects": [lls_mesh,]}, use_global=False, confirm=True)
-    # bpy.data.collections.remove(col)
-    # if VERBOSE: traceback.print_exc()
-    # update_light_sets(panel, context, always)
-    # return
 
     light_from_dict(light, profile_collection)
-
-    '''
-    profile_empty = [ob for ob in profile_collection.objects if ob.name.startswith('LLS_PROFILE')][0]
-    # before
-    A = set(profile_empty.children)
-
-    bpy.ops.scene.add_leomoon_studio_light()
-
-    # after operation
-    B = set(profile_empty.children)
-
-    # whats the difference
-    lgrp = (A ^ B).pop()
-
-    actuator = [c for c in family(lgrp) if "LLS_ROTATION" in c.name][0]
-    lhandle = [c for c in family(lgrp) if "LLS_LIGHT_HANDLE" in c.name][0]
-    ladvanced_object = [c for c in family(lgrp) if "LLS_LIGHT_MESH" in c.name][0]
-    lbasic_object = [c for c in family(lgrp) if "LLS_LIGHT_AREA" in c.name][0]
-
-    lhandle.location.z = light['radius']
-    lhandle.rotation_euler.y = light['rotation']
-
-    actuator.rotation_euler.x = light['position'][0]
-    actuator.rotation_euler.y = light['position'][1]
-    actuator.rotation_euler.z = 0
-
-    lhandle.LLStudio.type = 'BASIC'
-    context.view_layer.objects.active = lbasic_object
-    lbasic_object.data.LLStudio.color.r = light['Color Overlay'][0]
-    lbasic_object.data.LLStudio.color.g = light['Color Overlay'][1]
-    lbasic_object.data.LLStudio.color.b = light['Color Overlay'][2]
-    
-    lbasic_object.data.LLStudio.color_saturation = light['Color Saturation']
-    lbasic_object.data.LLStudio.intensity = light['Intensity']
-    lbasic_object.data.size = light['scale'][0] * 9
-    lbasic_object.data.size_y = light['scale'][1] * 9
-    
-    lhandle.LLStudio.type = 'ADVANCED'
-
-    # Advanced
-    ladvanced_object.scale.x = light['scale'][0]
-    ladvanced_object.scale.y = light['scale'][1]
-    ladvanced_object.scale.z = light['scale'][2]
-
-
-    lhandle.LLStudio.light_name = light['light_name']
-    lhandle.LLStudio.order_index = light['order_index']
-
-    new_mat_nodes = ladvanced_object.material_slots[0].material.node_tree.nodes
-    new_mat_nodes["Group"].inputs[2].default_value = light['Texture Switch']
-    new_mat_nodes["Group"].inputs[3].default_value[0] = light['Color Overlay'][0]
-    new_mat_nodes["Group"].inputs[3].default_value[1] = light['Color Overlay'][1]
-    new_mat_nodes["Group"].inputs[3].default_value[2] = light['Color Overlay'][2]
-    new_mat_nodes["Group"].inputs[3].default_value[3] = light['Color Overlay'][3]
-    new_mat_nodes["Group"].inputs[4].default_value = light['Color Saturation']
-    new_mat_nodes["Group"].inputs[5].default_value = light['Intensity']
-    new_mat_nodes["Group"].inputs[6].default_value = light['Mask - Gradient Switch']
-    new_mat_nodes["Group"].inputs[7].default_value = light['Mask - Gradient Type']
-    new_mat_nodes["Group"].inputs[8].default_value = light['Mask - Gradient Amount']
-    new_mat_nodes["Group"].inputs[9].default_value = light['Mask - Ring Switch']
-    new_mat_nodes["Group"].inputs[10].default_value = light['Mask - Ring Inner Radius']
-    new_mat_nodes["Group"].inputs[11].default_value = light['Mask - Ring Outer Radius']
-    new_mat_nodes["Group"].inputs[12].default_value = light['Mask - Top to Bottom']
-    new_mat_nodes["Group"].inputs[13].default_value = light['Mask - Bottom to Top']
-    new_mat_nodes["Group"].inputs[14].default_value = light['Mask - Left to Right']
-    new_mat_nodes["Group"].inputs[15].default_value = light['Mask - Right to Left']
-    new_mat_nodes["Group"].inputs[16].default_value = light['Mask - Diagonal Top Left']
-    new_mat_nodes["Group"].inputs[17].default_value = light['Mask - Diagonal Top Right']
-    new_mat_nodes["Group"].inputs[18].default_value = light['Mask - Diagonal Bottom Right']
-    new_mat_nodes["Group"].inputs[19].default_value = light['Mask - Diagonal Bottom Left']
-
-    # new_mat_nodes["Group"].inputs[3].default_value = light['Opacity']
-    # new_mat_nodes["Group"].inputs[4].default_value = light['Falloff']
-    # new_mat_nodes["Group"].inputs[5].default_value = light['Color Saturation']
-    # new_mat_nodes["Group"].inputs[6].default_value = light['Half']
-
-    script_file = os.path.realpath(__file__)
-    dir = os.path.dirname(script_file)
-    if os.path.isabs(light['tex']):
-        new_mat_nodes["Light Texture"].image.filepath = light['tex']
-    else:
-        new_mat_nodes["Light Texture"].image.filepath = os.path.join(dir, "textures_real_lights", light['tex'])
-    '''

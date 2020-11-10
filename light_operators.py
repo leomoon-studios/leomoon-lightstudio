@@ -24,62 +24,14 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_list: CollectionProperty(type = light_list.LightListItem)
     light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
 
-    # def active_light_type_get(self):
-    #     light_handle = bpy.context.object.parent
-    #     visible_lights = [c for c in light_handle.children if c.visible_get()]
-    #     if len(visible_lights) != 1:
-    #         # TODO: fix it
-    #         return 0
-    #     light_object = visible_lights[0]
-    #     if light_object.type == 'MESH':
-    #         return 0
-    #     else:
-    #         return 1
-    
-    # def active_light_type_set(self, value):
-    #     light_handle = bpy.context.object.parent
-    #     basic_col = [l.users_collection[0] for l in light_handle.children if l.type == 'LIGHT'][0]
-    #     advanced_col = [l.users_collection[0] for l in light_handle.children if l.type == 'MESH'][0]
-
-    #     basic_view = find_view_layer(basic_col, bpy.context.view_layer.layer_collection)
-    #     advanced_view = find_view_layer(advanced_col, bpy.context.view_layer.layer_collection)
-
-    #     if value == 0:
-    #         # ADVANCED
-    #         basic_view.exclude = True
-    #         advanced_view.exclude = False
-    #         bpy.context.view_layer.objects.active = advanced_col.objects[0]
-    #     elif value == 1:
-    #         # BASIC
-    #         basic_view.exclude = False
-    #         advanced_view.exclude = True
-    #         bpy.context.view_layer.objects.active = basic_col.objects[0]
-
-
-    # active_light_type: EnumProperty(
-    #     name="Light Type",
-    #     items=(
-    #         ('ADVANCED', "Advanced", "Cycles only"),
-    #         ('BASIC', "Basic", "Cycles & EEVEE"),
-    #     ),
-    #     default='ADVANCED',
-    #     get=active_light_type_get,
-    #     set=active_light_type_set,
-    # )
-
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
     light_name: StringProperty()
     order_index: IntProperty()
     
     def active_light_type_update(self, context):
-        # if not context.object:
-        #     light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
-        #     print(light_handle)
-        # else:
-        #     light_handle = context.object.parent
         try:
             light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
-        except:
+        except Exception as e:
             return
         
         try:
@@ -101,7 +53,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
                 bpy.context.view_layer.objects.active = basic_col.objects[0]
                 basic_col.objects[0].select_set(True)
                 basic_col.objects[0].data.LLStudio.intensity = basic_col.objects[0].data.LLStudio.intensity
-        except IndexError:
+        except IndexError as e:
             lls_col = light_handle.users_collection[0]
             light = salvage_data(lls_col)
             light_root = light_handle.parent.parent
@@ -142,7 +94,7 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
         update=color_update,
     )
     def light_power_formula(self, context):
-        if not bpy.context.object.type == 'LIGHT':
+        if not bpy.context.object or not bpy.context.object.type == 'LIGHT':
             return
         
         try:
@@ -320,7 +272,6 @@ class AddBSLight(bpy.types.Operator):
                 
                 context.view_layer.objects.active = light_object
                 light_object.select_set(True)
-                print(light_object)
 
                 # light = advanced_light_layer.collection.objects[0]
                 # light.LLStudio.order_index = len(context.scene.LLStudio.light_list)

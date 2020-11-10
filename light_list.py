@@ -295,21 +295,6 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
         for e in props.light_list[lls_handle.LLStudio.order_index + 1 : ]:
             bpy.data.objects[e.handle_name].LLStudio.order_index += 1
 
-        
-        
-        # basic_col_copy = [l.users_collection[0] for l in lls_handle_copy.children if l.type == 'LIGHT'][0]
-        # advanced_col_copy = [l.users_collection[0] for l in lls_handle_copy.children if l.type == 'MESH'][0]
-
-        # basic_view_copy = find_view_layer(basic_col_copy, bpy.context.view_layer.layer_collection)
-        # advanced_view_copy = find_view_layer(advanced_col_copy, bpy.context.view_layer.layer_collection)
-
-        # if visible_light_object.type == 'MESH':
-        #     advanced_view_copy.exclude = False
-        #     basic_view_copy.exclude = True
-        # else:
-        #     advanced_view_copy.exclude = True
-        #     basic_view_copy.exclude = False
-
         update_light_list_set(context)
         
         light_object = [obj for obj in lls_handle_copy.children if obj.visible_get()][0]

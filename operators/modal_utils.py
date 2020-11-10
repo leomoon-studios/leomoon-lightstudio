@@ -536,9 +536,9 @@ class LightImage(Rectangle):
         if self.rot != self._lls_handle.rotation_euler.y:
             updated |= True
             self.rot = self._lls_handle.rotation_euler.y
-        if self._scale != self.light_scale:
+        if self._scale != self._lls_handle.scale:
             updated |= True
-            self._scale = self.light_scale.copy()
+            self._scale = self._lls_handle.scale.copy()
             self.width = LightImage.default_size * self._scale.x
             self.height = LightImage.default_size * self._scale.z
             self._lls_basic_collection.objects[0].data.LLStudio.intensity = self._lls_basic_collection.objects[0].data.LLStudio.intensity
@@ -576,28 +576,10 @@ class LightImage(Rectangle):
             raise Exception("Malformed light")
         return None
 
-    @property
-    def light_scale(self):
-        return self._lls_handle.scale
-        # if self._lls_object.type == 'MESH':
-        #     return self._lls_object.scale
-        # else:
-        #     return Vector((1, self._lls_object.data.size / AREA_DEFAULT_SIZE, self._lls_object.data.size_y / AREA_DEFAULT_SIZE))
-    
-    @light_scale.setter
-    def light_scale(self, vec):
-        self._lls_handle.scale = vec
-        # if self._lls_object.type == 'MESH':
-        #     self._lls_object.scale = vec
-        # else:
-        #     self._lls_object.data.size = vec[1] * AREA_DEFAULT_SIZE
-        #     self._lls_object.data.size_y = vec[2] * AREA_DEFAULT_SIZE
-
     def __init__(self, context, panel, lls_light_collection):
         self.panel = panel
         self.__panel_loc = Vector((.5, .5))
 
-        # try:
         self._collection = lls_light_collection
         self._lls_handle = [m for m in lls_light_collection.objects if m.name.startswith("LLS_LIGHT_HANDLE")][0]
         self._lls_actuator = self._lls_object.parent.parent
@@ -607,12 +589,8 @@ class LightImage(Rectangle):
         self._lls_advanced_collection = [m for m in lls_light_collection.children if m.name.startswith("LLS_Advanced")][0]
         self._basic_view_layer = find_view_layer(self._lls_basic_collection, context.view_layer.layer_collection)
         self._advanced_view_layer = find_view_layer(self._lls_advanced_collection, context.view_layer.layer_collection)
-        # except Exception:
-        #     raise Exception
 
 
-        # self._image_path = ""
-        print('__Init__')
         self.image = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image
         self._image_path = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image.filepath
         self._lls_rot = None
@@ -628,6 +606,7 @@ class LightImage(Rectangle):
         self.mute_border = Border(self, (.7, 0, 0, 1))
         self.select_border = Border(self, (.2, .9, .2, 1))
         #self.select_border.weight = 2
+        self.active_border = Border(self, (.1, .45, .1, 1))
 
     @property
     def mute(self):
@@ -698,6 +677,8 @@ class LightImage(Rectangle):
     def draw(self):
         try:
             select = self._lls_object.select_get()
+            # select = self._lls_object == bpy.context.active_object and self._lls_object.select_get()
+            active_select = self._lls_object == bpy.context.active_object
         except ReferenceError:
             return
         except AttributeError:
@@ -718,8 +699,10 @@ class LightImage(Rectangle):
 
         if self.mute:
             self.mute_border.draw()
-        elif select:
+        elif select and active_select:
             self.select_border.draw()
+        elif active_select:
+            self.active_border.draw()
         else:
             self.default_border.draw()
 

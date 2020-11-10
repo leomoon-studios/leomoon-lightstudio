@@ -12,7 +12,7 @@ def update_clear():
     global UPDATED
     UPDATED = False
 
-VERBOSE = True
+VERBOSE = False
 
 AREA_DEFAULT_SIZE = 9
 
@@ -27,5 +27,4 @@ class LightOperator:
                context.scene.LLStudio.initialized and \
                object and \
                object.name.startswith('LLS_LIGHT_') and \
-               isFamily(object) and \
-               object.select_get()
+               isFamily(object)
