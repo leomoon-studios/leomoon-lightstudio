@@ -15,6 +15,8 @@ class DeleteOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
+        if not context.area:
+            return True
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
     
     def execute(self, context):
@@ -24,9 +26,16 @@ class DeleteOperator(bpy.types.Operator):
             context.view_layer.objects.active = obj
             if hasattr(obj, 'use_fake_user'):
                 obj.use_fake_user = False
-            ret = bpy.ops.scene.delete_leomoon_studio_light()
-            if 'CANCELLED' in ret:
+            try:
+                ret = bpy.ops.scene.delete_leomoon_studio_light()
+            except:
                 self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
+                return {'FINISHED'}
+            else:
+                if 'CANCELLED' in ret:
+                    self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
+                    return {'FINISHED'}
+
         
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 

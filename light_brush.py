@@ -86,16 +86,15 @@ def raycast(context, event, diff):
     #####
     profile = findLightGrp(context.active_object).parent
     handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
-    lightmesh = getLightMesh()
-    actuator = lightmesh.parent
+    light_handle = context.active_object.parent
+    actuator = light_handle.parent
     position = intersect_line_sphere(
         location - handle.location,
         (normal if diff else view_vector.reflect(normal)) + location - handle.location,
         Vector((0,0,0)),
-        lightmesh.location.x,
+        light_handle.location.z,
         False,
         )[0]
-
 
     if not position:
         return {'RUNNING_MODAL'}
@@ -124,7 +123,7 @@ class LLSLightBrush(bpy.types.Operator, LightOperator):
                 self.aux = False
             return {'RUNNING_MODAL'}
 
-        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
+        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | <Normal>' if self.normal_type else '<Reflection> | Normal'}")
 
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'Z', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
             # allow navigation
@@ -150,6 +149,11 @@ class LLSLightBrush(bpy.types.Operator, LightOperator):
 
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':
+            # set workspace tool to select
+            self.beginning_tool = context.workspace.tools.from_space_view3d_mode("OBJECT", create=False).idname
+            print(self.beginning_tool)
+            bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name='builtin.select_box')
+
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
         else:
@@ -164,12 +168,12 @@ key_released = False
 class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
     """Point on object to position light and reflection"""
     bl_idname = "light_studio.fast_3d_edit"
-    bl_label = "Light Brush"
+    bl_label = "Fast 3D Edit"
     bl_options = {"UNDO"}
-
+    
     continuous: BoolProperty(default=False, name="Hold to use", description="Button behaviour.\n ON: Hold button to use. Release button to stop.\n OFF: Hold LMB to use, release LMB to stop.")
     normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
-
+    
     def modal(self, context, event):
         screens = [window.screen for window in context.window_manager.windows]
         regions3d = [(area.spaces[0].region_3d, region) for screen in screens for area in screen.areas if area.type == context.area.type for region in area.regions if region.type == context.region.type]
@@ -195,7 +199,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
 
 
         global key_released
-        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | [Normal]' if self.normal_type else '[Reflection] | Normal'}")
+        context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | <Normal>' if self.normal_type else '<Reflection> | Normal'}")
         # print(event.type, event.value)
         if self.continuous:
             if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
@@ -203,6 +207,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 return {'PASS_THROUGH'}
             elif event.type in {'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
                 context.area.header_text_set(text=None)
+                bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
             elif event.type == 'N' and event.value == 'PRESS':
                 self.normal_type = not self.normal_type
@@ -212,6 +217,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 return {'PASS_THROUGH'}
             elif event.value == 'RELEASE' and not event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE', 'N'}:
                 context.area.header_text_set(text=None)
+                bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
             elif event.value == 'RELEASE':
                 key_released = True
@@ -222,6 +228,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 return {'PASS_THROUGH'}
             elif event.type in {'RIGHTMOUSE', 'ESC', 'RET', 'NUMPAD_ENTER'}:
                 context.area.header_text_set(text=None)
+                bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
             elif event.type == 'N' and event.value == 'PRESS':
                 self.normal_type = not self.normal_type
@@ -231,6 +238,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 return {'PASS_THROUGH'}
             elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and key_released:
                 context.area.header_text_set(text=None)
+                bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
             elif event.type in {self.keymap_key, 'LEFTMOUSE'} and event.value == 'RELEASE':
                 key_released = True
@@ -241,6 +249,13 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
+
+        # set workspace tool to select
+        self.beginning_tool = context.workspace.tools.from_space_view3d_mode("OBJECT", create=False).idname
+        print(self.beginning_tool)
+        bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name='builtin.select_box')
+
+
         km, kmi = get_user_keymap_item('Object Mode', self.__class__.bl_idname)
         self.keymap_key = kmi.type if kmi else 'F'
         global key_released
@@ -248,6 +263,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
         if self.continuous:
             raycast(context, event, self.normal_type)
         return {'RUNNING_MODAL'}
+
 
 addon_keymaps = []
 def add_shortkeys():

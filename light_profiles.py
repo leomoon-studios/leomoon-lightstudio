@@ -2,6 +2,7 @@ import bpy
 from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProperty, EnumProperty
 import os, sys, subprocess
 from . common import *
+from . light_data import *
 from itertools import chain
 from . operators.modal import close_control_panel
 from . import light_list
@@ -58,8 +59,8 @@ class LIST_OT_NewItem(bpy.types.Operator):
 
         script_file = os.path.realpath(__file__)
         dir = os.path.dirname(script_file)
-        bpy.ops.wm.append(filepath=_+'LLS3.blend'+_+'Object'+_,
-            directory=os.path.join(dir,"LLS3.blend"+_+"Object"+_),
+        bpy.ops.wm.append(filepath=_+'LLS4.blend'+_+'Object'+_,
+            directory=os.path.join(dir,"LLS4.blend"+_+"Object"+_),
             filename="LLS_PROFILE.000",
             active_collection=True)
 
@@ -256,12 +257,15 @@ def update_list_index(self, context):
 import json, time
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
-
-VERSION = 2.01
+VERSION = 3
+from . import light_operators
 def parse_profile(context, props, profiles, version=VERSION, internal_copy=False):
     plist = props.profile_list
     for profile in profiles:
-        print(profile)
+        if VERBOSE:
+            print('_'*5, 'Parse profile', '_'*5)
+            print(json.dumps(profile, indent=4, separators=(',', ': ')))
+
         bpy.ops.lls_list.new_profile()
         props.list_index = len(plist)-1
         plist[-1].name = profile["name"]
@@ -272,73 +276,16 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
         profile_empty = context.scene.objects[plist[-1].empty_name]
 
         if version > 1:
-            handle = getLightHandle(profile_empty)
+            handle = getProfileHandle(profile_empty)
             handle.location.x = profile['handle_position'][0]
             handle.location.y = profile['handle_position'][1]
             handle.location.z = profile['handle_position'][2]
 
         for light in profile["lights"]:
-            # before
-            A = set(profile_empty.children)
-
-            bpy.ops.scene.add_leomoon_studio_light()
-
-            # after operation
-            B = set(profile_empty.children)
-
-            # whats the difference
-            lgrp = (A ^ B).pop()
-
-            actuator = [c for c in family(lgrp) if "LLS_ROTATION" in c.name][0]
-            lmesh = [c for c in family(lgrp) if "LLS_LIGHT_MESH" in c.name][0]
-            lmesh.location.x = light['radius']
-
-            actuator.rotation_euler.x = light['position'][0]
-            actuator.rotation_euler.y = light['position'][1]
-            actuator.rotation_euler.z = 0
-
-            lmesh.scale.x = light['scale'][0]
-            lmesh.scale.y = light['scale'][1]
-            lmesh.scale.z = light['scale'][2]
-
-            lmesh.rotation_euler.x = light['rotation']
-
-            if 'light_name' in light:
-                lmesh.LLStudio.light_name = light['light_name']
-            if 'order_index' in light:
-                lmesh.LLStudio.order_index = light['order_index']
-
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[2].default_value = light['Texture Switch']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[0] = light['Color Overlay'][0]
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[1] = light['Color Overlay'][1]
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[2] = light['Color Overlay'][2]
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[3] = light['Color Overlay'][3]
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[4].default_value = light['Color Saturation']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[5].default_value = light['Intensity']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[6].default_value = light['Mask - Gradient Switch']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[7].default_value = light['Mask - Gradient Type']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[8].default_value = light['Mask - Gradient Amount']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[9].default_value = light['Mask - Ring Switch']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[10].default_value = light['Mask - Ring Inner Radius']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[11].default_value = light['Mask - Ring Outer Radius']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[12].default_value = light['Mask - Top to Bottom']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[13].default_value = light['Mask - Bottom to Top']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[14].default_value = light['Mask - Left to Right']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[15].default_value = light['Mask - Right to Left']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[16].default_value = light['Mask - Diagonal Top Left']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[17].default_value = light['Mask - Diagonal Top Right']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[18].default_value = light['Mask - Diagonal Bottom Right']
-            lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[19].default_value = light['Mask - Diagonal Bottom Left']
-
-            # lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value = light['Opacity']
-            # lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[4].default_value = light['Falloff']
-            # lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[5].default_value = light['Color Saturation']
-            # lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[6].default_value = light['Half']
-
-            if os.path.isabs(light['tex']):
-                lmesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath = light['tex']
-            else:
-                lmesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath = os.path.join(dir, "textures_real_lights", light['tex'])
+            if version < 3:
+                # most of light settings are moved to advanced sub dict. copy whole dict for the simplicity sake
+                light['advanced'] = light.copy()
+            light_operators.light_from_dict(light, profile_empty.users_collection[0])
 
 class ImportProfiles(bpy.types.Operator):
 
@@ -370,6 +317,7 @@ class ImportProfiles(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
+
 def compose_profile(list_index):
     props = bpy.context.scene.LLStudio
     profile_dict = {}
@@ -377,54 +325,15 @@ def compose_profile(list_index):
     profile_dict['lights']= []
     profile = bpy.data.objects[props.profile_list[list_index].empty_name]
     profile_collection = get_collection(profile)
-    handle = getLightHandle(profile)
+    handle = getProfileHandle(profile)
     profile_dict['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
     for light_collection in profile_collection.children:
-        lmesh = [ob for ob in light_collection.objects if ob.name.startswith('LLS_LIGHT_MESH')][0]
-        actuator = [ob for ob in light_collection.objects if ob.name.startswith('LLS_ROTATION')][0]
-        light = {}
-        light['light_name'] = lmesh.LLStudio.light_name
-        light['order_index'] = lmesh.LLStudio.order_index
-        light['radius'] = lmesh.location.x
-        light['position'] = [actuator.rotation_euler.x, actuator.rotation_euler.y]
-        light['scale'] = [lmesh.scale.x, lmesh.scale.y, lmesh.scale.z]
-        light['rotation'] = lmesh.rotation_euler.x
-        # view_layer = find_view_layer(light_collection, bpy.context.view_layer.layer_collection)
-        # light['mute'] = view_layer.exclude
-        texpath = lmesh.material_slots[0].material.node_tree.nodes["Light Texture"].image.filepath
-        light['tex'] = texpath.split(bpy.path.native_pathsep("\\textures_real_lights\\"))[-1]
-
-        light['Texture Switch'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[2].default_value
-        light['Color Overlay'] = [lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[0],
-                                  lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[1],
-                                  lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[2],
-                                  lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value[3]]
-        light['Color Saturation'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[4].default_value
-        light['Intensity'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[5].default_value
-        light['Mask - Gradient Switch'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[6].default_value
-        light['Mask - Gradient Type'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[7].default_value
-        light['Mask - Gradient Amount'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[8].default_value
-        light['Mask - Ring Switch'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[9].default_value
-        light['Mask - Ring Inner Radius'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[10].default_value
-        light['Mask - Ring Outer Radius'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[11].default_value
-        light['Mask - Top to Bottom'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[12].default_value
-        light['Mask - Bottom to Top'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[13].default_value
-        light['Mask - Left to Right'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[14].default_value
-        light['Mask - Right to Left'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[15].default_value
-        light['Mask - Diagonal Top Left'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[16].default_value
-        light['Mask - Diagonal Top Right'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[17].default_value
-        light['Mask - Diagonal Bottom Right'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[18].default_value
-        light['Mask - Diagonal Bottom Left'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[19].default_value
-
-        # light['Intensity'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[2].default_value
-        # light['Opacity'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[3].default_value
-        # light['Falloff'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[4].default_value
-        # light['Color Saturation'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[5].default_value
-        # light['Half'] = lmesh.material_slots[0].material.node_tree.nodes["Group"].inputs[6].default_value
-
-        profile_dict['lights'].append(light)
+        light = salvage_data(light_collection)
+        profile_dict['lights'].append(light.dict)
         profile_dict['lights'].sort(key=lambda x: x["order_index"])
-
+        
+        # import json
+        # print(json.dumps(profile_dict, indent=4, separators=(',', ': ')))
     return profile_dict
 
 class ExportProfiles(bpy.types.Operator):
@@ -538,6 +447,7 @@ class CopyProfileToScene(bpy.types.Operator):
         profiles = [compose_profile(index),]
 
         context.window.scene = bpy.data.scenes[self.sceneprop]
+
         context.scene.render.engine = 'CYCLES'
         if not context.scene.LLStudio.initialized:
             bpy.ops.scene.create_leomoon_light_studio()

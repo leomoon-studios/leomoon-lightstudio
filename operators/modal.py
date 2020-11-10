@@ -8,7 +8,7 @@ from .. import light_list
 
 from .modal_utils import shader2Dcolor
 from gpu_extras.batch import batch_for_shader
-import time, traceback
+import time, traceback, os
 from mathutils.geometry import intersect_line_line_2d
 from . import VERBOSE, LightOperator
 
@@ -51,7 +51,12 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+
         if running_modals:
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
             self.mouse_y=active_object.loc.y
@@ -62,9 +67,9 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
         super().invoke(context, event)
 
         if running_modals:
-            self.base_object_rotation = LightImage.selected_object._lls_mesh.rotation_euler.x
+            self.base_object_rotation = LightImage.selected_object._lls_handle.rotation_euler.y
         else:
-            self.base_object_rotation = context.object.rotation_euler.x
+            self.base_object_rotation = context.object.parent.rotation_euler.y
 
         return {"RUNNING_MODAL"}
     
@@ -75,9 +80,9 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
     def _cancel(self, context, event):
         global running_modals
         if running_modals:
-            LightImage.selected_object._lls_mesh.rotation_euler.x = self.base_object_rotation
+            LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation
         else:
-            context.object.rotation_euler.x = self.base_object_rotation
+            context.object.parent.rotation_euler.y = self.base_object_rotation
 
         bpy.context.workspace.status_text_set(None)
         #context.area.header_text_set(text=None)
@@ -85,9 +90,9 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
     def _modal(self, context, event):
         global running_modals
         if running_modals:
-            LightImage.selected_object._lls_mesh.rotation_euler.x = self.base_object_rotation + self.angle()
+            LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation + self.angle()
         else:
-            context.object.rotation_euler.x = self.base_object_rotation + self.angle()
+            context.object.parent.rotation_euler.y = self.base_object_rotation + self.angle()
 
         bpy.context.workspace.status_text_set(f"Rot: {self.angle():.3f}")
         #context.area.header_text_set(text=f"Rot: {self.angle():.3f}")
@@ -95,6 +100,24 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
         if not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
             return {"RUNNING_MODAL"}
         return {"PASS_THROUGH"}
+
+def get_scale_adapter(light_object):
+    return light_object.parent.scale.copy()
+    # if light_object.type == 'MESH':
+    #     return light_object.scale.copy()
+    # elif light_object.type == 'LIGHT':
+    #     return Vector((light_object.data.size / 9, light_object.data.size / 9, light_object.data.size_y / 9))
+
+def set_scale_adapter(light_object, new_scale):
+    light_object.parent.scale = new_scale
+    if light_object.type == 'LIGHT':
+        light_object.data.LLStudio.intensity = light_object.data.LLStudio.intensity
+
+    # if light_object.type == 'MESH':
+    #     light_object.scale = new_scale
+    # elif light_object.type == 'LIGHT':
+    #     light_object.data.size = new_scale.y * 9
+    #     light_object.data.size_y = new_scale.z * 9
 
 class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     bl_idname = "light_studio.scale"
@@ -110,7 +133,12 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+
         if running_modals:
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
             self.mouse_y=active_object.loc.y
@@ -121,17 +149,18 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
         super().invoke(context, event)
         
         if running_modals:
-            self.base_object_scale = LightImage.selected_object._lls_mesh.scale.copy()
+            self.base_object_scale = LightImage.selected_object._lls_handle.scale.copy()
         else:
-            self.base_object_scale = context.object.scale.copy()
+            self.base_object_scale = get_scale_adapter(context.object)
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
         global running_modals
         if running_modals:
-            LightImage.selected_object._lls_mesh.scale = self.base_object_scale
+            LightImage.selected_object._lls_handle.scale = self.base_object_scale
         else:
-            context.object.scale = self.base_object_scale
+            # context.object.scale = self.base_object_scale
+            set_scale_adapter(context.object, self.base_object_scale)
         bpy.context.workspace.status_text_set(None)
         #context.area.header_text_set(text=None)
 
@@ -142,17 +171,19 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     def _modal(self, context, event):
         new_scale = self.base_object_scale * self.delta_length_factor()
         if self.x_key:
+            new_scale.y = self.base_object_scale.y
             new_scale.z = self.base_object_scale.z
         if self.y_key:
+            new_scale.x = self.base_object_scale.x
             new_scale.y = self.base_object_scale.y
 
         global running_modals
         if running_modals:
-            LightImage.selected_object._lls_mesh.scale = new_scale
+            LightImage.selected_object._lls_handle.scale = new_scale
         else:
-            context.object.scale = new_scale
-        bpy.context.workspace.status_text_set(f"Scale X: {new_scale.z:.3f} Y: {new_scale.y:.3f}  [X/Y] Axis, [Shift] Precision mode")
-        #context.area.header_text_set(text=f"Scale X: {new_scale.z:.3f} Y: {new_scale.y:.3f}  [X/Y] Axis, [Shift] Precision mode")
+            set_scale_adapter(context.object, new_scale)
+        bpy.context.workspace.status_text_set(f"Scale X: {new_scale.x:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
+        #context.area.header_text_set(text=f"Scale X: {new_scale.y:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode")
 
         if event.value == "PRESS" and not event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
             return {"RUNNING_MODAL"}
@@ -180,34 +211,39 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
 
     def invoke(self, context, event):
         global running_modals
+        context.active_object.select_set(True)
+        lls_collection, profile_collection, profile, handle = llscol_profilecol_profile_handle(context)
+        self.profile_handle = handle
 
         if running_modals:
-            global panel_global
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             # override starting mouse position
+            global panel_global
             self.mouse_x = LightImage.selected_object.loc.x
             self.mouse_y = LightImage.selected_object.loc.y
-            self.light_mesh = LightImage.selected_object._lls_mesh
+            self.light_handle = LightImage.selected_object._lls_object.parent
             self.light_actuator = LightImage.selected_object._lls_actuator
             self.base_object_rotation = self.light_actuator.rotation_euler.copy()
-            self.base_object_distance = self.light_mesh.location.x
-            global panel_global
+            self.base_object_distance = self.light_handle.location.z
             self.canvas_width = panel_global.width
             self.canvas_height = panel_global.height
         else:
             # override starting mouse position
             self.mouse_x = context.area.width/2
             self.mouse_y = context.area.height/2
-            self.light_actuator = context.object.parent
-            self.light_mesh = context.object
-            self.base_object_rotation = context.object.parent.rotation_euler.copy()
-            self.base_object_distance = context.object.location.x
+            self.light_actuator = context.object.parent.parent
+            self.light_handle = context.object.parent
+            self.base_object_rotation = context.object.parent.parent.rotation_euler.copy()
+            self.base_object_distance = self.light_handle.location.z
         super().invoke(context, event)
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
         global running_modals
         self.light_actuator.rotation_euler = self.base_object_rotation
-        self.light_mesh.location.x = self.base_object_distance
+        self.light_handle.location.z = self.base_object_distance
         
         global GRABBING
         GRABBING = False
@@ -236,10 +272,22 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             y_factor = .0025 #pi / 250
 
         if self.z_key:
-            self.light_mesh.location.x = max(self.base_object_distance + dv.x * 0.05, 0)
+            self.light_handle.location.z = max(self.base_object_distance + dv.x * 0.05, 0)
             import bpy_extras
-            self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_mesh.matrix_world.to_translation().normalized() * context.space_data.clip_end)
-            self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, Vector((0,0,0)))
+            start_pos = self.light_handle.matrix_world.to_translation() - self.profile_handle.location
+            start_pos = start_pos.normalized() * context.space_data.clip_end + self.profile_handle.location
+            self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, start_pos)
+            if self.z_start_position is None:
+                self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation())
+            self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.profile_handle.location)
+            
+            # self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation().normalized() * context.space_data.clip_end)
+            # self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, Vector((0,0,0)))
+
+            if self.z_start_position is None or self.z_end_position is None:
+                self.z_start_position = Vector((0,0))
+                self.z_end_position = Vector((0,0))
+
             if running_modals:
                 global panel_global
                 v1 = panel_global.point_lt
@@ -326,7 +374,8 @@ class LLS_OT_control_panel(bpy.types.Operator):
             if hasattr(self, 'handler'):
                 bpy.types.SpaceView3D.draw_handler_remove(self.handler, 'WINDOW')
         except (ValueError, AttributeError):
-            if VERBOSE: traceback.print_exc()
+            # if VERBOSE: traceback.print_exc()
+            pass
 
     def _mouse_event(self, context, event):
         area_mouse_x = event.mouse_x - context.area.x
@@ -648,6 +697,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
             return self.panel
         return None
 
+from .. light_data import salvage_data, convert_old_light, light_from_dict
 def update_light_sets(panel, context, always=False):
     lls_collection, profile_collection = llscol_profilecol(context)
     if profile_collection is not None:
@@ -665,10 +715,28 @@ def update_light_sets(panel, context, always=False):
                 try:
                     LightImage(context, panel, col)
                 except:
+                    # Salvage data
+                    objects = [ob for ob in col.objects]
+                    light_root = [ob for ob in objects if ob.name.startswith("LLS_LIGHT.")]
+                    if light_root:
+                        light_root = light_root[0]
+                        # convert_old_light(light_root, profile_collection)
+
+                    family_obs = family(light_root)
+
+
+                    light = salvage_data(col)
+
                     # Some crucial objects are missing. Delete whole light collection
-                    bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
+                    # bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
+                    bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
                     bpy.data.collections.remove(col)
-                    if VERBOSE: traceback.print_exc()
+                    
+                    # override = context.copy()
+                    # override['selected_objects'] = col.objects
+                    # bpy.ops.object.delete_custom(override, use_global=True)
+
+                    light_from_dict(light, profile_collection)
 
             update_clear()
 

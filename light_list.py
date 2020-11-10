@@ -6,6 +6,7 @@ from itertools import chain
 from . operators import modal
 from . operators.modal import close_control_panel, update_light_sets
 from . operators.modal_utils import send_light_to_top, LightImage
+from . light_data import *
 
 _ = os.sep
 
@@ -14,16 +15,16 @@ class LightListItem(bpy.types.PropertyGroup):
     def update_name(self, context):
         name = self.name
         if self.name == '':
-            name = self.mesh_name
+            name = self.handle_name
             self.name = name
-        bpy.data.objects[self.mesh_name].LLStudio.light_name = name
+        bpy.data.objects[self.handle_name].LLStudio.light_name = name
 
     name: StringProperty(
             name="Profile Name",
             default="Untitled",
             update=update_name)
-
-    mesh_name: StringProperty(
+    
+    handle_name: StringProperty(
             description="",
             default="")
 
@@ -31,12 +32,12 @@ class LLS_UL_LightList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.list_index else 'LIGHT'
 
-        if item.mesh_name in context.scene.objects:
+        if item.handle_name in context.scene.objects:
             # Make sure your code supports all 3 layout types
             if self.layout_type in {'DEFAULT', 'COMPACT'}:
                 layout.prop(item, 'name', text='', emboss=False, translate=False)
 
-                mesh_object = context.scene.objects[item.mesh_name]
+                mesh_object = context.scene.objects[item.handle_name]
                 mesh_collection = get_collection(mesh_object)
 
                 view_layer = find_view_layer(mesh_collection, context.view_layer.layer_collection)
@@ -47,9 +48,9 @@ class LLS_UL_LightList(bpy.types.UIList):
                 props = context.scene.LLStudio
                 excluded=0
                 for li in props.light_list:
-                    if not li.mesh_name in context.scene.objects:
+                    if not li.handle_name in context.scene.objects:
                         continue
-                    mesh_object = context.scene.objects[li.mesh_name]
+                    mesh_object = context.scene.objects[li.handle_name]
                     mesh_collection = get_collection(mesh_object)
                     vl = find_view_layer(mesh_collection, context.view_layer.layer_collection)
                     excluded += vl.exclude
@@ -65,21 +66,55 @@ def get_list_index(self):
     ob = bpy.context.view_layer.objects.active
     if isFamily(ob):
         for i, li in enumerate(self.light_list):
-            if li.mesh_name == ob.name:
+            if li.handle_name == ob.parent.name:
                 return i
     return -1
 
 def set_list_index(self, index):
     selected_light = self.light_list[index]
-    ob = bpy.context.scene.objects[selected_light.mesh_name]       # Get the object
-    bpy.ops.object.select_all(action='DESELECT') # Deselect all objects
-    if ob.name in bpy.context.view_layer.objects:
-        bpy.context.view_layer.objects.active = ob
-        ob.select_set(True)
+    light_handle = bpy.context.scene.objects[selected_light.handle_name]       # Get the object
 
-    if modal.running_modals:
-        light_icon = [l for l in LightImage.lights if l._lls_mesh == ob][0]
-        send_light_to_top(light_icon)
+    light_collection = light_handle.users_collection[0]
+    light_layer = find_view_layer(light_collection, bpy.context.view_layer.layer_collection)
+    if light_layer.exclude:
+        return
+    
+    bpy.ops.object.select_all(action='DESELECT') # Deselect all objects
+
+    try:
+        basic_light_collection = [c for c in light_collection.children if c.name.startswith('LLS_Basic')][0]
+        basic_light_layer = find_view_layer(basic_light_collection, bpy.context.view_layer.layer_collection)
+
+        advanced_light_collection = [c for c in light_collection.children if c.name.startswith('LLS_Advanced')][0]
+        advanced_light_layer = find_view_layer(advanced_light_collection, bpy.context.view_layer.layer_collection)
+
+        if basic_light_layer.exclude + advanced_light_layer.exclude != 1:
+            advanced_light_layer.exclude = False
+            basic_light_layer.exclude = True
+
+        if not basic_light_layer.exclude:
+            light_object = basic_light_collection.objects[0]
+        elif not advanced_light_layer.exclude:
+            light_object = advanced_light_collection.objects[0]
+
+
+        if light_object.name in bpy.context.view_layer.objects:
+            bpy.context.view_layer.objects.active = light_object
+            light_object.select_set(True)
+
+        if modal.running_modals:
+            light_icon = [l for l in LightImage.lights if l._lls_handle == light_object.parent][0]
+            send_light_to_top(light_icon)
+    except IndexError:
+        print("Malformed light. Trying to fix.")
+        light = salvage_data(light_collection)
+        light_root = light_handle.parent.parent
+        profile_collection = light_root.parent.users_collection[0]
+        family_obs = family(light_root)
+        bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
+        bpy.data.collections.remove(light_collection)
+        light_from_dict(light, profile_collection)
+
 
 def update_light_list_set(context):
     '''Update light list set. Use when the light list needs to be synced with real object hierarchy. '''
@@ -89,13 +124,28 @@ def update_light_list_set(context):
         props.light_list.clear()
 
         lls_lights = set(profile_collection.children)
-        lights = [m for col in lls_lights for m in col.objects if m.name.startswith("LLS_LIGHT_MESH")]
+        
+        lights = [m for col in lls_lights for m in col.objects if m.name.startswith("LLS_LIGHT_HANDLE")]
         lights.sort(key= lambda m: m.LLStudio.order_index)
-        for i, lls_mesh in enumerate(lights):
-            lls_mesh.LLStudio.order_index = i
+        for i, lls_handle in enumerate(lights):
+            lls_handle.LLStudio.order_index = i
             ll = props.light_list.add()
-            ll.mesh_name = lls_mesh.name
-            ll.name = lls_mesh.LLStudio.light_name if lls_mesh.LLStudio.light_name else lls_mesh.name
+            ll.handle_name = lls_handle.name
+            ll.name = lls_handle.LLStudio.light_name if lls_handle.LLStudio.light_name else f"Light {lls_handle.LLStudio.order_index}"
+
+            view_layer = find_view_layer(lls_handle.users_collection[0], context.view_layer.layer_collection)
+            visible_lights = [c for c in lls_handle.children if c.visible_get()]
+            if len(visible_lights) == 1 and not view_layer.exclude:
+                light_object = visible_lights[0]
+                real_light_type = 'ADVANCED' if light_object.type == 'MESH' else 'BASIC'
+                if real_light_type != lls_handle.LLStudio.type:
+                    lls_handle.LLStudio.type = lls_handle.LLStudio.type
+            else:
+                if not view_layer.exclude:
+                    lls_handle.LLStudio.type = lls_handle.LLStudio.type
+                else:
+                    for vl in view_layer.children:
+                        vl.exclude = True
 
 class LLS_OT_MuteToggle(bpy.types.Operator):
     bl_idname = "light_studio.mute_toggle"
@@ -110,12 +160,15 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.LLStudio
-        mesh_name = props.light_list[self.index].mesh_name
-        mesh_object = context.scene.objects[mesh_name]
-        mesh_collection = get_collection(mesh_object)
+        handle_name = props.light_list[self.index].handle_name
+        light_handle = context.scene.objects[handle_name]
+        light_collection = get_collection(light_handle)
 
-        view_layer = find_view_layer(mesh_collection, context.view_layer.layer_collection)
+        view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
         view_layer.exclude = not view_layer.exclude
+
+        if not view_layer.exclude:
+            light_handle.LLStudio.type = light_handle.LLStudio.type
         return {"FINISHED"}
 
 class LLS_OT_Isolate(bpy.types.Operator):
@@ -131,28 +184,34 @@ class LLS_OT_Isolate(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.LLStudio
-        mesh_name = props.light_list[self.index].mesh_name
-        mesh_object = context.scene.objects[mesh_name]
-        mesh_collection = get_collection(mesh_object)
-        view_layer = find_view_layer(mesh_collection, context.view_layer.layer_collection)
+        handle_name = props.light_list[self.index].handle_name
+        light_handle = context.scene.objects[handle_name]
+        light_collection = get_collection(light_handle)
+        view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
         
         view_layers=[]
         excluded=0
         for li in props.light_list:
-            mesh_object = context.scene.objects[li.mesh_name]
-            mesh_collection = get_collection(mesh_object)
+            lls_handle = context.scene.objects[li.handle_name]
+            light_collection = get_collection(lls_handle)
 
-            vl = find_view_layer(mesh_collection, context.view_layer.layer_collection)
+            vl = find_view_layer(light_collection, context.view_layer.layer_collection)
             view_layers.append(vl)
             excluded += vl.exclude
+        print([v.name for v in view_layers])
 
         if not view_layer.exclude and excluded == len(view_layers)-1:
             for v in view_layers:
                 v.exclude = False
+                lls_handle = v.children[0].collection.objects[0].parent
+                lls_handle.LLStudio.type = lls_handle.LLStudio.type
         else:
             for v in view_layers:
-                v.exclude = True
+                if not v.exclude:
+                    # Do not set exclude=True twice because it propagates to children.
+                    v.exclude = True
             view_layer.exclude = False
+            light_handle.LLStudio.type = light_handle.LLStudio.type
 
         return {"FINISHED"}
 
@@ -186,8 +245,8 @@ class LLS_OT_LightListMoveItem(bpy.types.Operator):
             return{'CANCELLED'}
 
         for i, e in enumerate(list):
-            if e.mesh_name in bpy.data.objects:
-                bpy.data.objects[e.mesh_name].LLStudio.order_index = i
+            if e.handle_name in bpy.data.objects:
+                bpy.data.objects[e.handle_name].LLStudio.order_index = i
 
         return{'FINISHED'}
 
@@ -204,35 +263,76 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
                context.mode == 'OBJECT' and \
                context.scene.LLStudio.initialized and \
                light and \
-               light.name.startswith('LLS_LIGHT')
+               light.name.startswith('LLS_LIGHT_')
 
     def execute(self, context):
         props = context.scene.LLStudio
         list = props.profile_list
 
+        light_handle = context.object.parent
+        visible_lights = [c for c in light_handle.children if c.visible_get()]
+        if len(visible_lights) != 1:
+            visible_light_object = light_handle.children[0]
+        else:
+            visible_light_object = visible_lights[0]
+
 
         lls_collection, profile_collection = llscol_profilecol(context)
-        lls_mesh = context.object
-        lcol = [c for c in lls_mesh.users_collection if c.name.startswith('LLS_Light')]
+        lls_handle = context.object.parent
+        lcol = [c for c in lls_handle.users_collection if c.name.startswith('LLS_Light')]
         
         if not lcol:
             return{'CANCELLED'}
         
         lcol = lcol[0]
         light_copy = duplicate_collection(lcol, profile_collection)
-        lls_mesh_copy = [lm for lm in light_copy.objects if lm.name.startswith('LLS_LIGHT_MESH')][0] # original light mesh exists so no checks necessary
-        lls_mesh_copy.LLStudio.light_name += " Copy"
-        lls_mesh_copy.LLStudio.order_index += 1
+        lls_handle_copy = [lm for lm in light_copy.objects if lm.name.startswith('LLS_LIGHT_HANDLE')][0] # original light mesh exists so no checks necessary
+        lls_handle_copy.LLStudio.light_name = lls_handle.LLStudio.light_name if lls_handle.LLStudio.light_name else f"Light {lls_handle.LLStudio.order_index}"
+        lls_handle_copy.LLStudio.light_name += " Copy"
+        lls_handle_copy.LLStudio.order_index += 1
 
         # place copied profile next to source profile
-        for e in props.light_list[lls_mesh.LLStudio.order_index + 1 : ]:
-            bpy.data.objects[e.mesh_name].LLStudio.order_index += 1
+        for e in props.light_list[lls_handle.LLStudio.order_index + 1 : ]:
+            bpy.data.objects[e.handle_name].LLStudio.order_index += 1
 
         update_light_list_set(context)
+        
+        light_object = [obj for obj in lls_handle_copy.children if obj.visible_get()][0]
+        bpy.context.view_layer.objects.active = light_object
+        light_object.select_set(True)
 
         if modal.panel_global:
             update_light_sets(modal.panel_global, context, always=True)
-            light_icon = [l for l in LightImage.lights if l._lls_mesh == lls_mesh][0]
+            light_icon = [l for l in LightImage.lights if l._lls_handle == lls_handle][0]
             send_light_to_top(light_icon)
 
         return{'FINISHED'}
+
+from bpy.app.handlers import persistent
+@persistent
+def load_post(scene):
+    context = bpy.context
+    props = bpy.context.scene.LLStudio
+    
+    if not props.initialized:
+        return
+
+    lls_collection, profile_collection = llscol_profilecol(context)
+
+    if profile_collection is None:
+        return
+
+    # props.light_list.clear()
+
+    lls_lights = set(profile_collection.children)
+    
+    lights = [m for col in lls_lights for m in col.objects if m.name.startswith("LLS_LIGHT_MESH")]
+    for i, lls_mesh in enumerate(lights):
+        convert_old_light(lls_mesh, profile_collection)
+    update_light_list_set(bpy.context)
+
+def register():
+    bpy.app.handlers.load_post.append(load_post)
+
+def unregister():
+    bpy.app.handlers.load_post.remove(load_post)

@@ -51,7 +51,7 @@ class LLS_PT_Lights(bpy.types.Panel):
 
         col = row.column(align=True)
         col.operator('scene.add_leomoon_studio_light', icon='ADD', text="")
-        col.operator('scene.delete_leomoon_studio_light', icon='REMOVE', text="")
+        col.operator('scene.delete_leomoon_studio_light', icon='REMOVE', text="").confirm=False
         col.operator('lls_list.copy_light', icon='DUPLICATE', text="")
 
         col.separator()
@@ -72,32 +72,43 @@ class LLS_PT_Selected(bpy.types.Panel):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
 
     def draw(self, context):
-        if context.active_object and (context.active_object.name.startswith('LLS_CONTROLLER') or context.active_object.name.startswith('LLS_LIGHT_MESH')):
+        if context.active_object and context.active_object.name.startswith('LLS_LIGHT_'):
             layout = self.layout
             wm = context.window_manager
 
             col = layout.column(align=True)
             # col.operator('lls.light_brush', text="3D Edit", icon='PIVOT_CURSOR')
 
-            box = layout.box()
-            col = box.column()
-            col.template_icon_view(wm, "lls_tex_previews", show_labels=True)
-            col.label(text=os.path.splitext(wm.lls_tex_previews)[0])
+            row = col.row()
+            # row.prop(context.scene.LLStudio, 'active_light_type', expand=True)
+            row.prop(context.object.parent.LLStudio, 'type', expand=True)
+            col.separator()
 
-            layout.separator()
-            try:
-                lls_inputs = getLightMesh().active_material.node_tree.nodes["Group"].inputs
-                for input in lls_inputs[2:]:
-                    if input.type == "RGBA":
-                        layout.prop(input, 'default_value', text=input.name)
-                        col = layout.column(align=True)
-                    else:
-                        col.prop(input, 'default_value', text=input.name)
-            except:
-                col.label(text="LLS_light material is not valid.")
-                if operators.VERBOSE:
-                    traceback.print_exc()
-            col.prop(getLightMesh(), 'location', index=0) #light radius
+            if context.object.type == 'LIGHT':
+                row = col.row()
+                row.prop(context.object.data.LLStudio, 'color')
+                col.prop(context.object.data.LLStudio, 'color_saturation', slider=True)
+                col.prop(context.object.data.LLStudio, 'intensity')
+            elif context.object.type == 'MESH':
+                box = layout.box()
+                col = box.column()
+                col.template_icon_view(wm, "lls_tex_previews", show_labels=True)
+                col.label(text=os.path.splitext(wm.lls_tex_previews)[0])
+
+                layout.separator()
+                try:
+                    lls_inputs = getLightMesh().active_material.node_tree.nodes["Group"].inputs
+                    for input in lls_inputs[2:]:
+                        if input.type == "RGBA":
+                            layout.prop(input, 'default_value', text=input.name)
+                            col = layout.column(align=True)
+                        else:
+                            col.prop(input, 'default_value', text=input.name)
+                except:
+                    col.label(text="LLS_light material is not valid.")
+                    if operators.VERBOSE:
+                        traceback.print_exc()
+            col.prop(getLightMesh().parent, 'location', index=2, text="Distance") #light radius
 
 @force_register
 class LLS_PT_ProfileList(bpy.types.Panel):
