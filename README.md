@@ -32,7 +32,7 @@ Video below shows the options that are available per light.
 ## Limitations
 ~~LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh lights in real-time. Rendering is only supported in Cycles.~~
 
-LeoMoon LightStudio now supports EEVEE with "Basic lights".
+LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 
 
 ## Background HDR vs Manual Lighting
