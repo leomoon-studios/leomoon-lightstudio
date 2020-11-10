@@ -495,8 +495,6 @@ class LightImage(Rectangle):
 
     @classmethod
     def refresh(cls):
-        props = bpy.context.scene.LLStudio
-
         cls.selected_object = None
         for l in cls.lights:
             try:

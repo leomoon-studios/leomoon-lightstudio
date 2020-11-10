@@ -52,11 +52,11 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
     def invoke(self, context, event):
         global running_modals
         context.active_object.select_set(True)
-        if LightImage.selected_object is None:
-            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
-            LightImage.selected_object = LightImage.lights[idx]
 
         if running_modals:
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
             self.mouse_y=active_object.loc.y
@@ -134,11 +134,11 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     def invoke(self, context, event):
         global running_modals
         context.active_object.select_set(True)
-        if LightImage.selected_object is None:
-            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
-            LightImage.selected_object = LightImage.lights[idx]
 
         if running_modals:
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             active_object = LightImage.selected_object
             self.mouse_x=active_object.loc.x
             self.mouse_y=active_object.loc.y
@@ -212,19 +212,21 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
     def invoke(self, context, event):
         global running_modals
         context.active_object.select_set(True)
-        if LightImage.selected_object is None:
-            idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
-            LightImage.selected_object = LightImage.lights[idx]
+        lls_collection, profile_collection, profile, handle = llscol_profilecol_profile_handle(context)
+        self.profile_handle = handle
 
         if running_modals:
+            if LightImage.selected_object is None:
+                idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
+                LightImage.selected_object = LightImage.lights[idx]
             # override starting mouse position
             global panel_global
             self.mouse_x = LightImage.selected_object.loc.x
             self.mouse_y = LightImage.selected_object.loc.y
-            self.light_object = LightImage.selected_object._lls_object
+            self.light_handle = LightImage.selected_object._lls_object.parent
             self.light_actuator = LightImage.selected_object._lls_actuator
             self.base_object_rotation = self.light_actuator.rotation_euler.copy()
-            self.base_object_distance = self.light_object.location.x
+            self.base_object_distance = self.light_handle.location.z
             self.canvas_width = panel_global.width
             self.canvas_height = panel_global.height
         else:
@@ -232,16 +234,16 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             self.mouse_x = context.area.width/2
             self.mouse_y = context.area.height/2
             self.light_actuator = context.object.parent.parent
-            self.light_object = context.object.parent
+            self.light_handle = context.object.parent
             self.base_object_rotation = context.object.parent.parent.rotation_euler.copy()
-            self.base_object_distance = context.object.parent.location.x
+            self.base_object_distance = self.light_handle.location.z
         super().invoke(context, event)
         return {"RUNNING_MODAL"}
     
     def _cancel(self, context, event):
         global running_modals
         self.light_actuator.rotation_euler = self.base_object_rotation
-        self.light_object.location.x = self.base_object_distance
+        self.light_handle.location.z = self.base_object_distance
         
         global GRABBING
         GRABBING = False
@@ -270,10 +272,22 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             y_factor = .0025 #pi / 250
 
         if self.z_key:
-            self.light_object.location.x = max(self.base_object_distance + dv.x * 0.05, 0)
+            self.light_handle.location.z = max(self.base_object_distance + dv.x * 0.05, 0)
             import bpy_extras
-            self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_object.matrix_world.to_translation().normalized() * context.space_data.clip_end)
-            self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, Vector((0,0,0)))
+            start_pos = self.light_handle.matrix_world.to_translation() - self.profile_handle.location
+            start_pos = start_pos.normalized() * context.space_data.clip_end + self.profile_handle.location
+            self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, start_pos)
+            if self.z_start_position is None:
+                self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation())
+            self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.profile_handle.location)
+            
+            # self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation().normalized() * context.space_data.clip_end)
+            # self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, Vector((0,0,0)))
+
+            if self.z_start_position is None or self.z_end_position is None:
+                self.z_start_position = Vector((0,0))
+                self.z_end_position = Vector((0,0))
+
             if running_modals:
                 global panel_global
                 v1 = panel_global.point_lt

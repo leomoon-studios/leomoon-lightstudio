@@ -11,7 +11,7 @@ bl_info = {
     "category": "User Interface" }
     
     
-import bpy      
+import bpy
 
 # load and reload submodules
 ##################################    
