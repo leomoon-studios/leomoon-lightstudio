@@ -27,7 +27,7 @@ def draw(self, area):
         b.draw(self.mouse_x, self.mouse_y)
     for l in LightImage.lights:
         l.draw()
-    
+
     if VERBOSE:
         font_size = 14
         blf.size(0, font_size, 72)
@@ -72,7 +72,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
             self.base_object_rotation = context.object.parent.rotation_euler.y
 
         return {"RUNNING_MODAL"}
-    
+
     def _finish(self, context, event):
         bpy.context.workspace.status_text_set(None)
         #context.area.header_text_set(text=None)
@@ -147,13 +147,13 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
             self.mouse_x = context.area.width/2
             self.mouse_y = context.area.height/2
         super().invoke(context, event)
-        
+
         if running_modals:
             self.base_object_scale = LightImage.selected_object._lls_handle.scale.copy()
         else:
             self.base_object_scale = get_scale_adapter(context.object)
         return {"RUNNING_MODAL"}
-    
+
     def _cancel(self, context, event):
         global running_modals
         if running_modals:
@@ -239,12 +239,12 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             self.base_object_distance = self.light_handle.location.z
         super().invoke(context, event)
         return {"RUNNING_MODAL"}
-    
+
     def _cancel(self, context, event):
         global running_modals
         self.light_actuator.rotation_euler = self.base_object_rotation
         self.light_handle.location.z = self.base_object_distance
-        
+
         global GRABBING
         GRABBING = False
         bpy.context.workspace.status_text_set(None)
@@ -280,7 +280,7 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             if self.z_start_position is None:
                 self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation())
             self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.profile_handle.location)
-            
+
             # self.z_start_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, self.light_handle.matrix_world.to_translation().normalized() * context.space_data.clip_end)
             # self.z_end_position = bpy_extras.view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, Vector((0,0,0)))
 
@@ -401,10 +401,10 @@ class LLS_OT_control_panel(bpy.types.Operator):
         aw = context.area.width
         ah = context.area.height
         pw = min(aw-60, 800)
-        
+
         global panel_global
         if not panel_global:
-            panel_global = Panel(Vector((30, 25)), pw, pw*(9/16))
+            panel_global = Panel(Vector((15, 45)), pw, pw*(9/16))
         self.panel = panel_global
 
         LightImage.default_size = 50
@@ -420,7 +420,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
         self.modifier_key = False
 
         return {"RUNNING_MODAL"}
-    
+
     def border_touch_point(self, context, area_mouse_x, area_mouse_y):
         touch_point = 0
         treshold = 5
@@ -447,7 +447,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
             elif area_mouse_x > self.panel.point_rb.x-treshold and area_mouse_x <= self.panel.point_rb.x+treshold:
                 touch_point |= W_RIGHT
                 context.window.cursor_set('MOVE_X')
-        
+
         if area_mouse_x >= self.panel.point_lt.x-treshold and area_mouse_x <= self.panel.point_rb.x+treshold:
             if area_mouse_y > self.panel.point_lt.y-treshold and area_mouse_y <= self.panel.point_lt.y+treshold:
                 touch_point |= W_TOP
@@ -463,7 +463,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
             context.window.cursor_set('SCROLL_XY')
         elif touch_point == 0:
             context.window.cursor_set('DEFAULT')
-        
+
         return touch_point
 
     def modal(self, context, event):
@@ -490,7 +490,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
                 self.modifier_key = False
             elif event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"}:
                 dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
-                
+
                 # Draw resize cursor
                 touch_point = self.border_touch_point(context, area_mouse_x, area_mouse_y)
                 if self.border_touch and event.value == "PRESS":
@@ -513,12 +513,12 @@ class LLS_OT_control_panel(bpy.types.Operator):
                         active_object = LightImage.selected_object
                         if active_object and not GRABBING:
                             bpy.ops.light_studio.grab('INVOKE_DEFAULT', mouse_x=active_object.loc.x, mouse_y=active_object.loc.y)
-                            self.panel_moving = False                    
-                    
+                            self.panel_moving = False
+
                     return {"RUNNING_MODAL"}
 
                 return {"PASS_THROUGH"}
-            
+
             if event.value == "PRESS":
                 if event.type in {"LEFT_CTRL", "RIGHT_CTRL", "LEFT_SHIFT", "RIGHT_SHIFT", "LEFT_ALT", "RIGHT_ALT"}:
                     self.modifier_key = True
@@ -531,7 +531,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
                     if not self.clicked_object:
                         return {"PASS_THROUGH"}
-                    
+
                     if hasattr(self.clicked_object, 'mute'):
                         muted_count = len([l for l in LightImage.lights if l.mute])
                         unmuted_count = len(LightImage.lights) - muted_count
@@ -552,10 +552,10 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
                     if hasattr(self.clicked_object, 'select'):
                         self.clicked_object.select()
-                    
+
                     return {"RUNNING_MODAL"}
 
-                # Left mouse button pressed            
+                # Left mouse button pressed
                 elif event.type == "LEFTMOUSE":
                     dx, dy, area_mouse_x, area_mouse_y = self._mouse_event(context, event)
 
@@ -574,7 +574,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
                     if touch_point and not isinstance(self.clicked_object, Button):
                         self.border_touch = touch_point
                         return {"RUNNING_MODAL"}
-                    
+
                     self.panel_moving = self.clicked_object != None
 
                     click_result = self.click_manager.click(self.clicked_object)
@@ -637,14 +637,14 @@ class LLS_OT_control_panel(bpy.types.Operator):
                 elif event.type == "LEFT_SHIFT":
                     self.precision_mode = True
                     return {'RUNNING_MODAL'}
-                
+
                 # Return (Enter) key is pressed
                 elif event.type == "RET":
                     bpy.context.workspace.status_text_set(None)
                     #context.area.header_text_set(text=None)
                     self._unregister_handler()
                     return {'FINISHED'}
-            
+
             if event.value == "RELEASE":
                 #bpy.context.workspace.status_text_set(textinfo)
                 #context.area.header_text_set(text=textinfo)
@@ -664,7 +664,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
             self._unregister_handler()
             if VERBOSE: traceback.print_exc()
             return {"CANCELLED"}
-        
+
         return {"PASS_THROUGH"}
 
     def find_clicked(self, area_mouse_x, area_mouse_y, overlapping=False):
@@ -677,7 +677,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
             if area_mouse_x <= r_ui.width + 2:
                 return None
 
-        
+
         overlapped = []
         for l in reversed(LightImage.lights):
             if l.is_mouse_over(area_mouse_x, area_mouse_y):
@@ -688,7 +688,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
         if overlapping and overlapped:
             return overlapped
-        
+
         for b in Button.buttons:
             if is_in_rect(b, Vector((area_mouse_x, area_mouse_y))):
                 return b
@@ -707,7 +707,7 @@ def update_light_sets(panel, context, always=False):
 
             to_delete = working_set.difference(lls_lights)
             to_add =  lls_lights.difference(working_set)
-            
+
             for col in to_delete:
                 LightImage.remove(col)
 
@@ -731,7 +731,7 @@ def update_light_sets(panel, context, always=False):
                     # bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
                     bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
                     bpy.data.collections.remove(col)
-                    
+
                     # override = context.copy()
                     # override['selected_objects'] = col.objects
                     # bpy.ops.object.delete_custom(override, use_global=True)
@@ -762,5 +762,5 @@ def remove_shortkeys():
     wm = bpy.context.window_manager
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-        
+
     addon_keymaps.clear()

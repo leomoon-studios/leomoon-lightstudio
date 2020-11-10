@@ -30,12 +30,21 @@ Video below shows the options that are available per light.
 * Import/Export light profiles
 
 ## Limitations
-LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh lights in real-time. Rendering is only supported in Cycles.
+~~LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh lights in real-time. Rendering is only supported in Cycles.~~
+
+LeoMoon LightStudio now supports EEVEE with "Basic lights".
+
 
 ## Background HDR vs Manual Lighting
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
 ## Changelog
+### 2.7.0 2020-11-10:
+* Added two types of lights:
+    * Advanced: Supports HDR light textures and has many masking options
+    * Basic: Blender's area light with limited options to support EEVEE
+* Many bugfixes and improvements
+
 ### 2.6.2 2020-10-07:
 * Added custom hotkeys to addon preferences
 * Major improvements added to Light Brush with F hotkey (3D Edit)
