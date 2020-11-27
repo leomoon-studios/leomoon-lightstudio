@@ -6,7 +6,7 @@ from . operators import modal
 
 class DeleteOperator(bpy.types.Operator):
     """ Custom delete """
-    bl_idname = "object.delete_custom" 
+    bl_idname = "object.delete_custom"
     bl_label = "Custom Delete"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -18,10 +18,10 @@ class DeleteOperator(bpy.types.Operator):
         if not context.area:
             return True
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
-    
+
     def execute(self, context):
         protected_objects = (ob for ob in context.selected_objects if ob.protected)
-        
+
         for obj in protected_objects:
             context.view_layer.objects.active = obj
             if hasattr(obj, 'use_fake_user'):
@@ -36,13 +36,13 @@ class DeleteOperator(bpy.types.Operator):
                     self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
                     return {'FINISHED'}
 
-        
+
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 
         light_list.update_light_list_set(context)
 
         return {'FINISHED'}
-    
+
     def invoke(self, context, event):
         if self.confirm:
             if not modal.running_modals:
@@ -67,7 +67,8 @@ def register_keymaps():
         for default_kmi in kmis:
             addon_kmi = addon_km.keymap_items.new(DeleteOperator.bl_idname, default_kmi.type, default_kmi.value)
             addon_kmi.map_type = default_kmi.map_type
-            addon_kmi.repeat = default_kmi.repeat
+            if hasattr(addon_kmi, 'repeat'):
+                addon_kmi.repeat = default_kmi.repeat
             addon_kmi.any = default_kmi.any
             addon_kmi.shift = default_kmi.shift
             addon_kmi.ctrl = default_kmi.ctrl
@@ -76,7 +77,7 @@ def register_keymaps():
             addon_kmi.key_modifier = default_kmi.key_modifier
             addon_kmi.properties.use_global = default_kmi.properties.use_global
             addon_kmi.properties.confirm = default_kmi.properties.confirm
-            
+
             addon_keymaps.append((addon_km, addon_kmi))
 
 
@@ -90,5 +91,5 @@ def remove_shortkeys():
     wm = bpy.context.window_manager
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-        
+
     addon_keymaps.clear()

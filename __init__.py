@@ -4,17 +4,17 @@ bl_info = {
     "name": "LeoMoon LightStudio",
     "description": "Easy setup for complex studio lighting",
     "author": "LeoMoon Studios",
-    "version": (2, 7, 0),
-    "blender": (2, 80, 0),
+    "version": (2, 7, 1),
+    "blender": (2, 82, 0),
     "location": "View3D -> Tools -> LightStudio",
     "wiki_url": "",
     "category": "User Interface" }
-    
-    
+
+
 import bpy
 
 # load and reload submodules
-##################################    
+##################################
 
 from . import auto_load
 
@@ -22,7 +22,7 @@ auto_load.init()
 
 
 # register
-################################## 
+##################################
 
 from . light_operators import LeoMoon_Light_Studio_Properties, LeoMoon_Light_Studio_Object_Properties, LeoMoon_Light_Studio_Light_Properties
 from . import deleteOperator, light_brush
@@ -39,7 +39,7 @@ def register():
     modal.add_shortkeys()
     bpy.app.handlers.load_post.append(modal.load_handler)
     bpy.app.handlers.frame_change_pre.append(modal.frame_change_handler)
-    
+
 
 def unregister():
     deleteOperator.remove_shortkeys()
