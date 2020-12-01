@@ -27,13 +27,13 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
     light_name: StringProperty()
     order_index: IntProperty()
-
+    
     def active_light_type_update(self, context):
         try:
             light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
         except Exception as e:
             return
-
+        
         try:
             basic_col = [l.users_collection[0] for l in light_handle.children if l.type == 'LIGHT'][0]
             advanced_col = [l.users_collection[0] for l in light_handle.children if l.type == 'MESH'][0]
@@ -62,7 +62,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
             bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
             bpy.data.collections.remove(lls_col)
             light_from_dict(light, profile_collection)
-
+    
     type: EnumProperty(
         name="Light Type",
         items=(
@@ -71,7 +71,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
         ),
         default='ADVANCED',
         update=active_light_type_update,
-    )
+    ) 
 
 from . operators import AREA_DEFAULT_SIZE
 class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
@@ -81,7 +81,7 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
     color: FloatVectorProperty(
         name="Color",
         subtype="COLOR",
-        default=(1,.4,.15),
+        default=(1,1,1),
         size=3,
         soft_min=0,
         soft_max=1,
@@ -96,7 +96,7 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
     def light_power_formula(self, context):
         if not bpy.context.object or not bpy.context.object.type == 'LIGHT':
             return
-
+        
         try:
             bpy.context.object.data.energy = self.intensity * context.object.parent.scale.x * context.object.parent.scale.z * 250
         except:
@@ -238,7 +238,7 @@ class AddBSLight(bpy.types.Operator):
 
                 advanced_light_collection = [c for c in collection.children if c.name.startswith('LLS_Advanced')][0]
                 basic_light_collection = [c for c in collection.children if c.name.startswith('LLS_Basic')][0]
-
+                
                 new_objects = collection.objects[:]
                 # new_objects += [ob for col in collection.children for ob in col.objects]
                 new_objects += advanced_light_collection.objects[:]
@@ -269,7 +269,7 @@ class AddBSLight(bpy.types.Operator):
                     # advanced_light_layer.exclude = False
                     light_object = advanced_light_collection.objects[0]
                     light_handle.LLStudio.type = 'ADVANCED'
-
+                
                 context.view_layer.objects.active = light_object
                 light_object.select_set(True)
 
@@ -359,11 +359,36 @@ class BUILTIN_KSI_LightStudio(bpy.types.KeyingSetInfo):
     def generate(ksi, context, ks, data):
         id_block = data.id_data
 
-        lls_collection = get_collection(id_block)
-        light_mesh = [m for m in lls_collection.objects if m.name.startswith("LLS_LIGHT_MESH")][0]
-        lls_actuator = light_mesh.parent
+        lls_root = findLightGrp(id_block)
+        family_obs = family(lls_root)
+        
+        lls_handle = [m for m in family_obs if m.name.startswith("LLS_LIGHT_HANDLE")][0]
+        lls_actuator = lls_handle.parent
 
-        ks.paths.add(light_mesh, "location", index=0, group_method='KEYINGSET')
-        ks.paths.add(light_mesh, "rotation_euler", index=0, group_method='KEYINGSET')
-        ks.paths.add(light_mesh, "scale", group_method='KEYINGSET')
+        ks.paths.add(lls_handle, "location", index=2, group_method='KEYINGSET')
+        ks.paths.add(lls_handle, "rotation_euler", index=1, group_method='KEYINGSET')
+        ks.paths.add(lls_handle, "scale", group_method='KEYINGSET')
         ks.paths.add(lls_actuator, "rotation_euler", group_method='KEYINGSET')
+
+from bpy.app.handlers import persistent
+@persistent
+def textcounter_text_update_frame(scene, depsgraph=None):
+    if not scene.LLStudio.initialized:
+        return
+
+    for lls_area in [obj for obj in scene.objects if obj.name.startswith("LLS_LIGHT_AREA.")]:
+        color = lls_area.data.LLStudio.color
+        color_saturation = lls_area.data.LLStudio.color_saturation
+        intensity = lls_area.data.LLStudio.intensity
+        lls_area.data.color = Vector((1,1,1)).lerp(color, color_saturation)
+
+        try:
+            lls_area.data.energy = intensity * lls_area.parent.scale.x * lls_area.parent.scale.z * 250
+        except:
+            lls_area.data.energy = intensity
+
+def register():
+    bpy.app.handlers.frame_change_post.append(textcounter_text_update_frame)
+
+def unregister():
+    bpy.app.handlers.frame_change_post.remove(textcounter_text_update_frame)
