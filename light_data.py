@@ -29,7 +29,8 @@ class LightDict:
             "Mask - Diagonal Top Left": 0.0,
             "Mask - Diagonal Top Right": 0.0,
             "Mask - Diagonal Bottom Right": 0.0,
-            "Mask - Diagonal Bottom Left": 0.0
+            "Mask - Diagonal Bottom Left": 0.0,
+            "Mask - Backface": 0.0
         },
         "basic": {
             "color": [
@@ -132,6 +133,7 @@ def salvage_data(lls_collection):
             light['advanced']['Mask - Diagonal Top Right'] = mat_nodes["Group"].inputs[17].default_value
             light['advanced']['Mask - Diagonal Bottom Right'] = mat_nodes["Group"].inputs[18].default_value
             light['advanced']['Mask - Diagonal Bottom Left'] = mat_nodes["Group"].inputs[19].default_value
+            light['advanced']['Mask - Backface'] = mat_nodes["Group"].inputs[20].default_value
         except:
             print("Error while parsing Mesh Light")
     
@@ -243,6 +245,7 @@ def light_from_dict(from_dict, profile_collection):
     new_mat_nodes["Group"].inputs[17].default_value = light_dict['advanced']['Mask - Diagonal Top Right']
     new_mat_nodes["Group"].inputs[18].default_value = light_dict['advanced']['Mask - Diagonal Bottom Right']
     new_mat_nodes["Group"].inputs[19].default_value = light_dict['advanced']['Mask - Diagonal Bottom Left']
+    new_mat_nodes["Group"].inputs[20].default_value = light_dict['advanced']['Mask - Backface']
 
     script_file = os.path.realpath(__file__)
     dir = os.path.dirname(script_file)
