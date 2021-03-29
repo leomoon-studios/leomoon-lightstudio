@@ -16,6 +16,7 @@ class LightDict:
             ],
             "Color Saturation": 0.0,
             "Intensity": 2.0,
+            "Exposure": 1.0,
             "Mask - Gradient Switch": 0.0,
             "Mask - Gradient Type": 0.0,
             "Mask - Gradient Amount": 0.0,
@@ -60,16 +61,16 @@ class LightDict:
     def __init__(self, real_dict=None):
         import copy
         self.dict = copy.deepcopy(self._dict)
-        
+
         if real_dict:
             self.dict.update(real_dict)
-    
+
     def __getitem__(self, key):
         return self.dict[key]
-    
+
     def __setitem__(self, key, val):
         self.dict[key] = val
-    
+
     def __str__(self):
         import json
         return json.dumps(self.dict, indent=4, separators=(',', ': '))
@@ -119,24 +120,25 @@ def salvage_data(lls_collection):
                                     mat_nodes["Group"].inputs[3].default_value[3]]
             light['advanced']['Color Saturation'] = mat_nodes["Group"].inputs[4].default_value
             light['advanced']['Intensity'] = mat_nodes["Group"].inputs[5].default_value
-            light['advanced']['Mask - Gradient Switch'] = mat_nodes["Group"].inputs[6].default_value
-            light['advanced']['Mask - Gradient Type'] = mat_nodes["Group"].inputs[7].default_value
-            light['advanced']['Mask - Gradient Amount'] = mat_nodes["Group"].inputs[8].default_value
-            light['advanced']['Mask - Ring Switch'] = mat_nodes["Group"].inputs[9].default_value
-            light['advanced']['Mask - Ring Inner Radius'] = mat_nodes["Group"].inputs[10].default_value
-            light['advanced']['Mask - Ring Outer Radius'] = mat_nodes["Group"].inputs[11].default_value
-            light['advanced']['Mask - Top to Bottom'] = mat_nodes["Group"].inputs[12].default_value
-            light['advanced']['Mask - Bottom to Top'] = mat_nodes["Group"].inputs[13].default_value
-            light['advanced']['Mask - Left to Right'] = mat_nodes["Group"].inputs[14].default_value
-            light['advanced']['Mask - Right to Left'] = mat_nodes["Group"].inputs[15].default_value
-            light['advanced']['Mask - Diagonal Top Left'] = mat_nodes["Group"].inputs[16].default_value
-            light['advanced']['Mask - Diagonal Top Right'] = mat_nodes["Group"].inputs[17].default_value
-            light['advanced']['Mask - Diagonal Bottom Right'] = mat_nodes["Group"].inputs[18].default_value
-            light['advanced']['Mask - Diagonal Bottom Left'] = mat_nodes["Group"].inputs[19].default_value
-            light['advanced']['Mask - Backface'] = mat_nodes["Group"].inputs[20].default_value
+            light['advanced']['Exposure'] = mat_nodes["Group"].inputs[6].default_value
+            light['advanced']['Mask - Gradient Switch'] = mat_nodes["Group"].inputs[7].default_value
+            light['advanced']['Mask - Gradient Type'] = mat_nodes["Group"].inputs[8].default_value
+            light['advanced']['Mask - Gradient Amount'] = mat_nodes["Group"].inputs[9].default_value
+            light['advanced']['Mask - Ring Switch'] = mat_nodes["Group"].inputs[10].default_value
+            light['advanced']['Mask - Ring Inner Radius'] = mat_nodes["Group"].inputs[11].default_value
+            light['advanced']['Mask - Ring Outer Radius'] = mat_nodes["Group"].inputs[12].default_value
+            light['advanced']['Mask - Top to Bottom'] = mat_nodes["Group"].inputs[13].default_value
+            light['advanced']['Mask - Bottom to Top'] = mat_nodes["Group"].inputs[14].default_value
+            light['advanced']['Mask - Left to Right'] = mat_nodes["Group"].inputs[15].default_value
+            light['advanced']['Mask - Right to Left'] = mat_nodes["Group"].inputs[16].default_value
+            light['advanced']['Mask - Diagonal Top Left'] = mat_nodes["Group"].inputs[17].default_value
+            light['advanced']['Mask - Diagonal Top Right'] = mat_nodes["Group"].inputs[18].default_value
+            light['advanced']['Mask - Diagonal Bottom Right'] = mat_nodes["Group"].inputs[19].default_value
+            light['advanced']['Mask - Diagonal Bottom Left'] = mat_nodes["Group"].inputs[20].default_value
+            light['advanced']['Mask - Backface'] = mat_nodes["Group"].inputs[21].default_value
         except:
             print("Error while parsing Mesh Light")
-    
+
     if lls_handle:
         try:
             light['light_name'] = lls_handle.LLStudio.light_name
@@ -148,7 +150,7 @@ def salvage_data(lls_collection):
             light['type'] = lls_handle.LLStudio.type
         except:
             print("Handled error while parsing lls_handle")
-    
+
     if lls_basic:
         try:
             light['basic']['color'] = [lls_basic.data.LLStudio.color.r, lls_basic.data.LLStudio.color.g, lls_basic.data.LLStudio.color.b]
@@ -163,7 +165,7 @@ def salvage_data(lls_collection):
             light['basic']['intensity'] = light['advanced']['Intensity']
         except:
             print("Handled error while parsing Area Light")
-    
+
     if VERBOSE: print(light)
     return light
 
@@ -216,10 +218,10 @@ def light_from_dict(from_dict, profile_collection):
 
     bpy.context.view_layer.objects.active = lbasic_object
     lbasic_object.data.LLStudio.color = light_dict['basic']['color']
-    
+
     lbasic_object.data.LLStudio.color_saturation = light_dict['basic']['color_saturation']
     lbasic_object.data.LLStudio.intensity = light_dict['basic']['intensity']
-    
+
     lhandle.LLStudio.type = light_dict['type']
 
     # Advanced
@@ -231,21 +233,22 @@ def light_from_dict(from_dict, profile_collection):
     new_mat_nodes["Group"].inputs[3].default_value[3] = light_dict['advanced']['Color Overlay'][3]
     new_mat_nodes["Group"].inputs[4].default_value = light_dict['advanced']['Color Saturation']
     new_mat_nodes["Group"].inputs[5].default_value = light_dict['advanced']['Intensity']
-    new_mat_nodes["Group"].inputs[6].default_value = light_dict['advanced']['Mask - Gradient Switch']
-    new_mat_nodes["Group"].inputs[7].default_value = light_dict['advanced']['Mask - Gradient Type']
-    new_mat_nodes["Group"].inputs[8].default_value = light_dict['advanced']['Mask - Gradient Amount']
-    new_mat_nodes["Group"].inputs[9].default_value = light_dict['advanced']['Mask - Ring Switch']
-    new_mat_nodes["Group"].inputs[10].default_value = light_dict['advanced']['Mask - Ring Inner Radius']
-    new_mat_nodes["Group"].inputs[11].default_value = light_dict['advanced']['Mask - Ring Outer Radius']
-    new_mat_nodes["Group"].inputs[12].default_value = light_dict['advanced']['Mask - Top to Bottom']
-    new_mat_nodes["Group"].inputs[13].default_value = light_dict['advanced']['Mask - Bottom to Top']
-    new_mat_nodes["Group"].inputs[14].default_value = light_dict['advanced']['Mask - Left to Right']
-    new_mat_nodes["Group"].inputs[15].default_value = light_dict['advanced']['Mask - Right to Left']
-    new_mat_nodes["Group"].inputs[16].default_value = light_dict['advanced']['Mask - Diagonal Top Left']
-    new_mat_nodes["Group"].inputs[17].default_value = light_dict['advanced']['Mask - Diagonal Top Right']
-    new_mat_nodes["Group"].inputs[18].default_value = light_dict['advanced']['Mask - Diagonal Bottom Right']
-    new_mat_nodes["Group"].inputs[19].default_value = light_dict['advanced']['Mask - Diagonal Bottom Left']
-    new_mat_nodes["Group"].inputs[20].default_value = light_dict['advanced']['Mask - Backface']
+    new_mat_nodes["Group"].inputs[6].default_value = light_dict['advanced']['Exposure']
+    new_mat_nodes["Group"].inputs[7].default_value = light_dict['advanced']['Mask - Gradient Switch']
+    new_mat_nodes["Group"].inputs[8].default_value = light_dict['advanced']['Mask - Gradient Type']
+    new_mat_nodes["Group"].inputs[9].default_value = light_dict['advanced']['Mask - Gradient Amount']
+    new_mat_nodes["Group"].inputs[10].default_value = light_dict['advanced']['Mask - Ring Switch']
+    new_mat_nodes["Group"].inputs[11].default_value = light_dict['advanced']['Mask - Ring Inner Radius']
+    new_mat_nodes["Group"].inputs[12].default_value = light_dict['advanced']['Mask - Ring Outer Radius']
+    new_mat_nodes["Group"].inputs[13].default_value = light_dict['advanced']['Mask - Top to Bottom']
+    new_mat_nodes["Group"].inputs[14].default_value = light_dict['advanced']['Mask - Bottom to Top']
+    new_mat_nodes["Group"].inputs[15].default_value = light_dict['advanced']['Mask - Left to Right']
+    new_mat_nodes["Group"].inputs[16].default_value = light_dict['advanced']['Mask - Right to Left']
+    new_mat_nodes["Group"].inputs[17].default_value = light_dict['advanced']['Mask - Diagonal Top Left']
+    new_mat_nodes["Group"].inputs[18].default_value = light_dict['advanced']['Mask - Diagonal Top Right']
+    new_mat_nodes["Group"].inputs[19].default_value = light_dict['advanced']['Mask - Diagonal Bottom Right']
+    new_mat_nodes["Group"].inputs[20].default_value = light_dict['advanced']['Mask - Diagonal Bottom Left']
+    new_mat_nodes["Group"].inputs[21].default_value = light_dict['advanced']['Mask - Backface']
 
     script_file = os.path.realpath(__file__)
     dir = os.path.dirname(script_file)
