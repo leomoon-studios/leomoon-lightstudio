@@ -42,6 +42,7 @@ fragment_shader = '''
 
     uniform vec4 color_overlay = vec4(0);
     uniform float intensity = 1;
+    uniform float exposure = 1; 
     uniform float texture_switch = 1;
     uniform float color_saturation = 0;
 
@@ -68,7 +69,7 @@ fragment_shader = '''
         if(advanced){
             // Texture Switch + Intensity
             // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
-            fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity);
+            fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity) * pow(2,exposure);
 
             // Color Overlay
             float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
@@ -718,12 +719,13 @@ class LightImage(Rectangle):
                 # material properties
                 lls_node = self._lls_object.active_material.node_tree.nodes['Group']
                 intensity = lls_node.inputs['Intensity'].default_value
-
+                exposure = lls_node.inputs['Exposure'].default_value
                 texture_switch = lls_node.inputs['Texture Switch'].default_value
                 color_overlay = lls_node.inputs['Color Overlay'].default_value
                 color_saturation = lls_node.inputs['Color Saturation'].default_value
 
                 lightIconShader.uniform_float("intensity", intensity)
+                lightIconShader.uniform_float("exposure", exposure)
                 lightIconShader.uniform_float("texture_switch", texture_switch)
                 lightIconShader.uniform_float("color_overlay", color_overlay)
                 lightIconShader.uniform_float("color_saturation", color_saturation)
