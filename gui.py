@@ -160,7 +160,7 @@ class LLS_PT_ProfileImportExport(bpy.types.Panel):
         col = layout.column(align=True)
         col.operator('lls_list.export_profiles', text="Export Selected Profile")
         col.operator('lls_list.export_profiles', text="Export All Profiles").all=True
-        col.operator('lls_list.import_profiles')
+        col.operator('lls_list.import_profiles',  text="Import Profiles")
 
 from . import bl_info
 @force_register
