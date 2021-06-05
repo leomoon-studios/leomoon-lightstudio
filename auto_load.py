@@ -110,7 +110,7 @@ def iter_register_deps(cls):
 
 def get_dependency_from_annotation(value):
     if isinstance(value, tuple) and len(value) == 2:
-        if value[0] in (bpy.props.PointerProperty, bpy.props.CollectionProperty):
+        if value[0] in (bpy.props._PropertyDeferred.PointerProperty, bpy.props._PropertyDeferred.CollectionProperty):
             return value[1]["type"]
     return None
 
