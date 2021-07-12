@@ -42,7 +42,7 @@ fragment_shader = '''
 
     uniform vec4 color_overlay = vec4(0);
     uniform float intensity = 1;
-    uniform float exposure = 1; 
+    uniform float exposure = 1;
     uniform float texture_switch = 1;
     uniform float color_saturation = 0;
 
@@ -64,12 +64,20 @@ fragment_shader = '''
     void main()
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom+int(advanced));
+        trash = vec4(exposure+panel_point_lt.x+panel_point_rb.x+mask_bottom_to_top+mask_diagonal_bottom_left+mask_diagonal_bottom_right+mask_diagonal_top_left+mask_diagonal_top_right+mask_gradient_amount+mask_gradient_switch+mask_gradient_type+mask_left_to_right+mask_right_to_left+mask_ring_inner_radius+mask_ring_outer_radius+mask_ring_switch+mask_top_to_bottom+int(advanced));
 
         if(advanced){
             // Texture Switch + Intensity
             // log(1+intensity) so the images won't get overexposed too fast when high intensity values used
-            fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity) * pow(2,exposure);
+            
+            // set non-zero min color value to sort of simulate overexposure visible on real light object in viewport
+            vec4 tex = texture(image, texCoord_interp);
+            tex.r = max(0.05, tex.r);
+            tex.g = max(0.05, tex.g);
+            tex.b = max(0.05, tex.b);
+
+            fragColor = mix(vec4(1.0f), tex, texture_switch) * log(1+intensity) * pow((exposure+10)/11, 2);
+            // fragColor = mix(vec4(1.0f), texture(image, texCoord_interp), texture_switch) * log(1+intensity) * pow((exposure+10)/11, 2);
 
             // Color Overlay
             float gray = clamp(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114)), 0, 1);
@@ -720,15 +728,16 @@ class LightImage(Rectangle):
                 lls_node = self._lls_object.active_material.node_tree.nodes['Group']
                 intensity = lls_node.inputs['Intensity'].default_value
                 exposure = lls_node.inputs['Exposure'].default_value
+
                 texture_switch = lls_node.inputs['Texture Switch'].default_value
                 color_overlay = lls_node.inputs['Color Overlay'].default_value
                 color_saturation = lls_node.inputs['Color Saturation'].default_value
 
                 lightIconShader.uniform_float("intensity", intensity)
-                lightIconShader.uniform_float("exposure", exposure)
                 lightIconShader.uniform_float("texture_switch", texture_switch)
                 lightIconShader.uniform_float("color_overlay", color_overlay)
                 lightIconShader.uniform_float("color_saturation", color_saturation)
+                lightIconShader.uniform_float("exposure", exposure)
 
                 mask_bottom_to_top = lls_node.inputs['Mask - Bottom to Top'].default_value
                 mask_diagonal_bottom_left = lls_node.inputs['Mask - Diagonal Bottom Left'].default_value

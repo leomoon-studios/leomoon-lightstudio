@@ -24,6 +24,21 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_list: CollectionProperty(type = light_list.LightListItem)
     light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
 
+    def mode_change_func(self, context):
+        print(self.lls_mode)
+        if self.lls_mode == "NORMAL":
+            roots = [o for o in context.scene.objects if o.name.startswith("LEOMOON_LIGHT_STUDIO")]
+            for root in roots:
+                all_elems = family(root)
+                for elem in all_elems:
+                    matches = ['LLS_LIGHT_AREA', 'LLS_LIGHT_HANDLE']
+                    if any(x in elem.name for x in matches):
+                        elem.hide_viewport = True
+                        elem.hide_select = True
+
+    lls_mode: EnumProperty(items=[("ANIMATION", "Animation", "Animation"), ("NORMAL", "Normal", "Normal")], name="Mode", description="Use Animated mode to select all light components for easier keyframe editing.", update=mode_change_func, default="ANIMATION")
+    
+
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
     light_name: StringProperty()
     order_index: IntProperty()
@@ -372,10 +387,11 @@ class BUILTIN_KSI_LightStudio(bpy.types.KeyingSetInfo):
 
 from bpy.app.handlers import persistent
 @persistent
-def textcounter_text_update_frame(scene, depsgraph=None):
+def lightstudio_update_frame(scene, depsgraph=None):
     if not scene.LLStudio.initialized:
         return
 
+    # light energy sync
     for lls_area in [obj for obj in scene.objects if obj.name.startswith("LLS_LIGHT_AREA.")]:
         color = lls_area.data.LLStudio.color
         color_saturation = lls_area.data.LLStudio.color_saturation
@@ -387,8 +403,47 @@ def textcounter_text_update_frame(scene, depsgraph=None):
         except:
             lls_area.data.energy = intensity
 
+subscribe_to = bpy.types.LayerObjects, "active"
+
+def msgbus_callback(*args):
+    if not bpy.context.scene.LLStudio.initialized or bpy.context.scene.LLStudio.lls_mode=="NORMAL":
+        return
+    
+    active_object = bpy.context.active_object
+    if active_object.name.startswith("LLS_LIGHT_MESH") or active_object.name.startswith("LLS_LIGHT_AREA"):
+        root = findLightGrp(active_object)
+        lls_rotation = root.children[0]
+        lls_rotation.hide_viewport = False
+        lls_rotation.hide_select = False
+        lls_rotation.select_set(True)
+        lls_light_handle = lls_rotation.children[0]
+        lls_light_handle.hide_viewport = False
+        lls_light_handle.hide_select = False
+        lls_light_handle.select_set(True)
+
+        light_group_list = [n for n in active_object.active_material.node_tree.nodes if n.name.startswith('Group')]
+        if light_group_list:
+            light_group_list[0].select=True
+        
+
+owner = object()
+
+@persistent
+def lightstudio_load_post(load_handler):
+    bpy.msgbus.subscribe_rna(
+        key=subscribe_to,
+        owner=owner,
+        args=(),
+        notify=msgbus_callback,
+    )
+
 def register():
-    bpy.app.handlers.frame_change_post.append(textcounter_text_update_frame)
+    bpy.app.handlers.frame_change_post.append(lightstudio_update_frame)
+    bpy.app.handlers.load_post.append(lightstudio_load_post)
+    lightstudio_load_post(None)
+    
 
 def unregister():
-    bpy.app.handlers.frame_change_post.remove(textcounter_text_update_frame)
+    bpy.app.handlers.frame_change_post.remove(lightstudio_update_frame)
+    bpy.msgbus.clear_by_owner(owner)
+    bpy.app.handlers.load_post.remove(lightstudio_load_post)
