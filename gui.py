@@ -160,7 +160,7 @@ class LLS_PT_ProfileImportExport(bpy.types.Panel):
         col = layout.column(align=True)
         col.operator('lls_list.export_profiles', text="Export Selected Profile")
         col.operator('lls_list.export_profiles', text="Export All Profiles").all=True
-        col.operator('lls_list.import_profiles',  text="Import Profiles")
+        col.operator('lls_list.import_profiles', text="Import Profiles")
 
 from . import bl_info
 @force_register
@@ -180,6 +180,9 @@ class LLS_PT_Misc(bpy.types.Panel):
         scene = context.scene
 
         props = scene.LLStudio
+        
+        row = layout.row(align=True)
+        row.prop(props, 'lls_mode', expand=True)
 
         col = layout.column(align=True)
         col.operator('lls.find_missing_textures')

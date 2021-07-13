@@ -66,6 +66,8 @@ def get_list_index(self):
     ob = bpy.context.view_layer.objects.active
     if isFamily(ob):
         for i, li in enumerate(self.light_list):
+            if ob.parent == None:
+                continue
             if li.handle_name == ob.parent.name:
                 return i
     return -1
@@ -330,6 +332,30 @@ def load_post(scene):
     for i, lls_mesh in enumerate(lights):
         convert_old_light(lls_mesh, profile_collection)
     update_light_list_set(bpy.context)
+
+
+    # Also check new lights if they are up to date
+    bpy.context.scene.LLStudio.lls_mode = "NORMAL"
+    roots = [o for o in bpy.context.scene.objects if o.name.startswith("LEOMOON_LIGHT_STUDIO")]
+    for root in roots:
+        all_elems = family(root)
+        matching_names = []
+        for elem in all_elems:
+            matches = ['LLS_LIGHT_MESH']
+            if any(x in elem.name for x in matches):
+                matching_names.append(elem.name)
+    
+    print(matching_names)
+    for name in matching_names:
+        elem = bpy.data.objects[name]
+        try:
+            salvage_data(get_collection(elem.parent), only_validate=True)
+        except:
+            print("Recreate light:", elem.name)
+            llscol, profilecol = llscol_profilecol(context)
+            convert_old_light(elem.parent, profilecol)
+            update_light_list_set(bpy.context)
+
 
 def register():
     bpy.app.handlers.load_post.append(load_post)
