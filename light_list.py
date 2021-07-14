@@ -335,7 +335,6 @@ def load_post(scene):
 
 
     # Also check new lights if they are up to date
-    bpy.context.scene.LLStudio.lls_mode = "NORMAL"
     roots = [o for o in bpy.context.scene.objects if o.name.startswith("LEOMOON_LIGHT_STUDIO")]
     for root in roots:
         all_elems = family(root)

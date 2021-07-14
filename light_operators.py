@@ -25,7 +25,6 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     light_list_index: IntProperty(name = "Index for light_list", default = 0, get=light_list.get_list_index, set=light_list.set_list_index)
 
     def mode_change_func(self, context):
-        print(self.lls_mode)
         if self.lls_mode == "NORMAL":
             roots = [o for o in context.scene.objects if o.name.startswith("LEOMOON_LIGHT_STUDIO")]
             for root in roots:
@@ -36,7 +35,11 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
                         elem.hide_viewport = True
                         elem.hide_select = True
 
-    lls_mode: EnumProperty(items=[("ANIMATION", "Animation", "Animation"), ("NORMAL", "Normal", "Normal")], name="Mode", description="Use Animated mode to select all light components for easier keyframe editing.", update=mode_change_func, default="ANIMATION")
+    lls_mode: EnumProperty(items=[("ANIMATION", "Animation", "Animation"), ("NORMAL", "Normal", "Normal")],
+            name="Mode",
+            description="Use Animated mode to select all light components for easier keyframe editing.",
+            update=mode_change_func,
+            default="NORMAL")
     
 
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
@@ -406,10 +409,11 @@ def lightstudio_update_frame(scene, depsgraph=None):
 subscribe_to = bpy.types.LayerObjects, "active"
 
 def msgbus_callback(*args):
-    if not bpy.context.scene.LLStudio.initialized or bpy.context.scene.LLStudio.lls_mode=="NORMAL":
+    active_object = bpy.context.active_object
+
+    if not active_object or not bpy.context.scene.LLStudio.initialized or bpy.context.scene.LLStudio.lls_mode=="NORMAL":
         return
     
-    active_object = bpy.context.active_object
     if active_object.name.startswith("LLS_LIGHT_MESH") or active_object.name.startswith("LLS_LIGHT_AREA"):
         root = findLightGrp(active_object)
         lls_rotation = root.children[0]
