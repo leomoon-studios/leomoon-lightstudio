@@ -30,10 +30,14 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
             for root in roots:
                 all_elems = family(root)
                 for elem in all_elems:
-                    matches = ['LLS_LIGHT_AREA', 'LLS_LIGHT_HANDLE']
+                    matches = ['LLS_LIGHT_HANDLE']
                     if any(x in elem.name for x in matches):
                         elem.hide_viewport = True
                         elem.hide_select = True
+        elif self.lls_mode == "ANIMATION":
+            # force selection msgbus callback
+            bpy.context.view_layer.objects.active = bpy.context.view_layer.objects.active
+
 
     lls_mode: EnumProperty(items=[("ANIMATION", "Animation", "Animation"), ("NORMAL", "Normal", "Normal")],
             name="Mode",
@@ -425,9 +429,12 @@ def msgbus_callback(*args):
         lls_light_handle.hide_select = False
         lls_light_handle.select_set(True)
 
-        light_group_list = [n for n in active_object.active_material.node_tree.nodes if n.name.startswith('Group')]
-        if light_group_list:
-            light_group_list[0].select=True
+        try:
+            light_group_list = [n for n in active_object.active_material.node_tree.nodes if n.name.startswith('Group')]
+            if light_group_list:
+                light_group_list[0].select=True
+        except:
+            print("No LLS Material node found in the material.")
         
 
 owner = object()
