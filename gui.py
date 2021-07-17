@@ -27,6 +27,27 @@ class LLS_PT_Studio(bpy.types.Panel):
         col.operator('scene.set_light_studio_background')
 
 @force_register
+class LLS_PT_Mode(bpy.types.Panel):
+    bl_idname = "LLS_PT_mode"
+    bl_label = "Mode"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "LightStudio"
+
+    @classmethod
+    def poll(cls, context):
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+
+        props = scene.LLStudio
+
+        row = layout.row(align=True)
+        row.prop(props, 'lls_mode', expand=True)
+
+@force_register
 class LLS_PT_Lights(bpy.types.Panel):
     bl_idname = "LLS_PT_lights"
     bl_label = "Lights"
@@ -69,7 +90,8 @@ class LLS_PT_Selected(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+        # return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
 
     def draw(self, context):
         if context.active_object and context.active_object.name.startswith('LLS_LIGHT_'):
@@ -157,6 +179,9 @@ class LLS_PT_ProfileImportExport(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
 
+        box = layout.box()
+        box.label(text="Animation export not supported.", icon='ERROR')
+
         col = layout.column(align=True)
         col.operator('lls_list.export_profiles', text="Export Selected Profile")
         col.operator('lls_list.export_profiles', text="Export All Profiles").all=True
@@ -177,20 +202,14 @@ class LLS_PT_Misc(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        scene = context.scene
-
-        props = scene.LLStudio
-        
-        row = layout.row(align=True)
-        row.prop(props, 'lls_mode', expand=True)
 
         col = layout.column(align=True)
         col.operator('lls.find_missing_textures')
         col.operator('lls.open_textures_folder')
         col.operator('lls.lls_keyingset')
         if context.scene.keying_sets.active and context.scene.keying_sets.active.bl_idname == "BUILTIN_KSI_LightStudio":
-            box = col.box()
-            box.label(text="Keying Set is active")
+            box = layout.box()
+            box.label(text="Keying Set is active.", icon='CHECKMARK')
 
 class LLSKeyingSet(bpy.types.Operator):
     bl_idname = "lls.lls_keyingset"

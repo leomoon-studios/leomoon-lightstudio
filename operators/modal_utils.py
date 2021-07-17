@@ -518,7 +518,7 @@ class LightImage(Rectangle):
     def change_default_size(cls, value):
         cls.default_size = value
         for l in cls.lights:
-            l.width = value * l._scale.y
+            l.width = value * l._scale.x
             l.height = value * l._scale.z
 
     def panel_loc_to_area_px_lt(self):

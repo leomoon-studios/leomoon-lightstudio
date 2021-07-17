@@ -22,20 +22,22 @@ class DeleteOperator(bpy.types.Operator):
     def execute(self, context):
         protected_objects = (ob for ob in context.selected_objects if ob.protected)
 
-        for obj in protected_objects:
-            context.view_layer.objects.active = obj
-            if hasattr(obj, 'use_fake_user'):
-                obj.use_fake_user = False
-            try:
-                ret = bpy.ops.scene.delete_leomoon_studio_light()
-            except:
-                self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
-                return {'FINISHED'}
-            else:
-                if 'CANCELLED' in ret:
+        try:
+            for obj in protected_objects:
+                context.view_layer.objects.active = obj
+                if hasattr(obj, 'use_fake_user'):
+                    obj.use_fake_user = False
+                try:
+                    ret = bpy.ops.scene.delete_leomoon_studio_light()
+                except:
                     self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
                     return {'FINISHED'}
-
+                else:
+                    if 'CANCELLED' in ret:
+                        self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
+                        return {'FINISHED'}
+        except ReferenceError:
+            return {'FINISHED'}
 
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 

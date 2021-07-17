@@ -30,28 +30,32 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
             for root in roots:
                 all_elems = family(root)
                 for elem in all_elems:
-                    matches = ['LLS_LIGHT_AREA', 'LLS_LIGHT_HANDLE']
+                    matches = ['LLS_LIGHT_HANDLE']
                     if any(x in elem.name for x in matches):
                         elem.hide_viewport = True
                         elem.hide_select = True
+        elif self.lls_mode == "ANIMATION":
+            # force selection msgbus callback
+            bpy.context.view_layer.objects.active = bpy.context.view_layer.objects.active
 
-    lls_mode: EnumProperty(items=[("ANIMATION", "Animation", "Animation"), ("NORMAL", "Normal", "Normal")],
+
+    lls_mode: EnumProperty(items=[("NORMAL", "Normal", "Normal"), ("ANIMATION", "Animation", "Animation")],
             name="Mode",
             description="Use Animated mode to select all light components for easier keyframe editing.",
             update=mode_change_func,
             default="NORMAL")
-    
+
 
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
     light_name: StringProperty()
     order_index: IntProperty()
-    
+
     def active_light_type_update(self, context):
         try:
             light_handle = bpy.data.objects[context.scene.LLStudio.light_list[self.order_index].handle_name]
         except Exception as e:
             return
-        
+
         try:
             basic_col = [l.users_collection[0] for l in light_handle.children if l.type == 'LIGHT'][0]
             advanced_col = [l.users_collection[0] for l in light_handle.children if l.type == 'MESH'][0]
@@ -80,7 +84,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
             bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
             bpy.data.collections.remove(lls_col)
             light_from_dict(light, profile_collection)
-    
+
     type: EnumProperty(
         name="Light Type",
         items=(
@@ -89,7 +93,7 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
         ),
         default='ADVANCED',
         update=active_light_type_update,
-    ) 
+    )
 
 from . operators import AREA_DEFAULT_SIZE
 class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
@@ -114,7 +118,7 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
     def light_power_formula(self, context):
         if not bpy.context.object or not bpy.context.object.type == 'LIGHT':
             return
-        
+
         try:
             bpy.context.object.data.energy = self.intensity * context.object.parent.scale.x * context.object.parent.scale.z * 250
         except:
@@ -190,6 +194,21 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
             bpy.data.objects.remove(ob)
 
         context.scene.collection.children.unlink(get_lls_collection(context))
+        #bring back the default wold settings
+        if bpy.data.worlds.get('World') is None:
+            bpy.context.scene.world = bpy.data.worlds.new('World')
+            bpy.context.scene.world.use_nodes = True
+            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.050876, 0.050876, 0.050876, 1)
+            bpy.context.scene.world.cycles_visibility.diffuse = True
+            bpy.context.scene.world.cycles_visibility.glossy = True
+            bpy.context.scene.world.cycles_visibility.transmission = True
+        else:
+            bpy.context.scene.world = bpy.data.worlds['World']
+            bpy.context.scene.world.use_nodes = True
+            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.050876, 0.050876, 0.050876, 1)
+            bpy.context.scene.world.cycles_visibility.diffuse = True
+            bpy.context.scene.world.cycles_visibility.glossy = True
+            bpy.context.scene.world.cycles_visibility.transmission = True
 
         return {"FINISHED"}
 
@@ -217,14 +236,19 @@ class SetBackground(bpy.types.Operator):
         bpy.context.scene.render.engine = 'CYCLES'
         if bpy.data.worlds.get('LightStudio') is None:
             bpy.context.scene.world = bpy.data.worlds.new('LightStudio')
+            bpy.context.scene.world.use_nodes = True
+            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.008, 1)
+            bpy.context.scene.world.cycles_visibility.diffuse = False
+            bpy.context.scene.world.cycles_visibility.glossy = False
+            bpy.context.scene.world.cycles_visibility.transmission = False
         else:
             bpy.context.scene.world = bpy.data.worlds['LightStudio']
-        # bpy.context.scene.world = bpy.data.worlds.new("LightStudio")
-        bpy.context.scene.world.use_nodes = True
-        bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.00802319, 0.00802319, 0.00802319, 1)
-        bpy.context.scene.world.cycles_visibility.diffuse = False
-        bpy.context.scene.world.cycles_visibility.glossy = False
-        bpy.context.scene.world.cycles_visibility.transmission = False
+            bpy.context.scene.world.use_nodes = True
+            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.008, 1)
+            bpy.context.scene.world.cycles_visibility.diffuse = False
+            bpy.context.scene.world.cycles_visibility.glossy = False
+            bpy.context.scene.world.cycles_visibility.transmission = False
+
         return {"FINISHED"}
 
 class AddBSLight(bpy.types.Operator):
@@ -256,7 +280,7 @@ class AddBSLight(bpy.types.Operator):
 
                 advanced_light_collection = [c for c in collection.children if c.name.startswith('LLS_Advanced')][0]
                 basic_light_collection = [c for c in collection.children if c.name.startswith('LLS_Basic')][0]
-                
+
                 new_objects = collection.objects[:]
                 # new_objects += [ob for col in collection.children for ob in col.objects]
                 new_objects += advanced_light_collection.objects[:]
@@ -287,7 +311,7 @@ class AddBSLight(bpy.types.Operator):
                     # advanced_light_layer.exclude = False
                     light_object = advanced_light_collection.objects[0]
                     light_handle.LLStudio.type = 'ADVANCED'
-                
+
                 context.view_layer.objects.active = light_object
                 light_object.select_set(True)
 
@@ -379,7 +403,7 @@ class BUILTIN_KSI_LightStudio(bpy.types.KeyingSetInfo):
 
         lls_root = findLightGrp(id_block)
         family_obs = family(lls_root)
-        
+
         lls_handle = [m for m in family_obs if m.name.startswith("LLS_LIGHT_HANDLE")][0]
         lls_actuator = lls_handle.parent
 
@@ -413,7 +437,7 @@ def msgbus_callback(*args):
 
     if not active_object or not bpy.context.scene.LLStudio.initialized or bpy.context.scene.LLStudio.lls_mode=="NORMAL":
         return
-    
+
     if active_object.name.startswith("LLS_LIGHT_MESH") or active_object.name.startswith("LLS_LIGHT_AREA"):
         root = findLightGrp(active_object)
         lls_rotation = root.children[0]
@@ -425,10 +449,13 @@ def msgbus_callback(*args):
         lls_light_handle.hide_select = False
         lls_light_handle.select_set(True)
 
-        light_group_list = [n for n in active_object.active_material.node_tree.nodes if n.name.startswith('Group')]
-        if light_group_list:
-            light_group_list[0].select=True
-        
+        try:
+            light_group_list = [n for n in active_object.active_material.node_tree.nodes if n.name.startswith('Group')]
+            if light_group_list:
+                light_group_list[0].select=True
+        except:
+            print("No LLS Material node found in the material.")
+
 
 owner = object()
 
@@ -445,7 +472,7 @@ def register():
     bpy.app.handlers.frame_change_post.append(lightstudio_update_frame)
     bpy.app.handlers.load_post.append(lightstudio_load_post)
     lightstudio_load_post(None)
-    
+
 
 def unregister():
     bpy.app.handlers.frame_change_post.remove(lightstudio_update_frame)
