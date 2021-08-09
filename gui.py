@@ -152,7 +152,9 @@ class LLS_PT_ProfileList(bpy.types.Panel):
 
         row = layout.row()
         col = row.column()
-        col.template_list("UI_UL_list", "Profile_List", props, "profile_list", props, "list_index", rows=5)
+        col.prop(props, 'profile_multimode', expand=True)
+        # col.template_list("UI_UL_list", "Profile_List", props, "profile_list", props, "list_index", rows=5)
+        col.template_list("LLS_UL_ProfileList", "Profile_List", props, "profile_list", props, "list_index", rows=5)
 
         col = row.column(align=True)
         col.operator('lls_list.new_profile', icon='ADD', text="")
@@ -206,6 +208,7 @@ class LLS_PT_Misc(bpy.types.Panel):
         col = layout.column(align=True)
         col.operator('lls.find_missing_textures')
         col.operator('lls.open_textures_folder')
+        col.operator('light_studio.reset_control_panel')
         col.operator('lls.lls_keyingset')
         if context.scene.keying_sets.active and context.scene.keying_sets.active.bl_idname == "BUILTIN_KSI_LightStudio":
             box = layout.box()

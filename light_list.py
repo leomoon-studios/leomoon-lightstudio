@@ -118,11 +118,14 @@ def set_list_index(self, index):
         light_from_dict(light, profile_collection)
 
 
-def update_light_list_set(context):
+def update_light_list_set(context, profile_idx=None):
     '''Update light list set. Use when the light list needs to be synced with real object hierarchy. '''
     props = context.scene.LLStudio
-    lls_collection, profile_collection = llscol_profilecol(context)
-    if profile_collection is not None:
+    # lls_collection, profile_collection = llscol_profilecol(context)
+    lls_collection = get_lls_collection(context)
+    profile_idx = props.list_index if profile_idx==None else profile_idx
+    profile_collection = bpy.data.objects[props.profile_list[profile_idx].empty_name].users_collection[0]
+    if profile_collection is not None and (props.profile_list[profile_idx].enabled or not props.profile_multimode):
         props.light_list.clear()
 
         lls_lights = set(profile_collection.children)
@@ -143,11 +146,14 @@ def update_light_list_set(context):
                 if real_light_type != lls_handle.LLStudio.type:
                     lls_handle.LLStudio.type = lls_handle.LLStudio.type
             else:
-                if not view_layer.exclude:
+                # check if view_layer exists because profile can be muted
+                if view_layer and not view_layer.exclude:
                     lls_handle.LLStudio.type = lls_handle.LLStudio.type
-                else:
+                elif view_layer:
                     for vl in view_layer.children:
                         vl.exclude = True
+    else:
+        props.light_list.clear()
 
 class LLS_OT_MuteToggle(bpy.types.Operator):
     bl_idname = "light_studio.mute_toggle"
@@ -200,7 +206,7 @@ class LLS_OT_Isolate(bpy.types.Operator):
             vl = find_view_layer(light_collection, context.view_layer.layer_collection)
             view_layers.append(vl)
             excluded += vl.exclude
-        print([v.name for v in view_layers])
+        # print([v.name for v in view_layers])
 
         if not view_layer.exclude and excluded == len(view_layers)-1:
             for v in view_layers:
@@ -261,23 +267,23 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         light = context.active_object
-        return context.area.type == 'VIEW_3D' and \
+        props = context.scene.LLStudio
+        if not (context.area.type == 'VIEW_3D' and \
                context.mode == 'OBJECT' and \
-               context.scene.LLStudio.initialized and \
+               props.initialized and \
                light and \
-               light.name.startswith('LLS_LIGHT_')
+               light.name.startswith('LLS_LIGHT_')):
+            return False
+        
+        if props.profile_multimode:
+            profile = findLightProfileObject(light)
+            list_profile = props.profile_list[props.list_index]
+            return list_profile.enabled and profile and profile.name == list_profile.empty_name
+        else:
+            return True
 
     def execute(self, context):
         props = context.scene.LLStudio
-        list = props.profile_list
-
-        light_handle = context.object.parent
-        visible_lights = [c for c in light_handle.children if c.visible_get()]
-        if len(visible_lights) != 1:
-            visible_light_object = light_handle.children[0]
-        else:
-            visible_light_object = visible_lights[0]
-
 
         lls_collection, profile_collection = llscol_profilecol(context)
         lls_handle = context.object.parent

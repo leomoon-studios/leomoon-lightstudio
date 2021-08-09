@@ -89,27 +89,16 @@ def findLightGrp(ob):
         if ob.name.startswith('LLS_LIGHT.'): return ob
     return None
 
-def getLightMesh():
-    #obs = bpy.context.scene.objects
-    #lightGrp = obs.active
-    #light_no = lightGrp.name.split('.')[1]
-    #return obs[obs.find('LLS_LIGHT_MESH.'+light_no)]
+def findLightProfileObject(ob):
+    while ob and ob.parent:
+        ob = ob.parent
+        if ob.name.startswith('LLS_PROFILE.'): return ob
+    return None
 
+def getLightMesh():
     lg = findLightGrp(bpy.context.active_object)
     lm = [l for l in family(lg) if l.name.startswith("LLS_LIGHT_MESH")]
     return lm[0] if len(lm) else None
-
-# def getLightHandle():
-#     lg = findLightGrp(bpy.context.active_object)
-#     lm = [l for l in family(lg) if l.name.startswith("LLS_LIGHT_HANDLE")]
-#     return lm[0] if len(lm) else None
-
-def getLightController():
-    obs = bpy.context.view_layer.objects
-    lightGrp = obs.active
-    light_no = lightGrp.name.split('.')[1]
-    return obs[obs.find('LLS_CONTROLLER.'+light_no)]
-
 
 def findLightProfile(ob):
     if ob.name.startswith('LLS_PROFILE'):
@@ -134,15 +123,6 @@ def getProfileHandle(ob=None):
         return h[0]
     else:
         return None
-
-def refreshMaterials():
-    #controllers = [ob for ob in family(findLightGrp(context.active_object).parent) if ob.name.startswith('LLS_CONTROLLER.')]
-    controllers = (ob for ob in bpy.context.scene.objects if ob.name.startswith('LLS_CONTROLLER.') and isFamily(ob))
-    for cntrl in controllers:
-        mat = [m for m in cntrl.data.materials if m.name.startswith('LLS_icon_ctrl')][0]
-        mixNode = mat.node_tree.nodes['Mix Shader'].inputs['Fac']
-        mixNode.default_value = mixNode.default_value
-
 
 def duplicate_collection(collection, parent_collection):
     new_names = {}

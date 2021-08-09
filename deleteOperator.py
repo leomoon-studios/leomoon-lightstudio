@@ -41,7 +41,8 @@ class DeleteOperator(bpy.types.Operator):
 
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 
-        light_list.update_light_list_set(context)
+        if context.scene.LLStudio.initialized:
+            light_list.update_light_list_set(context)
 
         return {'FINISHED'}
 

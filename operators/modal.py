@@ -37,6 +37,14 @@ def draw(self, area):
             blf.position(0, 55, area.height-115 - (font_size+5)*i, 0)
             blf.draw(0, f'{k}: {v}')
 
+def multiprofile_conditions(context):
+    props = context.scene.LLStudio
+    multiprofile_conditions = True
+    if props.profile_multimode and running_modals:
+        profile = findLightProfileObject(context.active_object)
+        list_profile = props.profile_list[props.list_index]
+        multiprofile_conditions = list_profile.enabled and profile and profile.name == list_profile.empty_name
+    return multiprofile_conditions
 
 class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
     bl_idname = "light_studio.rotate"
@@ -53,7 +61,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
         global running_modals
         context.active_object.select_set(True)
 
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             if LightImage.selected_object is None:
                 idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
                 LightImage.selected_object = LightImage.lights[idx]
@@ -66,7 +74,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
             self.mouse_y = context.area.height/2
         super().invoke(context, event)
 
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             self.base_object_rotation = LightImage.selected_object._lls_handle.rotation_euler.y
         else:
             self.base_object_rotation = context.object.parent.rotation_euler.y
@@ -79,7 +87,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _cancel(self, context, event):
         global running_modals
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation
         else:
             context.object.parent.rotation_euler.y = self.base_object_rotation
@@ -89,7 +97,8 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _modal(self, context, event):
         global running_modals
-        if running_modals:
+        
+        if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation + self.angle()
         else:
             context.object.parent.rotation_euler.y = self.base_object_rotation + self.angle()
@@ -135,7 +144,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
         global running_modals
         context.active_object.select_set(True)
 
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             if LightImage.selected_object is None:
                 idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
                 LightImage.selected_object = LightImage.lights[idx]
@@ -148,7 +157,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
             self.mouse_y = context.area.height/2
         super().invoke(context, event)
 
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             self.base_object_scale = LightImage.selected_object._lls_handle.scale.copy()
         else:
             self.base_object_scale = get_scale_adapter(context.object)
@@ -156,7 +165,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _cancel(self, context, event):
         global running_modals
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.scale = self.base_object_scale
         else:
             # context.object.scale = self.base_object_scale
@@ -178,7 +187,7 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
             new_scale.y = self.base_object_scale.y
 
         global running_modals
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.scale = new_scale
         else:
             set_scale_adapter(context.object, new_scale)
@@ -215,7 +224,7 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
         lls_collection, profile_collection, profile, handle = llscol_profilecol_profile_handle(context)
         self.profile_handle = handle
 
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             if LightImage.selected_object is None:
                 idx = LightImage.find_idx(context.active_object.parent.users_collection[0])
                 LightImage.selected_object = LightImage.lights[idx]
@@ -264,7 +273,7 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             dv.x = 0
 
         global running_modals
-        if running_modals:
+        if running_modals and multiprofile_conditions(context):
             x_factor = 2*pi / self.canvas_width
             y_factor = pi / self.canvas_height
         else:
@@ -288,7 +297,7 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
                 self.z_start_position = Vector((0,0))
                 self.z_end_position = Vector((0,0))
 
-            if running_modals:
+            if running_modals and multiprofile_conditions(context):
                 global panel_global
                 v1 = panel_global.point_lt
                 v2 = Vector((panel_global.point_rb.x, panel_global.point_lt.y))
@@ -399,7 +408,6 @@ class LLS_OT_control_panel(bpy.types.Operator):
         self.handler = bpy.types.SpaceView3D.draw_handler_add(draw, (self, context.area), 'WINDOW', 'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
         aw = context.area.width
-        ah = context.area.height
         pw = min(aw-60, 800)
 
         global panel_global
@@ -697,10 +705,50 @@ class LLS_OT_control_panel(bpy.types.Operator):
             return self.panel
         return None
 
-from .. light_data import salvage_data, convert_old_light, light_from_dict
+class LLS_OT_ResetControlPanel(bpy.types.Operator):
+    bl_idname = "light_studio.reset_control_panel"
+    bl_label = "Reset Control Panel"
+    bl_description = "Reset Control Panel to default position and icon size"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        global running_modals
+        return running_modals > 0
+        
+    def execute(self, context):
+        aw = context.area.width
+        width = min(aw-60, 800)
+        height = width*(9/16)
+
+        global panel_global
+        start_point = Vector((15, 45))
+        panel_global.point_lt = Vector((
+            min(start_point.x, start_point.x+width),
+            max(start_point.y, start_point.y+height),
+            ))
+        panel_global.point_rb = Vector((
+            max(start_point.x, start_point.x+width),
+            min(start_point.y, start_point.y+height),
+            ))
+        
+        panel_global.move(Vector([0,0]))
+        LightImage.change_default_size(50)
+        return {"FINISHED"}
+
+from .. light_data import salvage_data, light_from_dict
 def update_light_sets(panel, context, always=False):
-    lls_collection, profile_collection = llscol_profilecol(context)
-    if profile_collection is not None:
+    # lls_collection, profile_collection = llscol_profilecol(context)
+    props = context.scene.LLStudio
+    lls_collection = get_lls_collection(context)
+    profile = props.profile_list[props.list_index]
+    profile_collection = bpy.data.objects[profile.empty_name].users_collection[0]
+    if not profile.enabled and props.profile_multimode:
+        working_set = set((l._collection for l in LightImage.lights))
+        for col in working_set:
+            LightImage.remove(col)
+            update_clear()
+    elif profile_collection is not None:
         if is_updated() or always or len(profile_collection.children) != len(LightImage.lights):
             lls_lights = set(profile_collection.children)
             working_set = set((l._collection for l in LightImage.lights))
@@ -710,7 +758,6 @@ def update_light_sets(panel, context, always=False):
 
             for col in to_delete:
                 LightImage.remove(col)
-
             for col in to_add:
                 try:
                     LightImage(context, panel, col)

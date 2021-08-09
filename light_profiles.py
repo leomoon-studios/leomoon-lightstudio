@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProperty, EnumProperty
+from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProperty, EnumProperty, IntProperty
 import os, sys, subprocess
 from . common import *
 from . light_data import *
@@ -22,6 +22,77 @@ class ListItem(bpy.types.PropertyGroup):
             name="Name of Empty that holds the profile",
             description="",
             default="")
+    
+    def enabled_update_func(self, context):
+        profile_collection = get_collection(bpy.data.objects[self.empty_name])
+
+        props = context.scene.LLStudio
+
+        lls_collection = get_lls_collection(context)
+        if self.enabled:
+            #link selected profile
+            if bpy.data.collections[self.empty_name].name not in lls_collection.children:
+                lls_collection.children.link(bpy.data.collections[self.empty_name])
+
+        else:
+            #unlink profile
+            if profile_collection:
+                if profile_collection.name in lls_collection.children:
+                    lls_collection.children.unlink(profile_collection)
+
+        profile_list_index = int(self.path_from_id().split('[')[1].split(']')[0])
+        light_list.update_light_list_set(context, profile_idx=profile_list_index)
+    
+    enabled: BoolProperty(default=False, update=enabled_update_func)
+
+class LLS_UL_ProfileList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        props = context.scene.LLStudio
+        custom_icon = 'OUTLINER_OB_LIGHT' if item.enabled else 'LIGHT'
+        profile_collection = bpy.data.objects[item.empty_name].users_collection[0]
+        # Make sure your code supports all 3 layout types
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            layout.prop(item, 'name', text='', emboss=False, translate=False)
+            if props.profile_multimode:
+                layout.prop(item, 'enabled', text='', emboss=False, translate=False, icon=custom_icon)
+                
+                enabled_count = 0
+                for p in props.profile_list:
+                    enabled_count += p.enabled
+                
+                custom_solo_icon = 'SOLO_ON' if enabled_count == 1 and item.enabled else 'SOLO_OFF'
+                layout.operator('lls_list.isolate_profile', emboss=False, icon=custom_solo_icon, text="").index = index
+
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label("", icon = custom_icon)
+
+class LIST_OT_IsolateProfile(bpy.types.Operator):
+
+    bl_idname = "lls_list.isolate_profile"
+    bl_label = "Isolate Light Profile"
+    bl_options = {"INTERNAL"}
+
+    index: IntProperty()
+
+    def execute(self, context):
+        props = context.scene.LLStudio
+
+        enabled_count = 0
+        for p in props.profile_list:
+            enabled_count += p.enabled
+        
+        if enabled_count == 1 and props.profile_list[self.index].enabled:
+            for p in props.profile_list:
+                p.enabled = True
+        else:
+            for p in props.profile_list:
+                p.enabled = False
+        
+            props.profile_list[self.index].enabled = True
+
+
+        return{'FINISHED'}
 
 class LIST_OT_NewItem(bpy.types.Operator):
 
@@ -132,7 +203,8 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
             index = index - 1
         props.list_index = index
 
-        light_list.update_light_list_set(context)
+        if props.initialized:
+            light_list.update_light_list_set(context)
 
         return{'FINISHED'}
 
@@ -224,26 +296,26 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-def update_list_index(self, context):
-    props = context.scene.LLStudio
-
+def _update_list_index(props, context, multimode_swith=False):
     if len(props.profile_list) == 0: return
 
-    selected_profile = props.profile_list[self.list_index]
+    selected_profile = props.profile_list[props.list_index]
 
-    if selected_profile.empty_name == props.last_empty: return
+    if not multimode_swith and selected_profile.empty_name == props.last_empty: return
 
-    print('Index update {}'.format(self.list_index))
+    print('Index update {}'.format(props.list_index))
 
-    #unlink current profile
-    lls_collection = get_lls_collection(context)
-    profile_collection = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')]
-    profile_collection = profile_collection[0] if profile_collection else None
-    if profile_collection:
-        lls_collection.children.unlink(profile_collection)
+    print(not props.profile_multimode)
+    if not props.profile_multimode:
+        #unlink current profile
+        lls_collection = get_lls_collection(context)
+        profile_collections = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')]
 
-    #link selected profile
-    lls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
+        for col in profile_collections:
+            lls_collection.children.unlink(col)
+
+        #link selected profile
+        lls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
 
     props.last_empty = selected_profile.empty_name
 
@@ -252,6 +324,9 @@ def update_list_index(self, context):
         update_light_sets(panel_global, bpy.context, always=True)
 
     light_list.update_light_list_set(context)
+
+def update_list_index(self, context):
+    _update_list_index(self, context)
 
 # import/export
 import json, time
@@ -485,3 +560,44 @@ class CopyProfileMenu(bpy.types.Operator):
 
         wm.popup_menu(draw, title="Copy Profile")
         return {'FINISHED'}
+
+
+def msgbus_callback(*args):
+    active_object = bpy.context.active_object
+    props = bpy.context.scene.LLStudio
+
+    if not active_object or not props.initialized or not props.profile_multimode or not active_object.name.startswith('LLS_LIGHT_'):
+        return
+
+    multiprofile_conditions = True
+    profile = findLightProfileObject(active_object)
+    list_profile = props.profile_list[props.list_index]
+    # multiprofile_conditions = list_profile.enabled and profile and profile.name == list_profile.empty_name
+    if not profile.name == list_profile.empty_name:
+        for i, p in enumerate(props.profile_list):
+            if p.empty_name == profile.name:
+                props.list_index = i
+                break
+
+
+owner = object()
+subscribe_to = bpy.types.LayerObjects, "active"
+
+from bpy.app.handlers import persistent
+@persistent
+def lightstudio_load_post(load_handler):
+    bpy.msgbus.subscribe_rna(
+        key=subscribe_to,
+        owner=owner,
+        args=(),
+        notify=msgbus_callback,
+    )
+
+def register():
+    bpy.app.handlers.load_post.append(lightstudio_load_post)
+    lightstudio_load_post(None)
+
+
+def unregister():
+    bpy.msgbus.clear_by_owner(owner)
+    bpy.app.handlers.load_post.remove(lightstudio_load_post)
