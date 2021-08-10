@@ -23,6 +23,8 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     
     def multimode_refresh(props, context):
         if props.profile_multimode:
+            if len(props.profile_list) == 0:
+                return
             tmp_idx = props.profile_list_index
             selected_profile = props.profile_list[props.profile_list_index]
             for profile in props.profile_list:
@@ -332,8 +334,8 @@ class AddLLSLight(bpy.types.Operator):
                 light_handle = [p for p in new_objects if p.name.startswith('LLS_LIGHT_HANDLE')][0]
                 light_handle.LLStudio.order_index = len(context.scene.LLStudio.light_list)
 
-                basic_light_layer = find_view_layer(basic_light_collection, context.view_layer.layer_collection)
-                advanced_light_layer = find_view_layer(advanced_light_collection, context.view_layer.layer_collection)
+                # basic_light_layer = find_view_layer(basic_light_collection, context.view_layer.layer_collection)
+                # advanced_light_layer = find_view_layer(advanced_light_collection, context.view_layer.layer_collection)
                 if context.scene.render.engine == "BLENDER_EEVEE":
                     # basic_light_layer.exclude = False
                     # advanced_light_layer.exclude = True

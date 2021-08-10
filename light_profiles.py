@@ -164,6 +164,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
 
         props.last_empty = profile.name
         props.profile_list_index = len(props.profile_list)-1
+        _update_profile_list_index(props, context, multimode_override=True)
 
         light_list.update_light_list_set(context)
 
@@ -188,6 +189,8 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
 
         ''' Delete/Switch Hierarchy stuff '''
         #delete objects from current profile
+        if props.last_empty not in context.scene.objects:
+            return {'FINISHED'}
         obsToRemove = family(context.scene.objects[props.last_empty])
         collectionsToRemove = set()
         for ob in obsToRemove:
@@ -206,7 +209,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         if props.initialized:
             light_list.update_light_list_set(context)
 
-        return{'FINISHED'}
+        return {'FINISHED'}
 
 class LIST_OT_CopyItem(bpy.types.Operator):
 
@@ -327,13 +330,26 @@ def _update_profile_list_index(props, context, multimode_override=False):
     if props.profile_multimode:
         if len(props.light_list):
             handle = bpy.data.objects[props.light_list[0].handle_name]
+            
+            for l in props.light_list:
+                light_handle = bpy.data.objects[l.handle_name]
+                light_objects = [c for c in light_handle.children if c.visible_get()]
+                if light_objects and light_objects[0].select_get():
+                    context.view_layer.objects.active = light_objects[0]
+                    for ob in context.selected_objects:
+                        if ob is not light_objects[0]: 
+                            ob.select_set(False)
+                    return
+            
             light_objects = [c for c in handle.children if c.visible_get()]
             if light_objects:
+                for ob in context.selected_objects:
+                    ob.select_set(False)
                 context.view_layer.objects.active = light_objects[0]
                 light_objects[0].select_set(True)
 
-def update_profile_list_index(self, context):
-    _update_profile_list_index(self, context)
+def update_profile_list_index(props, context):
+    _update_profile_list_index(props, context)
 
 # import/export
 import json, time
