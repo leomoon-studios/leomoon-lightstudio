@@ -68,6 +68,8 @@ class LLS_PT_Lights(bpy.types.Panel):
 
         row = layout.row()
         col = row.column()
+        if props.profile_multimode:
+            col.label(text="Profile: "+props.profile_list[props.profile_list_index].name)
         col.template_list("LLS_UL_LightList", "Light_List", props, "light_list", props, "light_list_index", rows=5)
 
         col = row.column(align=True)
@@ -153,8 +155,7 @@ class LLS_PT_ProfileList(bpy.types.Panel):
         row = layout.row()
         col = row.column()
         col.prop(props, 'profile_multimode', expand=True)
-        # col.template_list("UI_UL_list", "Profile_List", props, "profile_list", props, "list_index", rows=5)
-        col.template_list("LLS_UL_ProfileList", "Profile_List", props, "profile_list", props, "list_index", rows=5)
+        col.template_list("LLS_UL_ProfileList", "Profile_List", props, "profile_list", props, "profile_list_index", rows=5)
 
         col = row.column(align=True)
         col.operator('lls_list.new_profile', icon='ADD', text="")

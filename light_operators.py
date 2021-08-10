@@ -1,7 +1,7 @@
 import bpy
-from bpy.props import BoolProperty, PointerProperty, FloatProperty, CollectionProperty, IntProperty, StringProperty, EnumProperty, FloatVectorProperty
+from bpy.props import BoolProperty, FloatProperty, CollectionProperty, IntProperty, StringProperty, EnumProperty, FloatVectorProperty
 from mathutils import Vector
-from . light_profiles import ListItem, update_list_index, _update_list_index
+from . light_profiles import ListItem, update_profile_list_index, _update_profile_list_index
 from . common import *
 import os
 from . import operators
@@ -18,27 +18,38 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
 
     ''' Profile List '''
     profile_list: CollectionProperty(type = ListItem)
-    list_index: IntProperty(name = "Index for profile_list", default = 0, update=update_list_index)
+    profile_list_index: IntProperty(name = "Index for profile_list", default = 0, update=update_profile_list_index)
     last_empty: StringProperty(name="Name of last Empty holding profile", default="")
     
     def multimode_refresh(props, context):
         if props.profile_multimode:
+            tmp_idx = props.profile_list_index
+            selected_profile = props.profile_list[props.profile_list_index]
             for profile in props.profile_list:
                 profile_collection = get_collection(bpy.data.objects[profile.empty_name])
 
                 lls_collection = get_lls_collection(context)
-                if not profile.enabled:
-                    #unlink profile
-                    if profile_collection:
-                        if profile_collection.name in lls_collection.children:
-                            lls_collection.children.unlink(profile_collection)
-                else:
+                
+                if profile_collection.name == selected_profile.empty_name:
+                    selected_profile.enabled = True
+                
+                if profile.enabled:
                     #link selected profile
                     profile_col = bpy.data.collections[profile.empty_name]
                     if profile_col.name not in lls_collection.children:
                         lls_collection.children.link(profile_col)
+                else:
+                    #unlink profile
+                    if profile_collection:
+                        if profile_collection.name in lls_collection.children:
+                            lls_collection.children.unlink(profile_collection)
+                
+            for idx, profile in enumerate(props.profile_list):
+                if props.profile_list_index == idx: continue
+                props.profile_list_index = idx
+            props.profile_list_index = tmp_idx
         else:
-            _update_list_index(props, context, multimode_swith=True)
+            _update_profile_list_index(props, context, multimode_override=True)
         
 
     profile_multimode: BoolProperty(default=False, name="Multi Profile Mode", description="Use many profiles at once.", update=multimode_refresh)
@@ -282,8 +293,7 @@ class AddLLSLight(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         props = context.scene.LLStudio
-        return props.initialized and (props.profile_list[props.list_index].enabled or not props.profile_multimode)
-        # return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+        return props.initialized and (props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
         script_file = os.path.realpath(__file__)
@@ -379,7 +389,7 @@ class DeleteBSLight(bpy.types.Operator):
                props.initialized and \
                light and \
                light.name.startswith('LLS_LIGHT') and \
-               (props.profile_list[props.list_index].enabled or not props.profile_multimode)
+               (props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
         scene = context.scene

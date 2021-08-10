@@ -25,8 +25,11 @@ def get_lls_collection(context):
     return [c for c in context.scene.collection.children if c.name.startswith('LLS')][0]
 
 def llscol_profilecol_profile_handle(context):
+    props = context.scene.LLStudio
+    profile_empty_name = props.profile_list[props.profile_list_index].empty_name
     lls_collection = [c for c in context.scene.collection.children if c.name.startswith('LLS')][0]
-    profile_collection = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')][0]
+    # profile_collection = [c for c in lls_collection.children if c.name == profile_empty_name][0]
+    profile_collection = get_collection(bpy.data.objects[profile_empty_name])
     profile = [ob for ob in profile_collection.objects if ob.name.startswith('LLS_PROFILE')][0]
     handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
     return lls_collection, profile_collection, profile, handle
@@ -90,6 +93,9 @@ def findLightGrp(ob):
     return None
 
 def findLightProfileObject(ob):
+    if ob.name.startswith('LLS_PROFILE'):
+        return ob
+    
     while ob and ob.parent:
         ob = ob.parent
         if ob.name.startswith('LLS_PROFILE.'): return ob
@@ -100,21 +106,11 @@ def getLightMesh():
     lm = [l for l in family(lg) if l.name.startswith("LLS_LIGHT_MESH")]
     return lm[0] if len(lm) else None
 
-def findLightProfile(ob):
-    if ob.name.startswith('LLS_PROFILE'):
-        return ob
-    
-    while ob.parent:
-        ob = ob.parent
-        if ob.name.startswith('LLS_PROFILE'): return ob
-        
-    return None
-
 def getProfileHandle(ob=None):
     if not ob:
         ob = bpy.context.scene.objects.active
 
-    p = findLightProfile(ob)
+    p = findLightProfileObject(ob)
     if not p:
         return None
     

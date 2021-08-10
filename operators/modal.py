@@ -42,7 +42,7 @@ def multiprofile_conditions(context):
     multiprofile_conditions = True
     if props.profile_multimode and running_modals:
         profile = findLightProfileObject(context.active_object)
-        list_profile = props.profile_list[props.list_index]
+        list_profile = props.profile_list[props.profile_list_index]
         multiprofile_conditions = list_profile.enabled and profile and profile.name == list_profile.empty_name
     return multiprofile_conditions
 
@@ -741,7 +741,7 @@ def update_light_sets(panel, context, always=False):
     # lls_collection, profile_collection = llscol_profilecol(context)
     props = context.scene.LLStudio
     lls_collection = get_lls_collection(context)
-    profile = props.profile_list[props.list_index]
+    profile = props.profile_list[props.profile_list_index]
     profile_collection = bpy.data.objects[profile.empty_name].users_collection[0]
     if not profile.enabled and props.profile_multimode:
         working_set = set((l._collection for l in LightImage.lights))

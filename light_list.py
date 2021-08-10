@@ -30,7 +30,7 @@ class LightListItem(bpy.types.PropertyGroup):
 
 class LLS_UL_LightList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.list_index else 'LIGHT'
+        custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.profile_list_index else 'LIGHT'
 
         if item.handle_name in context.scene.objects:
             # Make sure your code supports all 3 layout types
@@ -123,7 +123,7 @@ def update_light_list_set(context, profile_idx=None):
     props = context.scene.LLStudio
     # lls_collection, profile_collection = llscol_profilecol(context)
     lls_collection = get_lls_collection(context)
-    profile_idx = props.list_index if profile_idx==None else profile_idx
+    profile_idx = props.profile_list_index if profile_idx==None else profile_idx
     profile_collection = bpy.data.objects[props.profile_list[profile_idx].empty_name].users_collection[0]
     if profile_collection is not None and (props.profile_list[profile_idx].enabled or not props.profile_multimode):
         props.light_list.clear()
@@ -277,7 +277,7 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
         
         if props.profile_multimode:
             profile = findLightProfileObject(light)
-            list_profile = props.profile_list[props.list_index]
+            list_profile = props.profile_list[props.profile_list_index]
             return list_profile.enabled and profile and profile.name == list_profile.empty_name
         else:
             return True
@@ -350,7 +350,7 @@ def load_post(scene):
             if any(x in elem.name for x in matches):
                 matching_names.append(elem.name)
     
-    print(matching_names)
+    # print(matching_names)
     for name in matching_names:
         elem = bpy.data.objects[name]
         try:

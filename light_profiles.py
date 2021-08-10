@@ -24,9 +24,8 @@ class ListItem(bpy.types.PropertyGroup):
             default="")
     
     def enabled_update_func(self, context):
+        if self.empty_name not in bpy.data.objects: return
         profile_collection = get_collection(bpy.data.objects[self.empty_name])
-
-        props = context.scene.LLStudio
 
         lls_collection = get_lls_collection(context)
         if self.enabled:
@@ -49,7 +48,6 @@ class LLS_UL_ProfileList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         props = context.scene.LLStudio
         custom_icon = 'OUTLINER_OB_LIGHT' if item.enabled else 'LIGHT'
-        profile_collection = bpy.data.objects[item.empty_name].users_collection[0]
         # Make sure your code supports all 3 layout types
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             layout.prop(item, 'name', text='', emboss=False, translate=False)
@@ -107,11 +105,12 @@ class LIST_OT_NewItem(bpy.types.Operator):
         item = props.profile_list.add()
         lls_collection = get_lls_collection(context)
 
-        # unlink existing profiles
-        for profile in (prof for prof in context.scene.objects if prof.name.startswith('LLS_PROFILE.') and isFamily(prof)):
-            profile_collection = profile.users_collection[0]
-            lls_collection.children.unlink(profile_collection)
-        #
+        if not props.profile_multimode:
+            # unlink existing profiles
+            for profile in (prof for prof in context.scene.objects if prof.name.startswith('LLS_PROFILE.') and isFamily(prof)):
+                profile_collection = profile.users_collection[0]
+                lls_collection.children.unlink(profile_collection)
+            #
 
         idx = 0
         for id in (i.name.split('Profile ')[1] for i in props.profile_list if i.name.startswith('Profile ')):
@@ -150,6 +149,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
         replace_link(profile, profile.name)
 
         item.empty_name = profile.name
+        item.enabled = props.profile_multimode
 
         handle = None
         if self.handle:
@@ -163,7 +163,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
             replace_link(handle, profile.name)
 
         props.last_empty = profile.name
-        props.list_index = len(props.profile_list)-1
+        props.profile_list_index = len(props.profile_list)-1
 
         light_list.update_light_list_set(context)
 
@@ -182,7 +182,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.LLStudio
-        index = props.list_index
+        index = props.profile_list_index
 
         props.profile_list.remove(index)
 
@@ -201,7 +201,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         # update index
         if index > 0:
             index = index - 1
-        props.list_index = index
+        props.profile_list_index = index
 
         if props.initialized:
             light_list.update_light_list_set(context)
@@ -234,11 +234,11 @@ class LIST_OT_CopyItem(bpy.types.Operator):
 
         new_list_item = props.profile_list.add()
         new_list_item.empty_name = profile_copy.name_full
-        new_list_item.name = props.profile_list[props.list_index].name + ' Copy'
+        new_list_item.name = props.profile_list[props.profile_list_index].name + ' Copy'
 
         # place copied profile next to source profile
         lastItemId = len(props.profile_list)-1
-        while lastItemId > props.list_index+1:
+        while lastItemId > props.profile_list_index+1:
             list.move(lastItemId-1, lastItemId)
             lastItemId -= 1
 
@@ -266,7 +266,7 @@ class LIST_OT_MoveItem(bpy.types.Operator):
     def move_index(self, context):
         """ Move index of an item render queue while clamping it. """
         props = context.scene.LLStudio
-        index = props.list_index
+        index = props.profile_list_index
         list_length = len(props.profile_list) - 1 # (index starts at 0)
         new_index = 0
 
@@ -276,13 +276,13 @@ class LIST_OT_MoveItem(bpy.types.Operator):
             new_index = index + 1
 
         new_index = max(0, min(new_index, list_length))
-        props.list_index = new_index
+        props.profile_list_index = new_index
 
 
     def execute(self, context):
         props = context.scene.LLStudio
         list = props.profile_list
-        index = props.list_index
+        index = props.profile_list_index
 
         if self.direction == 'DOWN':
             neighbor = index + 1
@@ -296,16 +296,15 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-def _update_list_index(props, context, multimode_swith=False):
+def _update_profile_list_index(props, context, multimode_override=False):
     if len(props.profile_list) == 0: return
 
-    selected_profile = props.profile_list[props.list_index]
+    selected_profile = props.profile_list[props.profile_list_index]
 
-    if not multimode_swith and selected_profile.empty_name == props.last_empty: return
+    if not multimode_override and selected_profile.empty_name == props.last_empty: return
 
-    print('Index update {}'.format(props.list_index))
+    print('Index update {}'.format(props.profile_list_index))
 
-    print(not props.profile_multimode)
     if not props.profile_multimode:
         #unlink current profile
         lls_collection = get_lls_collection(context)
@@ -325,8 +324,16 @@ def _update_list_index(props, context, multimode_swith=False):
 
     light_list.update_light_list_set(context)
 
-def update_list_index(self, context):
-    _update_list_index(self, context)
+    if props.profile_multimode:
+        if len(props.light_list):
+            handle = bpy.data.objects[props.light_list[0].handle_name]
+            light_objects = [c for c in handle.children if c.visible_get()]
+            if light_objects:
+                context.view_layer.objects.active = light_objects[0]
+                light_objects[0].select_set(True)
+
+def update_profile_list_index(self, context):
+    _update_profile_list_index(self, context)
 
 # import/export
 import json, time
@@ -342,7 +349,7 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
             print(json.dumps(profile, indent=4, separators=(',', ': ')))
 
         bpy.ops.lls_list.new_profile()
-        props.list_index = len(plist)-1
+        props.profile_list_index = len(plist)-1
         plist[-1].name = profile["name"]
         if not internal_copy:
             date = time.localtime()
@@ -428,7 +435,7 @@ class ExportProfiles(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.LLStudio
-        index = props.list_index
+        index = props.profile_list_index
 
         export_file = {}
         date = time.localtime()
@@ -517,7 +524,7 @@ class CopyProfileToScene(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.LLStudio
-        index = props.list_index
+        index = props.profile_list_index
 
         profiles = [compose_profile(index),]
 
@@ -571,12 +578,12 @@ def msgbus_callback(*args):
 
     multiprofile_conditions = True
     profile = findLightProfileObject(active_object)
-    list_profile = props.profile_list[props.list_index]
+    list_profile = props.profile_list[props.profile_list_index]
     # multiprofile_conditions = list_profile.enabled and profile and profile.name == list_profile.empty_name
     if not profile.name == list_profile.empty_name:
         for i, p in enumerate(props.profile_list):
             if p.empty_name == profile.name:
-                props.list_index = i
+                props.profile_list_index = i
                 break
 
 
