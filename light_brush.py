@@ -4,7 +4,7 @@ from math import *
 from mathutils.geometry import intersect_line_sphere
 from mathutils import Vector
 from bpy.props import *
-from . common import isFamily, family, findLightGrp, getLightMesh, getLightController, get_user_keymap_item
+from . common import isFamily, findLightGrp, get_user_keymap_item
 from . operators import LightOperator
 
 
