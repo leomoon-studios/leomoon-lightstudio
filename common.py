@@ -36,8 +36,11 @@ def llscol_profilecol_profile_handle(context):
 
 def llscol_profilecol(context):
     try:
+        props = context.scene.LLStudio
         lls_collection = [c for c in context.scene.collection.children if c.name.startswith('LLS')][0]
-        profile_collection = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')][0]
+        # profile_collection = [c for c in lls_collection.children if c.name.startswith('LLS_PROFILE')][0]
+        profile_empty_name = props.profile_list[props.profile_list_index].empty_name
+        profile_collection = get_collection(bpy.data.objects[profile_empty_name])
         return lls_collection, profile_collection
     except IndexError:
         return (None, None)

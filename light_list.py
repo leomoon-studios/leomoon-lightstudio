@@ -125,7 +125,7 @@ def update_light_list_set(context, profile_idx=None):
         props.light_list.clear()
         return
     # lls_collection, profile_collection = llscol_profilecol(context)
-    lls_collection = get_lls_collection(context)
+    # lls_collection = get_lls_collection(context)
     profile_idx = props.profile_list_index if profile_idx==None else profile_idx
     profile_collection = bpy.data.objects[props.profile_list[profile_idx].empty_name].users_collection[0]
     if profile_collection is not None and (props.profile_list[profile_idx].enabled or not props.profile_multimode):

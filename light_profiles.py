@@ -26,21 +26,24 @@ class ListItem(bpy.types.PropertyGroup):
     def enabled_update_func(self, context):
         if self.empty_name not in bpy.data.objects: return
         profile_collection = get_collection(bpy.data.objects[self.empty_name])
+        profile_list_index = int(self.path_from_id().split('[')[1].split(']')[0])
 
         lls_collection = get_lls_collection(context)
         if self.enabled:
             #link selected profile
             if bpy.data.collections[self.empty_name].name not in lls_collection.children:
                 lls_collection.children.link(bpy.data.collections[self.empty_name])
+            
+            props = context.scene.LLStudio
+            light_list.update_light_list_set(context, profile_idx=profile_list_index)
 
         else:
             #unlink profile
             if profile_collection:
                 if profile_collection.name in lls_collection.children:
                     lls_collection.children.unlink(profile_collection)
+            light_list.update_light_list_set(context)
 
-        profile_list_index = int(self.path_from_id().split('[')[1].split(']')[0])
-        light_list.update_light_list_set(context, profile_idx=profile_list_index)
     
     enabled: BoolProperty(default=False, update=enabled_update_func)
 
