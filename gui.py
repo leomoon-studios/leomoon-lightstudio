@@ -25,6 +25,7 @@ class LLS_PT_Studio(bpy.types.Panel):
         col.separator()
         col.operator('light_studio.control_panel', icon='MENU_PANEL')
         col.operator('scene.set_light_studio_background')
+        col.operator('scene.switch_to_cycles')
 
 @force_register
 class LLS_PT_Mode(bpy.types.Panel):
