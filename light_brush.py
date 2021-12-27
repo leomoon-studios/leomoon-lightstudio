@@ -193,6 +193,8 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
         override_context.active_object = context.active_object
         if hasattr(context, 'depsgraph'):
             override_context.depsgraph = context.depsgraph
+        else:
+            override_context.depsgraph = context.evaluated_depsgraph_get()
         override_event = OverrideEvent()
         override_event.mouse_region_x = event.mouse_x - active_region.x
         override_event.mouse_region_y = event.mouse_y - active_region.y

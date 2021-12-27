@@ -24,7 +24,6 @@ class LLS_PT_Studio(bpy.types.Panel):
         if context.scene.LLStudio.initialized: col.operator('scene.delete_leomoon_light_studio')
         col.separator()
         col.operator('light_studio.control_panel', icon='MENU_PANEL')
-        col.operator('scene.switch_to_cycles')
         col.operator('scene.set_light_studio_background')
 
 @force_register
@@ -80,6 +79,9 @@ class LLS_PT_ProfileList(bpy.types.Panel):
         col.operator('lls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
         col.operator('lls_list.move_profile', text='', icon="TRIA_DOWN").direction = 'DOWN'
 
+        row = layout.row()
+        row.operator('lls_list.select_profile_handle')
+
 @force_register
 class LLS_PT_Lights(bpy.types.Panel):
     bl_idname = "LLS_PT_lights"
@@ -101,7 +103,7 @@ class LLS_PT_Lights(bpy.types.Panel):
 
         row = layout.row()
         col = row.column()
-        if props.profile_multimode:
+        if props.profile_multimode and props.profile_list_index < len(props.profile_list):
             col.label(text="Profile: "+props.profile_list[props.profile_list_index].name)
         col.template_list("LLS_UL_LightList", "Light_List", props, "light_list", props, "light_list_index", rows=5)
 
