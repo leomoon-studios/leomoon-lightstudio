@@ -39,6 +39,12 @@ LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
 ## Changelog
+### 2.9.1 2021-09-15
+* Adds Switch to Cycles button
+* Moves Profiles panel before Lights panel
+* Fixes Copy Light
+* Fixes Copy Profile
+
 ### 2.9.0 2021-08-11:
 * Added Reset Control Panel button under Misc section
 * Added Multi Profile Mode

@@ -24,6 +24,7 @@ class LLS_PT_Studio(bpy.types.Panel):
         if context.scene.LLStudio.initialized: col.operator('scene.delete_leomoon_light_studio')
         col.separator()
         col.operator('light_studio.control_panel', icon='MENU_PANEL')
+        col.operator('scene.switch_to_cycles')
         col.operator('scene.set_light_studio_background')
 
 @force_register
@@ -46,6 +47,38 @@ class LLS_PT_Mode(bpy.types.Panel):
 
         row = layout.row(align=True)
         row.prop(props, 'lls_mode', expand=True)
+
+@force_register
+class LLS_PT_ProfileList(bpy.types.Panel):
+    bl_idname = "LLS_PT_profile_list"
+    bl_label = "Profiles"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "LightStudio"
+
+    @classmethod
+    def poll(cls, context):
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+
+        props = scene.LLStudio
+
+        row = layout.row()
+        col = row.column()
+        col.prop(props, 'profile_multimode', expand=True)
+        col.template_list("LLS_UL_ProfileList", "Profile_List", props, "profile_list", props, "profile_list_index", rows=5)
+
+        col = row.column(align=True)
+        col.operator('lls_list.new_profile', icon='ADD', text="")
+        col.operator('lls_list.delete_profile', icon='REMOVE', text="")
+        col.operator('lls_list.copy_profile_menu', icon='DUPLICATE', text="")
+
+        col.separator()
+        col.operator('lls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
+        col.operator('lls_list.move_profile', text='', icon="TRIA_DOWN").direction = 'DOWN'
 
 @force_register
 class LLS_PT_Lights(bpy.types.Panel):
@@ -133,38 +166,6 @@ class LLS_PT_Selected(bpy.types.Panel):
                     if operators.VERBOSE:
                         traceback.print_exc()
             col.prop(getLightMesh().parent, 'location', index=2, text="Distance") #light radius
-
-@force_register
-class LLS_PT_ProfileList(bpy.types.Panel):
-    bl_idname = "LLS_PT_profile_list"
-    bl_label = "Profiles"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "LightStudio"
-
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-
-        props = scene.LLStudio
-
-        row = layout.row()
-        col = row.column()
-        col.prop(props, 'profile_multimode', expand=True)
-        col.template_list("LLS_UL_ProfileList", "Profile_List", props, "profile_list", props, "profile_list_index", rows=5)
-
-        col = row.column(align=True)
-        col.operator('lls_list.new_profile', icon='ADD', text="")
-        col.operator('lls_list.delete_profile', icon='REMOVE', text="")
-        col.operator('lls_list.copy_profile_menu', icon='DUPLICATE', text="")
-
-        col.separator()
-        col.operator('lls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
-        col.operator('lls_list.move_profile', text='', icon="TRIA_DOWN").direction = 'DOWN'
 
 @force_register
 class LLS_PT_ProfileImportExport(bpy.types.Panel):
