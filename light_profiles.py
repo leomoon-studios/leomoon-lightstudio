@@ -193,6 +193,8 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         ''' Delete/Switch Hierarchy stuff '''
         #delete objects from current profile
         if props.last_empty not in context.scene.objects:
+            # update index
+            props.profile_list_index = max(0, index-1)
             return {'FINISHED'}
         obsToRemove = family(context.scene.objects[props.last_empty])
         collectionsToRemove = set()
@@ -205,9 +207,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
                 bpy.data.collections.remove(c)
 
         # update index
-        if index > 0:
-            index = index - 1
-        props.profile_list_index = index
+        props.profile_list_index = max(0, index-1)
 
         if props.initialized:
             light_list.update_light_list_set(context)
@@ -240,17 +240,50 @@ class LIST_OT_CopyItem(bpy.types.Operator):
 
         new_list_item = props.profile_list.add()
         new_list_item.empty_name = profile_copy.name_full
-        new_list_item.name = props.profile_list[props.profile_list_index].name + ' Copy'
+        profile_list_item = props.profile_list[props.profile_list_index]
+        new_list_item.name = profile_list_item.name + ' Copy'
+        new_list_item.enabled = profile_list_item.enabled
 
         # place copied profile next to source profile
         lastItemId = len(props.profile_list)-1
         while lastItemId > props.profile_list_index+1:
             list.move(lastItemId-1, lastItemId)
             lastItemId -= 1
+        
+        props.profile_list_index += 1
 
         return{'FINISHED'}
 
+class LIST_OT_SelectProfileHandle(bpy.types.Operator):
 
+    bl_idname = "lls_list.select_profile_handle"
+    bl_label = "Select Profile's Handle"
+    bl_options = {"INTERNAL"}
+
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list. """
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        list[index].enabled
+        return len(list) and list[index].enabled
+
+    def execute(self, context):
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+
+        for o in context.selected_objects:
+            o.select_set(False)
+        
+        handle = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
+        handle.hide_viewport = False
+        handle.hide_select = False
+        context.view_layer.objects.active = handle
+        handle.select_set(True)
+
+        return{'FINISHED'}
 
 class LIST_OT_MoveItem(bpy.types.Operator):
 
@@ -303,7 +336,7 @@ class LIST_OT_MoveItem(bpy.types.Operator):
         return{'FINISHED'}
 
 def _update_profile_list_index(props, context, multimode_override=False):
-    if len(props.profile_list) == 0: return
+    if len(props.profile_list) == 0 or props.profile_list_index >= len(props.profile_list): return
 
     selected_profile = props.profile_list[props.profile_list_index]
 
@@ -597,6 +630,7 @@ def msgbus_callback(*args):
 
     multiprofile_conditions = True
     profile = findLightProfileObject(active_object)
+    props.profile_list_index = min(len(props.profile_list)-1, props.profile_list_index)
     list_profile = props.profile_list[props.profile_list_index]
     # multiprofile_conditions = list_profile.enabled and profile and profile.name == list_profile.empty_name
     if not profile.name == list_profile.empty_name:

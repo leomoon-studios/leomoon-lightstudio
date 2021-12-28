@@ -280,6 +280,8 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
         
         if props.profile_multimode:
             profile = findLightProfileObject(light)
+            if props.profile_list_index >= len(props.profile_list):
+                return False
             list_profile = props.profile_list[props.profile_list_index]
             return list_profile.enabled and profile and profile.name == list_profile.empty_name
         else:
@@ -309,6 +311,8 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
         update_light_list_set(context)
         
         light_object = [obj for obj in lls_handle_copy.children if obj.visible_get()][0]
+        for o in context.selected_objects:
+            o.select_set(False)
         bpy.context.view_layer.objects.active = light_object
         light_object.select_set(True)
 

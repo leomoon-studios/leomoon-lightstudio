@@ -20,21 +20,22 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     profile_list: CollectionProperty(type = ListItem)
     profile_list_index: IntProperty(name = "Index for profile_list", default = 0, update=update_profile_list_index)
     last_empty: StringProperty(name="Name of last Empty holding profile", default="")
-
+    
     def multimode_refresh(props, context):
         if props.profile_multimode:
             if len(props.profile_list) == 0:
                 return
+            props.profile_list_index = min(len(props.profile_list), props.profile_list_index)
             tmp_idx = props.profile_list_index
             selected_profile = props.profile_list[props.profile_list_index]
             for profile in props.profile_list:
                 profile_collection = get_collection(bpy.data.objects[profile.empty_name])
 
                 lls_collection = get_lls_collection(context)
-
+                
                 if profile_collection.name == selected_profile.empty_name:
                     selected_profile.enabled = True
-
+                
                 if profile.enabled:
                     #link selected profile
                     profile_col = bpy.data.collections[profile.empty_name]
@@ -45,14 +46,14 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
                     if profile_collection:
                         if profile_collection.name in lls_collection.children:
                             lls_collection.children.unlink(profile_collection)
-
+                
             for idx, profile in enumerate(props.profile_list):
                 if props.profile_list_index == idx: continue
                 props.profile_list_index = idx
             props.profile_list_index = tmp_idx
         else:
             _update_profile_list_index(props, context, multimode_override=True)
-
+        
 
     profile_multimode: BoolProperty(default=False, name="Multi Profile Mode", description="Use many profiles at once.", update=multimode_refresh)
 
@@ -181,16 +182,20 @@ class CreateBlenderLightStudio(bpy.types.Operator):
         script_file = os.path.realpath(__file__)
         dir = os.path.dirname(script_file)
 
+        # In pre 3.0 Blenders, this apending (with active_collection=False) added LLS collection in the scene master collection.
+        # Unfortunatelly, in 3.0 LLS collection is wrapped in 'Collection 2'
+        # so, we have to make sure master collection is the active collection and append it with active_collection=True
+        context.view_layer.active_layer_collection = context.view_layer.layer_collection
         bpy.ops.wm.append(filepath=_+'LLS4.blend'+_+'Collection'+_,
         directory=os.path.join(dir,"LLS4.blend"+_+"Collection"+_),
         filename="LLS",
-        active_collection=False)
+        active_collection=True)
 
         bpy.ops.lls_list.new_profile()
 
         context.scene.LLStudio.initialized = True
 
-        # bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.render.engine = 'CYCLES'
 
         # add the first light
         # bpy.ops.object.select_all(action='DESELECT')
@@ -268,7 +273,7 @@ class SetBackground(bpy.types.Operator):
         # return len(context.scene.LLStudio.profile_list)
 
     def execute(self, context):
-        # bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.render.engine = 'CYCLES'
         if bpy.data.worlds.get('LightStudio') is None:
             bpy.context.scene.world = bpy.data.worlds.new('LightStudio')
             bpy.context.scene.world.use_nodes = True
@@ -283,20 +288,7 @@ class SetBackground(bpy.types.Operator):
             bpy.context.scene.world.cycles_visibility.diffuse = False
             bpy.context.scene.world.cycles_visibility.glossy = False
             bpy.context.scene.world.cycles_visibility.transmission = False
-        return {"FINISHED"}
 
-class SwitchToCycles(bpy.types.Operator):
-    bl_idname = "scene.switch_to_cycles"
-    bl_description = "Change render engine to cycles"
-    bl_label = "Switch to Cycles"
-    bl_options = {"REGISTER", "UNDO"}
-    # @classmethod
-    # def poll(self, context):
-        # """ Enable if there's something in the list """
-        # return len(context.scene.LLStudio.profile_list)
-
-    def execute(self, context):
-        bpy.context.scene.render.engine = 'CYCLES'
         return {"FINISHED"}
 
 class AddLLSLight(bpy.types.Operator):
@@ -308,7 +300,7 @@ class AddLLSLight(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         props = context.scene.LLStudio
-        return props.initialized and (props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
+        return props.initialized and (props.profile_list_index < len(props.profile_list) and props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
         script_file = os.path.realpath(__file__)
@@ -404,7 +396,7 @@ class DeleteBSLight(bpy.types.Operator):
                props.initialized and \
                light and \
                light.name.startswith('LLS_LIGHT') and \
-               (props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
+               (props.profile_list_index < len (props.profile_list) and props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
         scene = context.scene
