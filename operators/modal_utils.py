@@ -869,8 +869,8 @@ class ClickManager:
                 return "DOUBLE"
 
 class MouseWidget:
-    mouse_x: bpy.props.IntProperty()
-    mouse_y: bpy.props.IntProperty()
+    mouse_x: bpy.props.FloatProperty()
+    mouse_y: bpy.props.FloatProperty()
 
     def __init__(self):
         self._start_position = None
