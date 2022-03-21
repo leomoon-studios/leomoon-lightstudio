@@ -1,13 +1,112 @@
 import bpy
-from bpy.props import BoolProperty, StringProperty, PointerProperty, FloatProperty, EnumProperty, IntProperty
+from bpy.props import BoolProperty, StringProperty, EnumProperty, IntProperty
 import os, sys, subprocess
+
 from . common import *
 from . light_data import *
-from itertools import chain
 from . operators.modal import close_control_panel
 from . import light_list
 
 _ = os.sep
+
+from time import time_ns
+import random
+def get_hash():
+    return str(time_ns()) + ''.join(random.choice('0123456789ABCDEFGHIJKLMNOPRSTUWXYZ') for i in range(4))
+def add_profile_hashes():
+    scene_profiles = {profile for scene in bpy.data.scenes for profile in scene.LLStudio.profile_list}
+    for profile in scene_profiles:
+        try:
+            profile_root = bpy.data.objects[profile.empty_name]
+            if not profile.hash or not 'hash' in profile_root:
+                # add new hash
+                hash = get_hash()
+                profile.hash = profile_root['hash'] = hash
+        except Exception as e:
+            if VERBOSE: print("Malformed profiles are not processed here.", e)
+
+def check_profiles_consistency(context, invert_multimode=False):
+    # Check for doubled profiles in the current scene. Assume that if current profile is doubled, then all profiles of this scene are doubled
+    changed = False
+    if len(context.scene.LLStudio.profile_list):
+        list_props = context.scene.LLStudio
+        scene_profile_list = list_props.profile_list
+        profile_menu_item = scene_profile_list[context.scene.LLStudio.profile_list_index]
+        profile_empty_idx = bpy.data.objects.find(profile_menu_item.empty_name)
+        lls = [o for o in context.scene.objects if o.name.startswith('LEOMOON_LIGHT_STUDIO')][0]
+        if (not invert_multimode and not list_props.profile_multimode) or (invert_multimode and list_props.profile_multimode):
+            if profile_empty_idx != -1:
+                try:
+                    this_scene_profiles = (o for o in lls.children if o.name.startswith('LLS_PROFILE') and o.name in context.scene.objects)
+                    this_profile_root = next(this_scene_profiles)
+                    if this_profile_root.name != profile_menu_item.empty_name:
+                        if VERBOSE: print('#', profile_menu_item.name, profile_menu_item.empty_name, this_profile_root.name)
+                        profile_menu_item.empty_name = this_profile_root.name
+                        hash = get_hash()
+                        profile_menu_item.hash = this_profile_root['hash'] = hash
+                        changed = True
+                    
+                        # assume the scene was duplicated
+                        # keep the active profile (as its hierarchy was duped) and remove all other profiles from the list (as they link to the original objects)
+                        # while len(scene_profile_list) > 1 and scene_profile_list[0] != profile_menu_item:
+                        #     scene_profile_list.remove(0)
+                        # while len(scene_profile_list) > 1:
+                        #     scene_profile_list.remove(1)
+
+                        
+                        for prof in scene_profile_list:
+                            if prof == profile_menu_item: continue
+                            prof_collection = get_collection(bpy.data.objects[prof.empty_name])
+
+                            col = duplicate_collection(prof_collection, None)
+                            new_root = next(ob for ob in col.objects if ob.name.startswith("LLS_PROFILE"))
+                            if VERBOSE: print('##', prof.name, prof.empty_name, new_root.name)
+                            prof.empty_name = new_root.name
+                            hash = get_hash()
+                            prof.hash = new_root['hash'] = hash
+                            changed = True
+                except Exception as e:
+                    print("Something wrong with object hierarchy. Profile consistency check failed.", e)
+            else:
+                print("profile root not found")
+        elif (not invert_multimode and list_props.profile_multimode) or (invert_multimode and not list_props.profile_multimode):
+            try:
+                enabled_profiles = [prof for prof in scene_profile_list if prof.enabled]
+                disabled_profiles = [prof for prof in scene_profile_list if not prof.enabled]
+                duped = False
+                for prof in enabled_profiles:
+                    this_scene_profiles = (o for o in lls.children if o.name.startswith('LLS_PROFILE') and o.name in context.scene.objects and 'hash' in o and o['hash'] == prof.hash)
+                    this_profile_root = next(this_scene_profiles)
+                    if this_profile_root.name != prof.empty_name:
+                        if VERBOSE: print('M#', prof.name, prof.empty_name, this_profile_root.name)
+                        prof.empty_name = this_profile_root.name
+                        hash = get_hash()
+                        prof.hash = this_profile_root['hash'] = hash
+                        changed = duped = True
+                # assume all profiles to be duped if any visible profile is duped
+                if duped:
+                    for prof in disabled_profiles:
+                        prof_collection = get_collection(bpy.data.objects[prof.empty_name])
+
+                        col = duplicate_collection(prof_collection, None)
+                        new_root = next(ob for ob in col.objects if ob.name.startswith("LLS_PROFILE"))
+                        if VERBOSE: print('M##', prof.name, prof.empty_name, new_root.name)
+                        prof.empty_name = new_root.name
+                        hash = get_hash()
+                        prof.hash = new_root['hash'] = hash
+            except Exception as e:
+                print("Something wrong with object hierarchy. Multi-Profile consistency check failed.", e)
+    return changed
+    
+class LLS_OT_RefreshLightList(bpy.types.Operator):
+    bl_idname = "light_studio.refresh_lightlist"
+    bl_label = "Refresh Light List"
+    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
+
+    def execute(self, context):
+        check_profiles_consistency(context)
+        _update_profile_list_index(context.scene.LLStudio, context, multimode_override=True)
+        return {"FINISHED"}
 
 class ListItem(bpy.types.PropertyGroup):
     """ Group of properties representing an item in the list """
@@ -22,6 +121,8 @@ class ListItem(bpy.types.PropertyGroup):
             name="Name of Empty that holds the profile",
             description="",
             default="")
+    
+    hash: StringProperty()
     
     def enabled_update_func(self, context):
         if self.empty_name not in bpy.data.objects: return
@@ -52,21 +153,25 @@ class LLS_UL_ProfileList(bpy.types.UIList):
         props = context.scene.LLStudio
         custom_icon = 'OUTLINER_OB_LIGHT' if item.enabled else 'LIGHT'
         # Make sure your code supports all 3 layout types
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.prop(item, 'name', text='', emboss=False, translate=False)
-            if props.profile_multimode:
-                layout.prop(item, 'enabled', text='', emboss=False, translate=False, icon=custom_icon)
-                
-                enabled_count = 0
-                for p in props.profile_list:
-                    enabled_count += p.enabled
-                
-                custom_solo_icon = 'SOLO_ON' if enabled_count == 1 and item.enabled else 'SOLO_OFF'
-                layout.operator('lls_list.isolate_profile', emboss=False, icon=custom_solo_icon, text="").index = index
+        if (not data.profile_multimode and data.profile_list[data.profile_list_index].empty_name in context.scene.objects)\
+            or (data.profile_multimode and len([profile for scene in bpy.data.scenes for profile in scene.LLStudio.profile_list if profile.empty_name==data.profile_list[index].empty_name]) == 1):
+            if self.layout_type in {'DEFAULT', 'COMPACT'}:
+                layout.prop(item, 'name', text='', emboss=False, translate=False)
+                if props.profile_multimode:
+                    layout.prop(item, 'enabled', text='', emboss=False, translate=False, icon=custom_icon)
+                    
+                    enabled_count = 0
+                    for p in props.profile_list:
+                        enabled_count += p.enabled
+                    
+                    custom_solo_icon = 'SOLO_ON' if enabled_count == 1 and item.enabled else 'SOLO_OFF'
+                    layout.operator('lls_list.isolate_profile', emboss=False, icon=custom_solo_icon, text="").index = index
 
-        elif self.layout_type in {'GRID'}:
-            layout.alignment = 'CENTER'
-            layout.label("", icon = custom_icon)
+            elif self.layout_type in {'GRID'}:
+                layout.alignment = 'CENTER'
+                layout.label("", icon = custom_icon)
+        else:
+            layout.operator('light_studio.refresh_lightlist', text="Refresh...")
 
 class LIST_OT_IsolateProfile(bpy.types.Operator):
 
@@ -77,6 +182,7 @@ class LIST_OT_IsolateProfile(bpy.types.Operator):
     index: IntProperty()
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
 
         enabled_count = 0
@@ -99,11 +205,12 @@ class LIST_OT_NewItem(bpy.types.Operator):
 
     bl_idname = "lls_list.new_profile"
     bl_label = "Add a new profile"
-    bl_options = {"INTERNAL"}
+    bl_options = {"INTERNAL", "UNDO"}
 
     handle: BoolProperty(default=True)
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         item = props.profile_list.add()
         lls_collection = get_lls_collection(context)
@@ -185,6 +292,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         return len(context.scene.LLStudio.profile_list)
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         index = props.profile_list_index
 
@@ -202,6 +310,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
             collectionsToRemove.update(ob.users_collection)
             ob.use_fake_user = False
         bpy.ops.object.delete({"selected_objects": obsToRemove}, use_global=True)
+        print(collectionsToRemove)
         for c in collectionsToRemove:
             if c.name.startswith('LLS_'):
                 bpy.data.collections.remove(c)
@@ -226,6 +335,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         return len(context.scene.LLStudio.profile_list)
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         list = props.profile_list
 
@@ -243,6 +353,8 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         profile_list_item = props.profile_list[props.profile_list_index]
         new_list_item.name = profile_list_item.name + ' Copy'
         new_list_item.enabled = profile_list_item.enabled
+        hash = get_hash()
+        new_list_item.hash = profile['hash'] = hash
 
         # place copied profile next to source profile
         lastItemId = len(props.profile_list)-1
@@ -266,10 +378,13 @@ class LIST_OT_SelectProfileHandle(bpy.types.Operator):
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
-        list[index].enabled
-        return len(list) and list[index].enabled
+        if props.profile_multimode:
+            return len(list) and list[index].enabled
+        else:
+            return len(list)
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
@@ -319,6 +434,7 @@ class LIST_OT_MoveItem(bpy.types.Operator):
 
 
     def execute(self, context):
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
@@ -652,10 +768,12 @@ def lightstudio_load_post(load_handler):
         args=(),
         notify=msgbus_callback,
     )
+    bpy.app.timers.register(lambda : add_profile_hashes(), first_interval=0.1)
 
 def register():
     bpy.app.handlers.load_post.append(lightstudio_load_post)
     lightstudio_load_post(None)
+    bpy.app.timers.register(lambda : add_profile_hashes(), first_interval=0.1)
 
 
 def unregister():

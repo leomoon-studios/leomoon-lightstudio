@@ -61,6 +61,8 @@ class LLS_UL_LightList(bpy.types.UIList):
             elif self.layout_type in {'GRID'}:
                 layout.alignment = 'CENTER'
                 layout.label("", icon = custom_icon)
+        else:
+            layout.operator('light_studio.refresh_lightlist', text="Refresh...")
 
 def get_list_index(self):
     ob = bpy.context.view_layer.objects.active
@@ -170,6 +172,8 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
     def execute(self, context):
+        from . light_profiles import check_profiles_consistency
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         handle_name = props.light_list[self.index].handle_name
         light_handle = context.scene.objects[handle_name]
@@ -194,6 +198,8 @@ class LLS_OT_Isolate(bpy.types.Operator):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
     def execute(self, context):
+        from . light_profiles import check_profiles_consistency
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         handle_name = props.light_list[self.index].handle_name
         light_handle = context.scene.objects[handle_name]
@@ -242,6 +248,8 @@ class LLS_OT_LightListMoveItem(bpy.types.Operator):
         return len(context.scene.LLStudio.light_list)
 
     def execute(self, context):
+        from . light_profiles import check_profiles_consistency
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
         list = props.light_list
         index = props.light_list_index
@@ -288,6 +296,8 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
             return True
 
     def execute(self, context):
+        from . light_profiles import check_profiles_consistency
+        check_profiles_consistency(context)
         props = context.scene.LLStudio
 
         lls_collection, profile_collection = llscol_profilecol(context)
@@ -367,6 +377,10 @@ def load_post(scene):
             llscol, profilecol = llscol_profilecol(context)
             convert_old_light(elem.parent, profilecol)
             update_light_list_set(bpy.context)
+    
+    from . import light_profiles
+    light_profiles.add_profile_hashes()
+    # light_profiles.check_profiles_consistency(context)
 
 
 def register():

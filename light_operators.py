@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import BoolProperty, FloatProperty, CollectionProperty, IntProperty, StringProperty, EnumProperty, FloatVectorProperty
 from mathutils import Vector
-from . light_profiles import ListItem, update_profile_list_index, _update_profile_list_index
+from . light_profiles import ListItem, update_profile_list_index, _update_profile_list_index, check_profiles_consistency
 from . common import *
 import os
 from . import operators
@@ -22,6 +22,8 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     last_empty: StringProperty(name="Name of last Empty holding profile", default="")
 
     def multimode_refresh(props, context):
+        if check_profiles_consistency(context, invert_multimode=True):
+            _update_profile_list_index(props, context, multimode_override=True)
         if props.profile_multimode:
             if len(props.profile_list) == 0:
                 return
@@ -172,7 +174,7 @@ class CreateBlenderLightStudio(bpy.types.Operator):
     bl_idname = "scene.create_leomoon_light_studio"
     bl_label = "Create LightStudio"
     bl_description = "Append LeoMoon LightStudio to current scene"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -207,7 +209,7 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
     bl_idname = "scene.delete_leomoon_light_studio"
     bl_label = "Delete LightStudio"
     bl_description = "Delete LeoMoon LightStudio from current scene"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -221,7 +223,9 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
         from . operators.modal import close_control_panel
         close_control_panel()
 
-        ''' for each profile from this scene: delete objects then remove from list '''
+        check_profiles_consistency(context)
+
+        #  for each profile from this scene: delete objects then remove from list
         while len(context.scene.LLStudio.profile_list):
             bpy.ops.lls_list.delete_profile()
 
@@ -233,7 +237,10 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
             ob.use_fake_user = False
             bpy.data.objects.remove(ob)
 
-        context.scene.collection.children.unlink(get_lls_collection(context))
+        # context.scene.collection.children.unlink(get_lls_collection(context))
+        for col in get_lls_collection(context).children_recursive:
+            bpy.data.collections.remove(col)
+        bpy.data.collections.remove(get_lls_collection(context))
         #bring back the default wold settings
         if bpy.data.worlds.get('World') is None:
             bpy.context.scene.world = bpy.data.worlds.new('World')
@@ -313,10 +320,10 @@ class AddLLSLight(bpy.types.Operator):
         return props.initialized and (props.profile_list_index < len(props.profile_list) and props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
+        check_profiles_consistency(context)
         script_file = os.path.realpath(__file__)
         dir = os.path.dirname(script_file)
 
-        scene = context.scene
         lls_collection, profile_collection, profile, handle = llscol_profilecol_profile_handle(context)
 
         filepath = os.path.join(dir,"LLS4.blend")
@@ -365,10 +372,6 @@ class AddLLSLight(bpy.types.Operator):
                 context.view_layer.objects.active = light_object
                 light_object.select_set(True)
 
-                # light = advanced_light_layer.collection.objects[0]
-                # light.LLStudio.order_index = len(context.scene.LLStudio.light_list)
-                # light_handle.LLStudio.order_index = len(context.scene.LLStudio.light_list)
-
 
 
 
@@ -380,8 +383,6 @@ class AddLLSLight(bpy.types.Operator):
         c.use_y = True
         c.use_z = True
         c.use_offset = True
-        # scene.frame_current = bpy.context.scene.frame_current # refresh hack
-        # refreshMaterials()
 
         operators.update()
         light_list.update_light_list_set(context)
@@ -409,7 +410,7 @@ class DeleteBSLight(bpy.types.Operator):
                (props.profile_list_index < len (props.profile_list) and props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
-        scene = context.scene
+        check_profiles_consistency(context)
         light = context.object
 
         lls_light = findLightGrp(light)
