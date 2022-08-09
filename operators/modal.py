@@ -97,7 +97,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _modal(self, context, event):
         global running_modals
-        
+
         if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation + self.angle()
         else:
@@ -501,16 +501,29 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
                 # Draw resize cursor
                 touch_point = self.border_touch_point(context, area_mouse_x, area_mouse_y)
-                if self.border_touch and event.value == "PRESS":
-                    if self.border_touch & W_LEFT:
-                        self.panel.point_lt.x = min(area_mouse_x, self.panel.point_rb.x - 100)
-                    elif self.border_touch & W_RIGHT:
-                        self.panel.point_rb.x = max(area_mouse_x, self.panel.point_lt.x + 100)
-                    if self.border_touch & W_TOP:
-                        self.panel.point_lt.y = max(area_mouse_y, self.panel.point_rb.y + 100)
-                    elif self.border_touch & W_BOTTOM:
-                        self.panel.point_rb.y = min(area_mouse_y, self.panel.point_lt.y - 100)
-                    self.panel.move(Vector([0,0]))
+                blender_version = bpy.app.version
+                if blender_version >= (3, 2, 2):
+                    if self.border_touch and event.value_prev == "PRESS":
+                        if self.border_touch & W_LEFT:
+                            self.panel.point_lt.x = min(area_mouse_x, self.panel.point_rb.x - 100)
+                        elif self.border_touch & W_RIGHT:
+                            self.panel.point_rb.x = max(area_mouse_x, self.panel.point_lt.x + 100)
+                        if self.border_touch & W_TOP:
+                            self.panel.point_lt.y = max(area_mouse_y, self.panel.point_rb.y + 100)
+                        elif self.border_touch & W_BOTTOM:
+                            self.panel.point_rb.y = min(area_mouse_y, self.panel.point_lt.y - 100)
+                        self.panel.move(Vector([0,0]))
+                else:
+                    if self.border_touch and event.value == "PRESS":
+                        if self.border_touch & W_LEFT:
+                            self.panel.point_lt.x = min(area_mouse_x, self.panel.point_rb.x - 100)
+                        elif self.border_touch & W_RIGHT:
+                            self.panel.point_rb.x = max(area_mouse_x, self.panel.point_lt.x + 100)
+                        if self.border_touch & W_TOP:
+                            self.panel.point_lt.y = max(area_mouse_y, self.panel.point_rb.y + 100)
+                        elif self.border_touch & W_BOTTOM:
+                            self.panel.point_rb.y = min(area_mouse_y, self.panel.point_lt.y - 100)
+                        self.panel.move(Vector([0,0]))
 
                 if self.clicked_object and self.panel_moving:
                     if isinstance(self.clicked_object, Panel):
@@ -715,7 +728,7 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
     def poll(cls, context):
         global running_modals
         return running_modals > 0
-        
+
     def execute(self, context):
         aw = context.area.width
         width = min(aw-60, 800)
@@ -731,7 +744,7 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
             max(start_point.x, start_point.x+width),
             min(start_point.y, start_point.y+height),
             ))
-        
+
         panel_global.move(Vector([0,0]))
         LightImage.change_default_size(50)
         return {"FINISHED"}
