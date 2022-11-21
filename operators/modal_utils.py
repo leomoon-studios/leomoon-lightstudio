@@ -1,4 +1,4 @@
-import gpu, bgl, blf
+import gpu, blf
 from gpu_extras.batch import batch_for_shader
 from mathutils import *
 from math import pi, fmod, radians, sin, cos, atan2
@@ -419,7 +419,7 @@ class Border(Rectangle):
         ]
 
         border_shader2Dcolor.bind()
-        bgl.glEnable(bgl.GL_BLEND)
+        gpu.state.blend_set("ALPHA")
         border_shader2Dcolor.uniform_float("color", self.color)
         border_shader2Dcolor.uniform_float("panel_point_lt", self.light_image.panel.point_lt)
         border_shader2Dcolor.uniform_float("panel_point_rb", self.light_image.panel.point_rb)
@@ -470,7 +470,7 @@ class Border(Rectangle):
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts}).draw(border_shader2Dcolor)
-        bgl.glDisable(bgl.GL_BLEND)
+        gpu.state.blend_set("NONE")
 
     def get_verts(self):
         self.point_lt = self.light_image.point_lt.copy()
@@ -557,11 +557,8 @@ class LightImage(Rectangle):
             if self._image_path != self._lls_object.active_material.node_tree.nodes["Light Texture"].image.filepath:
                 updated |= True
                 self.image = self._lls_object.active_material.node_tree.nodes["Light Texture"].image
+                self.gpu_texture = gpu.texture.from_image(self.image)
                 self._image_path = self._lls_object.active_material.node_tree.nodes["Light Texture"].image.filepath
-            # this should run when image changes but sometimes Blender looses images... so it's run every time to be safe
-            if self.image.gl_load():
-                raise Exception
-
 
         return updated
 
@@ -599,6 +596,7 @@ class LightImage(Rectangle):
 
 
         self.image = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image
+        self.gpu_texture = gpu.texture.from_image(self.image)
         self._image_path = self._lls_advanced_collection.objects[0].active_material.node_tree.nodes["Light Texture"].image.filepath
         self._lls_rot = None
         self._scale = None
@@ -719,9 +717,8 @@ class LightImage(Rectangle):
         
         if self._lls_handle.LLStudio.type == 'ADVANCED':
             lightIconShader.uniform_bool("advanced", [True,])
-            bgl.glActiveTexture(bgl.GL_TEXTURE0)
-            bgl.glBindTexture(bgl.GL_TEXTURE_2D, self.image.bindcode)
-            lightIconShader.uniform_int("image", 0)
+            lightIconShader.uniform_sampler("image", self.gpu_texture)
+            # lightIconShader.uniform_sampler("image", gpu.texture.from_image(self.image))
 
             try:
                 # material properties
@@ -778,7 +775,7 @@ class LightImage(Rectangle):
 
 
         
-        bgl.glEnable(bgl.GL_BLEND)
+        gpu.state.blend_set("ALPHA")
 
         if lleft < bleft:
             verts2 = deepcopy(verts)
@@ -828,7 +825,7 @@ class LightImage(Rectangle):
                     "texCoord": self.get_tex_coords(),
                 }
             ).draw(lightIconShader)
-        bgl.glDisable(bgl.GL_BLEND)
+        gpu.state.blend_set("NONE")
 
     def update_visual_location(self):
         self.loc = self.panel_loc_to_area_px_lt() + Vector((self.width/2, self.height/2))
