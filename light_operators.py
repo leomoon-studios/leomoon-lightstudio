@@ -531,3 +531,33 @@ def unregister():
     bpy.app.handlers.frame_change_post.remove(lightstudio_update_frame)
     bpy.msgbus.clear_by_owner(owner)
     bpy.app.handlers.load_post.remove(lightstudio_load_post)
+
+class OBJECT_OT_duplicate_move_wrapper(bpy.types.Operator):
+    bl_idname = "lls_object.duplicate_move"
+    bl_label = "Duplicate Objects"
+    bl_description = "Duplicate the selected objects and move them"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.object and (context.object.name.startswith('LLS_LIGHT_AREA') or context.object.name.startswith('LLS_LIGHT_MESH'))
+    
+    def execute(self, context):
+        bpy.ops.lls_list.copy_light()
+        bpy.ops.light_studio.grab('INVOKE_DEFAULT')
+        return {'FINISHED'}
+
+addon_keymaps = []
+def add_shortkeys():
+    wm = bpy.context.window_manager
+    addon_km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type="EMPTY")
+
+    addon_kmi = addon_km.keymap_items.new(OBJECT_OT_duplicate_move_wrapper.bl_idname, 'D', 'PRESS', shift=True)
+    addon_keymaps.append((addon_km, addon_kmi))
+
+def remove_shortkeys():
+    wm = bpy.context.window_manager
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+
+    addon_keymaps.clear()

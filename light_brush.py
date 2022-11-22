@@ -202,7 +202,7 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
 
         global key_released
         context.area.header_text_set(text=f"[LM] Select Face,  [ESC/RM] Quit,  [N] {'Reflection | <Normal>' if self.normal_type else '<Reflection> | Normal'}")
-        # print(event.type, event.value)
+        # print(event.type, event.value, ':', event.type_prev,event.value_prev)
         if self.continuous:
             if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
                 # allow navigation
@@ -221,9 +221,6 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 context.area.header_text_set(text=None)
                 bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
-            elif event.value == 'RELEASE':
-                key_released = True
-                return {'PASS_THROUGH'}
         else:
             if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'LEFT_SHIFT', 'LEFT_ALT', 'LEFT_CTRL'}:
                 # allow navigation
@@ -232,21 +229,24 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
                 context.area.header_text_set(text=None)
                 bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
+            elif event.type in {self.keymap_key, 'LEFTMOUSE'} and event.value == 'RELEASE' and not key_released:
+                key_released = True
+                return {'RUNNING_MODAL'}
+            elif not key_released:
+                return {'RUNNING_MODAL'}
             elif event.type == 'N' and event.value == 'PRESS':
                 self.normal_type = not self.normal_type
                 return {'RUNNING_MODAL'}
-            elif event.type in {'MOUSEMOVE', 'LEFTMOUSE'} and event.value == 'PRESS' and key_released:
+            elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
                 raycast(override_context, override_event, self.normal_type)
                 return {'PASS_THROUGH'}
-            elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE' and key_released:
+            elif event.type == 'MOUSEMOVE' and event.type_prev=='LEFTMOUSE' and event.value_prev == 'PRESS':
+                raycast(override_context, override_event, self.normal_type)
+                return {'PASS_THROUGH'}
+            elif event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
                 context.area.header_text_set(text=None)
                 bpy.ops.wm.tool_set_by_id('INVOKE_DEFAULT', name=self.beginning_tool)
                 return {'FINISHED'}
-            elif event.type in {self.keymap_key, 'LEFTMOUSE'} and event.value == 'RELEASE':
-                key_released = True
-                return {'PASS_THROUGH'}
-
-        #return {'PASS_THROUGH'}
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
