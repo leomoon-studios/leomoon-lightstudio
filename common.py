@@ -132,6 +132,7 @@ def duplicate_collection(collection, parent_collection):
 
     def rec_dup(collection, parent_collection):
         new_collection = bpy.data.collections.new(collection.name)
+        new_collection.use_fake_user = True
         for obj in collection.objects:
             new_obj = obj.copy()
 

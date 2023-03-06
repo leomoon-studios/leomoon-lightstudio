@@ -10,6 +10,23 @@ from . light_data import *
 
 _ = os.sep
 
+def mute_get(self):
+    try:
+        mesh_object = bpy.context.scene.objects[self.handle_name]
+        mesh_collection = get_collection(mesh_object)
+        view_layer = find_view_layer(mesh_collection, bpy.context.view_layer.layer_collection)
+        return view_layer.exclude
+    except Exception as e:
+        print('problem', e)
+        return bpy.data.objects[self.handle_name].LLStudio.mute
+
+def mute_set(self, value):
+    mesh_object = bpy.context.scene.objects[self.handle_name]
+    mesh_collection = get_collection(mesh_object)
+    view_layer = find_view_layer(mesh_collection, bpy.context.view_layer.layer_collection)
+    view_layer.exclude = value
+    mesh_object.LLStudio.mute = value
+
 class LightListItem(bpy.types.PropertyGroup):
     """ Group of properties representing an item in the list """
     def update_name(self, context):
@@ -27,6 +44,8 @@ class LightListItem(bpy.types.PropertyGroup):
     handle_name: StringProperty(
             description="",
             default="")
+
+    mute: BoolProperty(get=mute_get, set=mute_set)
 
 class LLS_UL_LightList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -144,6 +163,7 @@ def update_light_list_set(context, profile_idx=None):
             ll.name = lls_handle.LLStudio.light_name if lls_handle.LLStudio.light_name else f"Light {lls_handle.LLStudio.order_index}"
 
             view_layer = find_view_layer(lls_handle.users_collection[0], context.view_layer.layer_collection)
+            # lls_handle.LLStudio.mute = view_layer.exclude
             visible_lights = [c for c in lls_handle.children if c.visible_get()]
             if len(visible_lights) == 1 and not view_layer.exclude:
                 light_object = visible_lights[0]
@@ -175,15 +195,29 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
         from . light_profiles import check_profiles_consistency
         check_profiles_consistency(context)
         props = context.scene.LLStudio
+        
+        #######
+        muted = props.light_list[self.index].mute = not props.light_list[self.index].mute
+        #######
+
+
         handle_name = props.light_list[self.index].handle_name
         light_handle = context.scene.objects[handle_name]
-        light_collection = get_collection(light_handle)
+        
+        
+        #######
+        if not muted:
+            light_handle.LLStudio.active_light_type_update(context)
+        ########
+        
 
-        view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
-        view_layer.exclude = not view_layer.exclude
+        # light_collection = get_collection(light_handle)
 
-        if not view_layer.exclude:
-            light_handle.LLStudio.type = light_handle.LLStudio.type
+        # view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
+        # view_layer.exclude = not view_layer.exclude
+
+        # if not view_layer.exclude:
+            # light_handle.LLStudio.type = light_handle.LLStudio.type
         return {"FINISHED"}
 
 class LLS_OT_Isolate(bpy.types.Operator):
@@ -201,34 +235,48 @@ class LLS_OT_Isolate(bpy.types.Operator):
         from . light_profiles import check_profiles_consistency
         check_profiles_consistency(context)
         props = context.scene.LLStudio
-        handle_name = props.light_list[self.index].handle_name
-        light_handle = context.scene.objects[handle_name]
-        light_collection = get_collection(light_handle)
-        view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
-        
-        view_layers=[]
-        excluded=0
-        for li in props.light_list:
-            lls_handle = context.scene.objects[li.handle_name]
-            light_collection = get_collection(lls_handle)
 
-            vl = find_view_layer(light_collection, context.view_layer.layer_collection)
-            view_layers.append(vl)
-            excluded += vl.exclude
-        # print([v.name for v in view_layers])
-
-        if not view_layer.exclude and excluded == len(view_layers)-1:
-            for v in view_layers:
-                v.exclude = False
-                lls_handle = v.children[0].collection.objects[0].parent
-                lls_handle.LLStudio.type = lls_handle.LLStudio.type
+        list_item = props.light_list[self.index]
+        excluded = sum(li.mute for li in props.light_list)
+        if not list_item.mute and excluded == len(props.light_list)-1:
+            for li in props.light_list:
+                li.mute = False
         else:
-            for v in view_layers:
-                if not v.exclude:
+            for li in props.light_list:
+                if not li.mute:
                     # Do not set exclude=True twice because it propagates to children.
-                    v.exclude = True
-            view_layer.exclude = False
-            light_handle.LLStudio.type = light_handle.LLStudio.type
+                    li.mute = True
+            list_item.mute = False
+
+        
+
+        # handle_name = props.light_list[self.index].handle_name
+        # light_handle = context.scene.objects[handle_name]
+        # light_collection = get_collection(light_handle)
+        # view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
+        
+        # view_layers=[]
+        # excluded=0
+        # for li in props.light_list:
+        #     lls_handle = context.scene.objects[li.handle_name]
+        #     light_collection = get_collection(lls_handle)
+
+        #     vl = find_view_layer(light_collection, context.view_layer.layer_collection)
+        #     view_layers.append(vl)
+        #     excluded += vl.exclude
+
+        # if not view_layer.exclude and excluded == len(view_layers)-1:
+        #     for v in view_layers:
+        #         v.exclude = False
+        #         lls_handle = v.children[0].collection.objects[0].parent
+        #         lls_handle.LLStudio.type = lls_handle.LLStudio.type
+        # else:
+        #     for v in view_layers:
+        #         if not v.exclude:
+        #             # Do not set exclude=True twice because it propagates to children.
+        #             v.exclude = True
+        #     view_layer.exclude = False
+        #     light_handle.LLStudio.type = light_handle.LLStudio.type
 
         return {"FINISHED"}
 

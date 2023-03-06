@@ -24,8 +24,15 @@ class LLS_PT_Studio(bpy.types.Panel):
         if context.scene.LLStudio.initialized: col.operator('scene.delete_leomoon_light_studio')
         col.separator()
         col.operator('light_studio.control_panel', icon='MENU_PANEL')
-        col.operator('scene.switch_to_cycles')
+        sub = col.row(align=True)
+        sub.operator('scene.switch_to_renderer', text="Cycles", depress=context.scene.render.engine == 'CYCLES').engine='CYCLES'
+        sub.operator('scene.switch_to_renderer', text="EEVEE", depress=context.scene.render.engine == 'BLENDER_EEVEE').engine='BLENDER_EEVEE'
         col.operator('scene.set_light_studio_background')
+        col.operator('lls.render_lights_exr')
+        col.label(text="Camera Visibility")
+        sub = col.row(align=True)
+        sub.operator('lls.camera_toggle_all_lights', text='In Camera').visible_camera = True
+        sub.operator('lls.camera_toggle_all_lights', text='Hidden').visible_camera = False
 
 @force_register
 class LLS_PT_Mode(bpy.types.Panel):

@@ -469,7 +469,13 @@ def _update_profile_list_index(props, context, multimode_override=False):
             lls_collection.children.unlink(col)
 
         #link selected profile
-        lls_collection.children.link(bpy.data.collections[selected_profile.empty_name])
+        new_profile_collection = bpy.data.collections[selected_profile.empty_name]
+        lls_collection.children.link(new_profile_collection)
+        # restore lights visibility
+        for col in new_profile_collection.children:
+            light_handle = next(o for o in col.objects if o.name.startswith('LLS_LIGHT_HANDLE'))
+            if light_handle.LLStudio.mute:
+                find_view_layer(col, context.view_layer.layer_collection).exclude = light_handle.LLStudio.mute
 
     props.last_empty = selected_profile.empty_name
 
@@ -482,7 +488,7 @@ def _update_profile_list_index(props, context, multimode_override=False):
     if props.profile_multimode:
         if len(props.light_list):
             handle = bpy.data.objects[props.light_list[0].handle_name]
-            
+
             for l in props.light_list:
                 light_handle = bpy.data.objects[l.handle_name]
                 light_objects = [c for c in light_handle.children if c.visible_get()]
