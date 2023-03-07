@@ -455,6 +455,10 @@ def _update_profile_list_index(props, context, multimode_override=False):
     if len(props.profile_list) == 0 or props.profile_list_index >= len(props.profile_list): return
 
     selected_profile = props.profile_list[props.profile_list_index]
+    if selected_profile.empty_name not in bpy.data.collections:
+        props.profile_list.remove(props.profile_list_index)
+        context_show_popup(context, text="Profile collection not found. Profile removed from the list.", title="Error", icon='ERROR')
+
 
     if not multimode_override and selected_profile.empty_name == props.last_empty: return
 

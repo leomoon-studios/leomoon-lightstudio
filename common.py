@@ -1,5 +1,8 @@
 import bpy
 
+def context_show_popup(context, text, title, icon):
+    context.window_manager.popup_menu(lambda s, c: s.layout.label(text=text), title=title, icon=icon)
+
 def get_user_keymap_item(keymap_name, keymap_item_idname, multiple_entries=False):
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.user
