@@ -204,7 +204,6 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
                     temp_props['old_camera_visibility'][ob.name] = ob.visible_camera
                     ob.visible_camera = True
         
-        print('_1')
         # add export camera
         temp_props['old_camera'] = context.scene.camera.name
         camera_data = bpy.data.cameras.new(name='LLS HDR Export Camera')
@@ -222,7 +221,6 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
         from math import radians
         export_camera.rotation_euler = (radians(90), radians(0), radians(-90))
 
-        print('_2')
         # save image settings
         rd = context.scene.render
         image_settings = rd.image_settings
@@ -247,7 +245,6 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
 
         temp_props['cycles_samples'] = context.scene.cycles.samples
         context.scene.cycles.samples = self.samples
-        print('_3')
         # create dummy view layer
         if 'BLS HDR Export' in context.scene.view_layers:
             dummy_layer = context.scene.view_layers["BLS HDR Export"]
@@ -272,7 +269,6 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
             
             _rec_match_visibility(dummy_layer_collection, real_layer_collection)
         
-        print('_4')
         temp_props['old_filepath'] = rd.filepath
         rd.filepath = f"{os.path.dirname(rd.filepath)}/{self.hdr_name}"
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=self.save_file, layer="BLS HDR Export")
@@ -286,13 +282,11 @@ def _hdr_render_complete(scene):
         if not temp_props:
             return
 
-        print(1)
         rd = scene.render
         image_settings = rd.image_settings
         rd.filepath = temp_props['old_filepath']
 
         scene.camera = bpy.data.objects[temp_props['old_camera']]
-        print(2)
 
         # delete export camera
         export_camera = bpy.data.objects[temp_props['export_camera']]
@@ -300,18 +294,15 @@ def _hdr_render_complete(scene):
         bpy.data.objects.remove(export_camera)
         bpy.data.cameras.remove(camera_data)
 
-        print(3)
         # restore image_settings props
         # global temp_props
         image_settings.file_format = temp_props['image_settings']['file_format']
         for k,v in temp_props['image_settings'].items():
             setattr(image_settings, k, v)
         
-        print(4)
         for k,v in temp_props['render'].items():
             setattr(rd, k, v)
         
-        print(5)
         scene.cycles.samples = temp_props['cycles_samples']
         temp_props.clear()
     # run in the thread-safe context of new frame
