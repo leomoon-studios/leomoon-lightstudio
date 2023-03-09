@@ -29,9 +29,9 @@ class LLS_PT_Studio(bpy.types.Panel):
         sub.operator('scene.switch_to_renderer', text="EEVEE", depress=context.scene.render.engine == 'BLENDER_EEVEE').engine='BLENDER_EEVEE'
         col.operator('scene.set_light_studio_background')
         col.operator('lls.render_lights_exr')
-        col.label(text="Camera Visibility")
+        col.label(text="Light Visibility in Camera")
         sub = col.row(align=True)
-        sub.operator('lls.camera_toggle_all_lights', text='In Camera').visible_camera = True
+        sub.operator('lls.camera_toggle_all_lights', text='Visible').visible_camera = True
         sub.operator('lls.camera_toggle_all_lights', text='Hidden').visible_camera = False
 
 @force_register

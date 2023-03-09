@@ -175,8 +175,8 @@ temp_props = {}
 class LLS_OT_render_lights_exr(bpy.types.Operator):
     ''' Render lights as an equirectangular map using scene's settings (Cycles) '''
     bl_idname = "lls.render_lights_exr"
-    bl_label = "Lights as EXR"
-    bl_description = "Render Lights as EXR"
+    bl_label = "Export Lights as EXR"
+    bl_description = "Renders lights as equirectangular EXR..."
     bl_options = {"REGISTER", "UNDO"}
 
     samples: IntProperty(name="Max Samples", default=512)
@@ -192,7 +192,7 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-    
+
     def execute(self, context):
         global temp_props
         # set lights visibility in a camera
@@ -203,7 +203,7 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
                 if ob.type in {'MESH', 'LIGHT'}:
                     temp_props['old_camera_visibility'][ob.name] = ob.visible_camera
                     ob.visible_camera = True
-        
+
         # add export camera
         temp_props['old_camera'] = context.scene.camera.name
         camera_data = bpy.data.cameras.new(name='LLS HDR Export Camera')
@@ -239,7 +239,7 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
         image_settings.color_depth = '32'
         image_settings.exr_codec = 'ZIP'
 
-        
+
         rd.resolution_x = self.width
         rd.resolution_y = self.height
 
@@ -266,9 +266,9 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
                     if dummy_layer_collection.exclude:
                         continue
                     _rec_match_visibility(dummy_layer_collection, real_layer_collection)
-            
+
             _rec_match_visibility(dummy_layer_collection, real_layer_collection)
-        
+
         temp_props['old_filepath'] = rd.filepath
         rd.filepath = f"{os.path.dirname(rd.filepath)}/{self.hdr_name}"
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=self.save_file, layer="BLS HDR Export")
@@ -299,10 +299,10 @@ def _hdr_render_complete(scene):
         image_settings.file_format = temp_props['image_settings']['file_format']
         for k,v in temp_props['image_settings'].items():
             setattr(image_settings, k, v)
-        
+
         for k,v in temp_props['render'].items():
             setattr(rd, k, v)
-        
+
         scene.cycles.samples = temp_props['cycles_samples']
         temp_props.clear()
     # run in the thread-safe context of new frame
@@ -713,7 +713,7 @@ class OBJECT_OT_duplicate_move_wrapper(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return context.object and (context.object.name.startswith('LLS_LIGHT_AREA') or context.object.name.startswith('LLS_LIGHT_MESH'))
-    
+
     def execute(self, context):
         bpy.ops.lls_list.copy_light()
         bpy.ops.light_studio.grab('INVOKE_DEFAULT')
