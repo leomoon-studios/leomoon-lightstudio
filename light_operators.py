@@ -83,10 +83,10 @@ class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
             update=mode_change_func,
             default="NORMAL")
 
-
 class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
     light_name: StringProperty()
     order_index: IntProperty()
+    mute: BoolProperty()
 
     def active_light_type_update(self, context):
         try:
@@ -170,6 +170,173 @@ class LeoMoon_Light_Studio_Light_Properties(bpy.types.PropertyGroup):
         update=light_power_formula,
     )
 
+temp_props = {}
+
+class LLS_OT_render_lights_exr(bpy.types.Operator):
+    ''' Render lights as an equirectangular map using scene's settings (Cycles) '''
+    bl_idname = "lls.render_lights_exr"
+    bl_label = "Lights as EXR"
+    bl_description = "Render Lights as EXR"
+    bl_options = {"REGISTER", "UNDO"}
+
+    samples: IntProperty(name="Max Samples", default=512)
+    hdr_name: StringProperty(name="HDR File Name", default='BLS HDR')
+    save_file: BoolProperty(name="Auto-save EXR", default=False, description="Automatically save EXR file when the rendering is finished.")
+    width: IntProperty(name="Width", min=1, default=2160)
+    height: IntProperty(name="Height", min=1, default=1080)
+
+    @classmethod
+    def poll(cls, context):
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+    
+    def execute(self, context):
+        global temp_props
+        # set lights visibility in a camera
+        temp_props['old_camera_visibility'] = {}
+        lls_collection = get_lls_collection(context)
+        for col in lls_collection.children_recursive:
+            for ob in col.objects:
+                if ob.type in {'MESH', 'LIGHT'}:
+                    temp_props['old_camera_visibility'][ob.name] = ob.visible_camera
+                    ob.visible_camera = True
+        
+        # add export camera
+        temp_props['old_camera'] = context.scene.camera.name
+        camera_data = bpy.data.cameras.new(name='LLS HDR Export Camera')
+        export_camera = bpy.data.objects.new(camera_data.name, camera_data)
+        context.scene.collection.objects.link(export_camera)
+        context.scene.camera = export_camera
+        camera_data.type = 'PANO'
+        camera_data.cycles.panorama_type = 'EQUIRECTANGULAR'
+        root = next(o for o in lls_collection.objects if o.name.startswith('LEOMOON_LIGHT_STUDIO'))
+        export_camera.location = root.location
+
+        temp_props['export_camera'] = export_camera.name
+        temp_props['camera_data'] = camera_data.name
+
+        from math import radians
+        export_camera.rotation_euler = (radians(90), radians(0), radians(-90))
+
+        # save image settings
+        rd = context.scene.render
+        image_settings = rd.image_settings
+        # temp_props = {k:getattr(image_settings, k) for k in image_settings.__dir__() if not k.startswith('_') and type(getattr(image_settings,k)) in {int, bool, str}}
+        temp_props['render'] = {}
+        temp_props['render']['resolution_x'] = rd.resolution_x
+        temp_props['render']['resolution_y'] = rd.resolution_y
+        temp_props['render']['engine'] = rd.engine
+        rd.engine = 'CYCLES'
+
+        temp_props['old_camera_visibility'] = {}
+        temp_props['image_settings'] = {k.identifier: getattr(image_settings, k.identifier) for k in image_settings.bl_rna.properties if not k.is_readonly and k.type != 'POINTER'}
+
+        image_settings.file_format = 'OPEN_EXR'
+        image_settings.color_mode = 'RGBA'
+        image_settings.color_depth = '32'
+        image_settings.exr_codec = 'ZIP'
+
+        
+        rd.resolution_x = self.width
+        rd.resolution_y = self.height
+
+        temp_props['cycles_samples'] = context.scene.cycles.samples
+        context.scene.cycles.samples = self.samples
+        # create dummy view layer
+        if 'BLS HDR Export' in context.scene.view_layers:
+            dummy_layer = context.scene.view_layers["BLS HDR Export"]
+        else:
+            dummy_layer = context.scene.view_layers.new("BLS HDR Export")
+            dummy_layer.use = False
+
+
+        for dummy_layer_collection, real_layer_collection in zip(dummy_layer.layer_collection.children, context.layer_collection.children):
+            if not dummy_layer_collection.name.startswith('LLS'):
+                # exclude all non-LLS layers
+                dummy_layer_collection.exclude = True
+                continue
+
+            # match inner LLS layers
+            def _rec_match_visibility(dummy_layer_collection, real_layer_collection):
+                for dummy_layer_collection, real_layer_collection in zip(dummy_layer_collection.children, real_layer_collection.children):
+                    dummy_layer_collection.exclude = real_layer_collection.exclude
+                    if dummy_layer_collection.exclude:
+                        continue
+                    _rec_match_visibility(dummy_layer_collection, real_layer_collection)
+            
+            _rec_match_visibility(dummy_layer_collection, real_layer_collection)
+        
+        temp_props['old_filepath'] = rd.filepath
+        rd.filepath = f"{os.path.dirname(rd.filepath)}/{self.hdr_name}"
+        bpy.ops.render.render('INVOKE_DEFAULT', write_still=self.save_file, layer="BLS HDR Export")
+        return {"FINISHED"}
+
+from bpy.app.handlers import persistent
+
+def _hdr_render_complete(scene):
+    def do():
+        global temp_props
+        if not temp_props:
+            return
+
+        rd = scene.render
+        image_settings = rd.image_settings
+        rd.filepath = temp_props['old_filepath']
+
+        scene.camera = bpy.data.objects[temp_props['old_camera']]
+
+        # delete export camera
+        export_camera = bpy.data.objects[temp_props['export_camera']]
+        camera_data = bpy.data.cameras[temp_props['camera_data']]
+        bpy.data.objects.remove(export_camera)
+        bpy.data.cameras.remove(camera_data)
+
+        # restore image_settings props
+        # global temp_props
+        image_settings.file_format = temp_props['image_settings']['file_format']
+        for k,v in temp_props['image_settings'].items():
+            setattr(image_settings, k, v)
+        
+        for k,v in temp_props['render'].items():
+            setattr(rd, k, v)
+        
+        scene.cycles.samples = temp_props['cycles_samples']
+        temp_props.clear()
+    # run in the thread-safe context of new frame
+    bpy.app.timers.register(do)
+
+@persistent
+def render_complete(scene):
+    _hdr_render_complete(scene)
+
+@persistent
+def render_cancel(scene):
+    _hdr_render_complete(scene)
+
+
+class LLS_OT_camera_toggle_all_lights(bpy.types.Operator):
+    bl_idname = "lls.camera_toggle_all_lights"
+    bl_label = "Toggle Lights Visibility in Camera"
+    bl_description = "Toggle lights visibility in cameras"
+    bl_options = {"REGISTER", "UNDO"}
+
+    visible_camera: BoolProperty(name="Ray Visibility")
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene.LLStudio.initialized
+
+    def execute(self, context):
+        for col in get_lls_collection(context).children_recursive:
+            for ob in col.objects:
+                if ob.type in {'MESH', 'LIGHT'}:
+                    ob.visible_camera = self.visible_camera
+
+        return {"FINISHED"}
+
 class CreateBlenderLightStudio(bpy.types.Operator):
     bl_idname = "scene.create_leomoon_light_studio"
     bl_label = "Create LightStudio"
@@ -196,12 +363,6 @@ class CreateBlenderLightStudio(bpy.types.Operator):
         bpy.ops.lls_list.new_profile()
 
         context.scene.LLStudio.initialized = True
-
-        # bpy.context.scene.render.engine = 'CYCLES'
-
-        # add the first light
-        # bpy.ops.object.select_all(action='DESELECT')
-        # bpy.ops.scene.add_leomoon_studio_light()
 
         return {"FINISHED"}
 
@@ -298,14 +459,19 @@ class SetBackground(bpy.types.Operator):
 
         return {"FINISHED"}
 
-class SwitchToCycles(bpy.types.Operator):
-    bl_idname = "scene.switch_to_cycles"
-    bl_description = "Change render engine to cycles"
-    bl_label = "Switch to Cycles"
+class SwitchToRenderer(bpy.types.Operator):
+    bl_idname = "scene.switch_to_renderer"
+    bl_description = "Change render engine"
+    bl_label = "Switch Render Engine"
     bl_options = {"REGISTER", "UNDO"}
 
+    engine: EnumProperty(items=[("CYCLES", "Cycles", "Cycles"), ("BLENDER_EEVEE", "EEVEE", "EEVEE")],
+        name="Engine",
+        # description="Use Animated mode to select all light components for easier keyframe editing.",
+        default="CYCLES")
+
     def execute(self, context):
-        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.render.engine = self.engine
         return {"FINISHED"}
 
 class AddLLSLight(bpy.types.Operator):
@@ -526,11 +692,17 @@ def register():
     bpy.app.handlers.load_post.append(lightstudio_load_post)
     lightstudio_load_post(None)
 
+    bpy.app.handlers.render_cancel.append(render_cancel)
+    bpy.app.handlers.render_complete.append(render_complete)
+
 
 def unregister():
     bpy.app.handlers.frame_change_post.remove(lightstudio_update_frame)
     bpy.msgbus.clear_by_owner(owner)
     bpy.app.handlers.load_post.remove(lightstudio_load_post)
+
+    bpy.app.handlers.render_cancel.remove(render_cancel)
+    bpy.app.handlers.render_complete.remove(render_complete)
 
 class OBJECT_OT_duplicate_move_wrapper(bpy.types.Operator):
     bl_idname = "lls_object.duplicate_move"
