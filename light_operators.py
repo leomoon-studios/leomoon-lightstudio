@@ -583,7 +583,7 @@ class DeleteBSLight(bpy.types.Operator):
         lls_light_collection = lls_light.users_collection[0]
         col_to_remove = [lls_light_collection,]+ lls_light_collection.children[:]
         if lls_light_collection.name.startswith('LLS_Light'):
-            bpy.ops.object.delete({"selected_objects": family(lls_light)}, use_global=True)
+            bpy.ops.object.delete(use_global=True)
             for col in col_to_remove:
                 bpy.data.collections.remove(col)
 

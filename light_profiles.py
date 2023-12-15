@@ -309,7 +309,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         for ob in obsToRemove:
             collectionsToRemove.update(ob.users_collection)
             ob.use_fake_user = False
-        bpy.ops.object.delete({"selected_objects": obsToRemove}, use_global=True)
+        bpy.ops.object.delete(use_global=True)
         print(collectionsToRemove)
         for c in collectionsToRemove:
             if c.name.startswith('LLS_'):
