@@ -7,7 +7,7 @@ from . import *
 import time
 from copy import deepcopy
 
-shader2Dcolor = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+shader2Dcolor = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
 shader2Dcolor.bind()
 
 # ##################################
