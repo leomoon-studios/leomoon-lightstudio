@@ -163,8 +163,8 @@ def duplicate_collection(collection, parent_collection):
                 obj.matrix_parent_inverse = matrix_data[obj.name]["matrix_parent_inverse"]
                 #obj.matrix_world = matrix_data[obj.name]["matrix_world"]
                 if profile_handle and obj.name.startswith("LLS_LIGHT_HANDLE"):
-                    obj.constraints['Copy Location'].target = new_names[profile_handle.name]
-
+                    obj.constraints['Child Of'].target = new_names[profile_handle.name]
+                    obj.constraints['Child Of'].inverse_matrix.identity()
 
         if parent_collection:
             parent_collection.children.link(new_collection)

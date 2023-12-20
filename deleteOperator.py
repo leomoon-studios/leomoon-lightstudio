@@ -24,11 +24,14 @@ class DeleteOperator(bpy.types.Operator):
 
         try:
             for obj in protected_objects:
-                context.view_layer.objects.active = obj
+                # context.view_layer.objects.active = obj
                 if hasattr(obj, 'use_fake_user'):
                     obj.use_fake_user = False
                 try:
-                    ret = bpy.ops.scene.delete_leomoon_studio_light()
+                    context_override = bpy.context.copy()
+                    context_override["object"] = obj
+                    with bpy.context.temp_override(**context_override):
+                        ret = bpy.ops.scene.delete_leomoon_studio_light()
                 except:
                     self.report({'WARNING', 'ERROR'}, "Delete Profile in order to delete Handle")
                     return {'FINISHED'}
@@ -39,6 +42,7 @@ class DeleteOperator(bpy.types.Operator):
         except ReferenceError:
             return {'FINISHED'}
 
+        
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 
         if context.scene.LLStudio.initialized:

@@ -777,7 +777,10 @@ def update_light_sets(panel, context, always=False):
 
                     # Some crucial objects are missing. Delete whole light collection
                     # bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
-                    bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
+                    context_override = context.copy()
+                    context_override["selected_objects"] = list(family_obs)
+                    with context.temp_override(**context_override):
+                        bpy.ops.object.delete(use_global=True)
                     bpy.data.collections.remove(col)
 
                     # override = context.copy()
