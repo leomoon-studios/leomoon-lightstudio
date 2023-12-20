@@ -2,15 +2,6 @@
 ## Important Notice
 LeoMoon LightStudio (formerly known as Blender Light Studio) is 100% free and open-source. You can download and use it from here without any limitations.
 
-## Blender 3.5.1 macOS support
-We are working on a fix to support Metal on macOS but by changing GPU Backend from Metal to OpenGL you can use LightStudio on macOS until we have a fix.
-
-- Open Blender
-- Go to `Edit` > `Preferences` > `System`
-- Change `GPU Backend` to `OpenGL`
-- Close Blender
-- Open Blender and install LightStudio
-
 ## Development Fund
 If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**. This will help to fix bugs, improve user interface and add new features.
 
@@ -48,6 +39,9 @@ LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
 ## Changelog
+### 2.14.0 2023-11-10
+* Added macOS Metal support
+
 ### 2.13.0 2023-03-09
 * Added Cycles|EEVEE switch button
 * Added EXR exporting of lights to be used in other 3D programs
