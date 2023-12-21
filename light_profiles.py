@@ -252,6 +252,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
 
         profile.parent = [ob for ob in context.scene.objects if ob.name.startswith('LEOMOON_LIGHT_STUDIO')][0]
         profile.use_fake_user = True
+        profile.hide_select = True
         profile_collection = bpy.data.collections.new(profile.name)
         profile_collection.use_fake_user = True
         lls_collection = [c for c in context.scene.collection.children if c.name.startswith('LLS')][0]
@@ -270,6 +271,8 @@ class LIST_OT_NewItem(bpy.types.Operator):
             handle.parent = profile
             handle.protected = True
             handle.use_fake_user = True
+            handle.lock_rotation[0] = True
+            handle.lock_rotation[1] = True
             replace_link(handle, profile.name)
 
         props.last_empty = profile.name
@@ -309,7 +312,10 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         for ob in obsToRemove:
             collectionsToRemove.update(ob.users_collection)
             ob.use_fake_user = False
-        bpy.ops.object.delete({"selected_objects": obsToRemove}, use_global=True)
+        context_override = context.copy()
+        context_override["selected_objects"] = obsToRemove
+        with context.temp_override(**context_override):
+            bpy.ops.object.delete(use_global=True)
         print(collectionsToRemove)
         for c in collectionsToRemove:
             if c.name.startswith('LLS_'):
@@ -346,7 +352,10 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         handle = [ob for ob in profile.children if ob.name.startswith('LLS_HANDLE')][0]
 
         for l in [lm for lc in profile_copy.children if lc.name.startswith('LLS_Light') for lm in lc.objects if lm.name.startswith('LLS_LIGHT_MESH')]:
-            l.constraints['Copy Location'].target = handle
+            l.constraints['Child Of'].target = handle
+            l.constraints['Child Of'].inverse_matrix.identity()
+            # l.constraints['Child Of'].use_rotation_x = False
+            # l.constraints['Child Of'].use_rotation_y = False
 
         new_list_item = props.profile_list.add()
         new_list_item.empty_name = profile_copy.name_full

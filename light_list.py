@@ -46,6 +46,7 @@ class LightListItem(bpy.types.PropertyGroup):
             default="")
 
     mute: BoolProperty(get=mute_get, set=mute_set)
+    exclude_isolate: IntProperty(default=-1)
 
 class LLS_UL_LightList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -134,7 +135,10 @@ def set_list_index(self, index):
         light_root = light_handle.parent.parent
         profile_collection = light_root.parent.users_collection[0]
         family_obs = family(light_root)
-        bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
+        context_override = bpy.context.copy()
+        context_override["selected_objects"] = list(family_obs)
+        with bpy.context.temp_override(**context_override):
+            bpy.ops.object.delete(use_global=True)
         bpy.data.collections.remove(light_collection)
         light_from_dict(light, profile_collection)
 
@@ -237,12 +241,18 @@ class LLS_OT_Isolate(bpy.types.Operator):
         props = context.scene.LLStudio
 
         list_item = props.light_list[self.index]
-        excluded = sum(li.mute for li in props.light_list)
-        if not list_item.mute and excluded == len(props.light_list)-1:
+        # excluded = sum(li.mute for li in props.light_list)
+        included = sum(not li.mute for li in props.light_list)
+        # if not list_item.mute and excluded == len(props.light_list)-1:
+        if not list_item.mute and included == 1:
             for li in props.light_list:
-                li.mute = False
+                # li.mute = False
+                li.mute = li.exclude_isolate if li.exclude_isolate > -1 else False
+                li.exclude_isolate = -1
         else:
             for li in props.light_list:
+                if li.exclude_isolate == -1:
+                    li.exclude_isolate = li.mute
                 if not li.mute:
                     # Do not set exclude=True twice because it propagates to children.
                     li.mute = True
@@ -390,18 +400,24 @@ def load_post(scene):
     if not props.initialized:
         return
 
-    lls_collection, profile_collection = llscol_profilecol(context)
-
-    if profile_collection is None:
-        return
-
-    # props.light_list.clear()
-
-    lls_lights = set(profile_collection.children)
+    for i in range(len(context.scene.LLStudio.profile_list)):
+        context.scene.LLStudio.profile_list_index = i
     
-    lights = [m for col in lls_lights for m in col.objects if m.name.startswith("LLS_LIGHT_MESH")]
-    for i, lls_mesh in enumerate(lights):
-        convert_old_light(lls_mesh, profile_collection)
+        lls_collection, profile_collection = llscol_profilecol(context)
+
+        if profile_collection is None:
+            return
+
+        # props.light_list.clear()
+
+        lights = [o.name for o in profile_collection.all_objects if o.name.startswith("LLS_LIGHT_MESH")]
+        for i, lls_mesh_name in enumerate(lights):
+            elem = bpy.data.objects[lls_mesh_name]
+            try:
+                salvage_data(get_collection(elem.parent), only_validate=True)
+            except:
+                print("Recreate light:", elem.name)
+                convert_old_light(elem.parent, profile_collection)
     update_light_list_set(bpy.context)
 
 
@@ -414,17 +430,7 @@ def load_post(scene):
             matches = ['LLS_LIGHT_MESH']
             if any(x in elem.name for x in matches):
                 matching_names.append(elem.name)
-    
-    # print(matching_names)
-    for name in matching_names:
-        elem = bpy.data.objects[name]
-        try:
-            salvage_data(get_collection(elem.parent), only_validate=True)
-        except:
-            print("Recreate light:", elem.name)
-            llscol, profilecol = llscol_profilecol(context)
-            convert_old_light(elem.parent, profilecol)
-            update_light_list_set(bpy.context)
+
     
     from . import light_profiles
     light_profiles.add_profile_hashes()

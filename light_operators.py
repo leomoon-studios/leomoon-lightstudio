@@ -119,7 +119,10 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
             light_root = light_handle.parent.parent
             profile_collection = light_root.parent.users_collection[0]
             family_obs = family(light_root)
-            bpy.ops.object.delete({"selected_objects": list(family_obs)}, use_global=True)
+            context_override = context.copy()
+            context_override["selected_objects"] = list(family_obs)
+            with context.temp_override(**context_override):
+                bpy.ops.object.delete(use_global=True)
             bpy.data.collections.remove(lls_col)
             light_from_dict(light, profile_collection)
 
@@ -211,7 +214,11 @@ class LLS_OT_render_lights_exr(bpy.types.Operator):
         context.scene.collection.objects.link(export_camera)
         context.scene.camera = export_camera
         camera_data.type = 'PANO'
-        camera_data.cycles.panorama_type = 'EQUIRECTANGULAR'
+        if bpy.app.version >= (4, 0, 0):
+            camera_data.panorama_type = 'EQUIRECTANGULAR'
+        else:
+            camera_data.cycles.panorama_type = 'EQUIRECTANGULAR'
+
         root = next(o for o in lls_collection.objects if o.name.startswith('LEOMOON_LIGHT_STUDIO'))
         export_camera.location = root.location
 
@@ -542,13 +549,9 @@ class AddLLSLight(bpy.types.Operator):
 
 
         #####
-
-        c = light_handle.constraints.new('COPY_LOCATION')
+        c = light_handle.constraints.new('CHILD_OF')
         c.target = handle
-        c.use_x = True
-        c.use_y = True
-        c.use_z = True
-        c.use_offset = True
+        c.inverse_matrix.identity()
 
         operators.update()
         light_list.update_light_list_set(context)
@@ -583,9 +586,12 @@ class DeleteBSLight(bpy.types.Operator):
         lls_light_collection = lls_light.users_collection[0]
         col_to_remove = [lls_light_collection,]+ lls_light_collection.children[:]
         if lls_light_collection.name.startswith('LLS_Light'):
-            bpy.ops.object.delete({"selected_objects": family(lls_light)}, use_global=True)
-            for col in col_to_remove:
-                bpy.data.collections.remove(col)
+            context_override = context.copy()
+            context_override["selected_objects"] = family(lls_light)
+            with context.temp_override(**context_override):
+                bpy.ops.object.delete(use_global=True)
+                for col in col_to_remove:
+                    bpy.data.collections.remove(col)
 
         operators.update()
         light_list.update_light_list_set(context)

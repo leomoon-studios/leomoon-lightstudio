@@ -7,7 +7,7 @@ from . import *
 import time
 from copy import deepcopy
 
-shader2Dcolor = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+shader2Dcolor = gpu.shader.from_builtin('UNIFORM_COLOR')
 shader2Dcolor.bind()
 
 # ##################################
@@ -176,7 +176,7 @@ shader_info.fragment_source(
         }else{
             fragColor = mix(vec4(1.0f), g_data.color_overlay, g_data.color_saturation) * log(1+g_data.intensity);
         }
-    
+
         // Panel bound clipping
         if((gl_FragCoord.x < g_data.panel_point_lt.x || gl_FragCoord.x > g_data.panel_point_rb.x)
          || (gl_FragCoord.y < g_data.panel_point_rb.y || gl_FragCoord.y > g_data.panel_point_lt.y))
@@ -381,7 +381,7 @@ class Button(Rectangle):
         self.text = text
         blf.color(self.font_id, *self.font_color)
         blf.position(self.font_id, *loc, 0)
-        blf.size(self.font_id, self.font_size, 72)
+        blf.size(self.font_id, self.font_size)
         self.dimensions = blf.dimensions(self.font_id, text)
         self.function = lambda args : None
 
@@ -398,7 +398,7 @@ class Button(Rectangle):
         else:
             shader2Dcolor.uniform_float("color", self.bg_color)
         batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
-        blf.size(self.font_id, self.font_size, 72)
+        blf.size(self.font_id, self.font_size)
         blf.position(self.font_id, self.point_lt.x + 5, self.point_rb.y + 7, 0)
         blf.color(self.font_id, *self.font_color)
         blf.draw(self.font_id, self.text)
@@ -468,9 +468,9 @@ class Border(Rectangle):
         border_shader2Dcolor.uniform_float("color", self.color)
         border_shader2Dcolor.uniform_float("panel_point_lt", self.light_image.panel.point_lt)
         border_shader2Dcolor.uniform_float("panel_point_rb", self.light_image.panel.point_rb)
-        print(self.color)
-        print(self.light_image.panel.point_lt)
-        print(self.light_image.panel.point_rb)
+        # print(self.color)
+        # print(self.light_image.panel.point_lt)
+        # print(self.light_image.panel.point_rb)
         
         if lleft < bleft:
             left_verts2 = deepcopy(left_verts)
@@ -515,7 +515,7 @@ class Border(Rectangle):
             batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts2}).draw(border_shader2Dcolor)
             batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": bottom_verts2}).draw(border_shader2Dcolor)
 
-        print(left_verts)
+        # print(left_verts)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": left_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": right_verts}).draw(border_shader2Dcolor)
         batch_for_shader(border_shader2Dcolor, 'TRI_STRIP', {"pos": top_verts}).draw(border_shader2Dcolor)
@@ -787,9 +787,8 @@ class LightImage(Rectangle):
                 UBO_data.color_saturation = color_saturation
                 UBO_data.exposure = exposure
 
-                UBO_data.color_saturation = self._lls_object.data.LLStudio.color_saturation
-                v = Vector((self._lls_object.data.LLStudio.color[:]+(1,)))
-                UBO_data.color_overlay = (ctypes.c_float * len(v))(*v)
+                # v = Vector((self._lls_object.data.LLStudio.color[:]+(1,)))
+                # UBO_data.color_overlay = (ctypes.c_float * len(v))(*v)
 
                 mask_bottom_to_top = lls_node.inputs['Mask - Bottom to Top'].default_value
                 mask_diagonal_bottom_left = lls_node.inputs['Mask - Diagonal Bottom Left'].default_value
@@ -821,6 +820,9 @@ class LightImage(Rectangle):
                 UBO_data.mask_ring_switch = mask_ring_switch
                 UBO_data.mask_top_to_bottom = mask_top_to_bottom
             except:
+                import traceback
+                print('Probably not a problem:')
+                print(traceback.format_exc())
                 pass
         else:
             lightIconShader.uniform_bool("advanced", [False,])

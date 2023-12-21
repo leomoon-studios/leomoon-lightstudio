@@ -253,6 +253,7 @@ def salvage_data(lls_collection, only_validate=False):
             light['rotation'] = lls_handle.rotation_euler.y
             light['scale'] = lls_handle.scale[:]
             light['type'] = lls_handle.LLStudio.type
+            lls_handle.constraints["Child Of"].inverse_matrix
         except:
             if only_validate: raise InvalidLight()
             print("Handled error while parsing lls_handle")
@@ -377,5 +378,8 @@ def convert_old_light(lls_mesh, profile_collection):
     if VERBOSE: print(light)
 
     # Some crucial objects are missing. Delete whole light collection
-    bpy.ops.object.delete_custom({"selected_objects": [lls_mesh,]}, use_global=False, confirm=True)
+    context_override = bpy.context.copy()
+    context_override["selected_objects"] = [lls_mesh,]
+    with bpy.context.temp_override(**context_override):
+        bpy.ops.object.delete_custom(use_global=False, confirm=True)
     light_from_dict(light, profile_collection)
