@@ -135,10 +135,10 @@ def set_list_index(self, index):
         light_root = light_handle.parent.parent
         profile_collection = light_root.parent.users_collection[0]
         family_obs = family(light_root)
-        context_override = bpy.context.copy()
-        context_override["selected_objects"] = list(family_obs)
-        with bpy.context.temp_override(**context_override):
-            bpy.ops.object.delete(use_global=True)
+
+        for obj in family_obs:
+            bpy.data.objects.remove(obj)
+
         bpy.data.collections.remove(light_collection)
         light_from_dict(light, profile_collection)
 

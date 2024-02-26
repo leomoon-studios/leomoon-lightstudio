@@ -32,10 +32,15 @@ def init(ignore=[], make_annotations=False):
     auto_annotations = make_annotations
 
 def register():
-    for cls in fifo_cls:
+    fifo_list = list(set(fifo_cls))
+    print(fifo_list)
+    for cls in fifo_list:
         if auto_annotations:
             make_annotations(cls)
-        bpy.utils.register_class(cls)
+        try:
+            bpy.utils.register_class(cls)
+        except Exception as e:
+            print(e)
 
     for cls in ordered_classes:
         if cls not in fifo_cls:

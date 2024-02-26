@@ -378,8 +378,14 @@ def convert_old_light(lls_mesh, profile_collection):
     if VERBOSE: print(light)
 
     # Some crucial objects are missing. Delete whole light collection
-    context_override = bpy.context.copy()
-    context_override["selected_objects"] = [lls_mesh,]
-    with bpy.context.temp_override(**context_override):
-        bpy.ops.object.delete_custom(use_global=False, confirm=True)
+
+    from . light_operators import _delete_leomoon_studio_light
+    if hasattr(lls_mesh, 'use_fake_user'):
+        lls_mesh.use_fake_user = False
+    try:
+        _delete_leomoon_studio_light(bpy.context, lls_mesh)
+    except Exception as e:
+        import traceback 
+        traceback.print_exc()
+    
     light_from_dict(light, profile_collection)

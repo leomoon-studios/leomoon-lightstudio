@@ -312,11 +312,10 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         for ob in obsToRemove:
             collectionsToRemove.update(ob.users_collection)
             ob.use_fake_user = False
-        context_override = context.copy()
-        context_override["selected_objects"] = obsToRemove
-        with context.temp_override(**context_override):
-            bpy.ops.object.delete(use_global=True)
-        print(collectionsToRemove)
+        
+        for obj in obsToRemove:
+            bpy.data.objects.remove(obj)
+
         for c in collectionsToRemove:
             if c.name.startswith('LLS_'):
                 bpy.data.collections.remove(c)

@@ -337,7 +337,10 @@ class Panel(Rectangle):
         self.button_send_to_bottom.function = send_light_to_bottom
 
         km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
-        self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        if kmi:
+            self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        else:
+            self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [F]')
         self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()

@@ -776,16 +776,11 @@ def update_light_sets(panel, context, always=False):
                     light = salvage_data(col)
 
                     # Some crucial objects are missing. Delete whole light collection
-                    # bpy.ops.object.delete({"selected_objects": col.objects}, use_global=True)
-                    context_override = context.copy()
-                    context_override["selected_objects"] = list(family_obs)
-                    with context.temp_override(**context_override):
-                        bpy.ops.object.delete(use_global=True)
+                    
+                    for obj in family_obs:
+                        bpy.data.objects.remove(obj)
+                    
                     bpy.data.collections.remove(col)
-
-                    # override = context.copy()
-                    # override['selected_objects'] = col.objects
-                    # bpy.ops.object.delete_custom(override, use_global=True)
 
                     light_from_dict(light, profile_collection)
 
