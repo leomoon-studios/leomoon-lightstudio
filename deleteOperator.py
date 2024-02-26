@@ -68,7 +68,7 @@ def register_keymaps():
     else:
         # can now proceed with checking default kmis
         try:
-            print('registering keymap')
+            print('Registering keymap')
             km, kmis =  get_user_keymap_item('Object Mode', 'object.delete', multiple_entries=True)
             wm = bpy.context.window_manager
             addon_km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
@@ -90,6 +90,8 @@ def register_keymaps():
         except Exception as e:
             print("Keymap registering failed. Trying again...", e)
             bpy.app.timers.register(register_keymaps, first_interval=0.25)
+        else:
+            print("Keymap registered successfully.")
 
 
 from . common import get_user_keymap_item

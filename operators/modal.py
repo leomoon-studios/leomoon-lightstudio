@@ -30,7 +30,10 @@ def draw(self, area):
 
     if VERBOSE:
         font_size = 14
-        blf.size(0, font_size, 72)
+        if bpy.app.version < (3, 4, 0):
+            blf.size(0, font_size, 72)
+        else:
+            blf.size(0, font_size)
         excluded = {'click_manager', 'panel', 'handler'}
         for i, kv in enumerate([(k, v) for k, v in self.__dict__.items() if not k in excluded]):
             k, v = kv[:]

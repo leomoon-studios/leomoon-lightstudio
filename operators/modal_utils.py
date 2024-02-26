@@ -7,7 +7,8 @@ from . import *
 import time
 from copy import deepcopy
 
-shader2Dcolor = gpu.shader.from_builtin('UNIFORM_COLOR')
+UNIFORM_COLOR = '2D_UNIFORM_COLOR' if bpy.app.version < (3,4,0) else 'UNIFORM_COLOR'
+shader2Dcolor = gpu.shader.from_builtin(UNIFORM_COLOR)
 shader2Dcolor.bind()
 
 # ##################################
@@ -384,7 +385,10 @@ class Button(Rectangle):
         self.text = text
         blf.color(self.font_id, *self.font_color)
         blf.position(self.font_id, *loc, 0)
-        blf.size(self.font_id, self.font_size)
+        if bpy.app.version < (3, 4, 0):
+            blf.size(self.font_id, self.font_size, 72)
+        else:
+            blf.size(self.font_id, self.font_size)
         self.dimensions = blf.dimensions(self.font_id, text)
         self.function = lambda args : None
 
@@ -401,7 +405,10 @@ class Button(Rectangle):
         else:
             shader2Dcolor.uniform_float("color", self.bg_color)
         batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
-        blf.size(self.font_id, self.font_size)
+        if bpy.app.version < (3, 4, 0):
+            blf.size(self.font_id, self.font_size, 72)
+        else:
+            blf.size(self.font_id, self.font_size)
         blf.position(self.font_id, self.point_lt.x + 5, self.point_rb.y + 7, 0)
         blf.color(self.font_id, *self.font_color)
         blf.draw(self.font_id, self.text)
