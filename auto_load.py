@@ -32,9 +32,8 @@ def init(ignore=[], make_annotations=False):
     auto_annotations = make_annotations
 
 def register():
-    fifo_list = list(set(fifo_cls))
-    print(fifo_list)
-    for cls in fifo_list:
+    # print(fifo_cls)
+    for cls in fifo_cls:
         if auto_annotations:
             make_annotations(cls)
         try:
