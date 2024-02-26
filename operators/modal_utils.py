@@ -103,7 +103,7 @@ shader_info.fragment_source(
     void main()
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced));
+        trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced)+g_data.texture_switch+g_data.intensity);
     
         if(advanced){
             // Texture Switch + Intensity
@@ -116,7 +116,7 @@ shader_info.fragment_source(
             tex.b = max(0.05, tex.b);
             
             fragColor = mix(vec4(1.0f), tex, g_data.texture_switch) * log(1+g_data.intensity) * pow((g_data.exposure+10)/11, 2);
-
+            
             // Color Overlay
             float gray = clamp(float(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114))), 0.0f, 1.0f);
             vec4 colored = g_data.color_overlay * gray;
@@ -193,7 +193,6 @@ UBO = gpu.types.GPUUniformBuf(
 lightIconShader.uniform_block("g_data", UBO)
 del vert_out
 del shader_info
-
 # #####################################################
 
 border_vertex_shader= '''
@@ -773,12 +772,13 @@ class LightImage(Rectangle):
         else:
             self.default_border.draw()
 
-        # lightIconShader.bind()
+        lightIconShader.bind()
         UBO_data.panel_point_lt = (ctypes.c_float * len(self.panel.point_lt))(*self.panel.point_lt)
         UBO_data.panel_point_rb = (ctypes.c_float * len(self.panel.point_rb))(*self.panel.point_rb)
         
         if self._lls_handle.LLStudio.type == 'ADVANCED':
             lightIconShader.uniform_bool("advanced", [True,])
+        
             lightIconShader.uniform_sampler("image", self.gpu_texture)
 
             try:
@@ -836,6 +836,7 @@ class LightImage(Rectangle):
                 pass
         else:
             lightIconShader.uniform_bool("advanced", [False,])
+        
 
             UBO_data.intensity = self._lls_object.data.LLStudio.intensity
             UBO_data.color_saturation = self._lls_object.data.LLStudio.color_saturation
