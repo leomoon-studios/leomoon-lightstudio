@@ -11,8 +11,6 @@ from . light_data import *
 
 _ = os.sep
 
-from . import bl_info
-
 class LeoMoon_Light_Studio_Properties(bpy.types.PropertyGroup):
     initialized: BoolProperty(default = False)
 
@@ -119,10 +117,10 @@ class LeoMoon_Light_Studio_Object_Properties(bpy.types.PropertyGroup):
             light_root = light_handle.parent.parent
             profile_collection = light_root.parent.users_collection[0]
             family_obs = family(light_root)
-            context_override = context.copy()
-            context_override["selected_objects"] = list(family_obs)
-            with context.temp_override(**context_override):
-                bpy.ops.object.delete(use_global=True)
+
+            for obj in family_obs:
+                bpy.data.objects.remove(obj)
+
             bpy.data.collections.remove(lls_col)
             light_from_dict(light, profile_collection)
 
@@ -558,6 +556,21 @@ class AddLLSLight(bpy.types.Operator):
 
         return {"FINISHED"}
 
+def _delete_leomoon_studio_light(context, light):
+        check_profiles_consistency(context)
+
+        lls_light = findLightGrp(light)
+        lls_light_collection = lls_light.users_collection[0]
+        col_to_remove = [lls_light_collection,]+ lls_light_collection.children[:]
+        if lls_light_collection.name.startswith('LLS_Light'):
+            for obj in family(lls_light):
+                bpy.data.objects.remove(obj)
+            for col in col_to_remove:
+                    bpy.data.collections.remove(col)
+
+        operators.update()
+        light_list.update_light_list_set(context)
+
 class DeleteBSLight(bpy.types.Operator):
     bl_idname = "scene.delete_leomoon_studio_light"
     bl_label = "Delete Studio Light"
@@ -574,28 +587,14 @@ class DeleteBSLight(bpy.types.Operator):
         return context.area.type == 'VIEW_3D' and \
                context.mode == 'OBJECT' and \
                props.initialized and \
-               light and \
-               light.name.startswith('LLS_LIGHT') and \
+                (
+                (light and light.name.startswith('LLS_LIGHT')) or # for normal usage
+                (context.object and context.object.name.startswith('LLS_LIGHT')) # for usage with custom delete operator
+                ) and \
                (props.profile_list_index < len (props.profile_list) and props.profile_list[props.profile_list_index].enabled or not props.profile_multimode)
 
     def execute(self, context):
-        check_profiles_consistency(context)
-        light = context.object
-
-        lls_light = findLightGrp(light)
-        lls_light_collection = lls_light.users_collection[0]
-        col_to_remove = [lls_light_collection,]+ lls_light_collection.children[:]
-        if lls_light_collection.name.startswith('LLS_Light'):
-            context_override = context.copy()
-            context_override["selected_objects"] = family(lls_light)
-            with context.temp_override(**context_override):
-                bpy.ops.object.delete(use_global=True)
-                for col in col_to_remove:
-                    bpy.data.collections.remove(col)
-
-        operators.update()
-        light_list.update_light_list_set(context)
-
+        _delete_leomoon_studio_light(context, context.object)
         return {"FINISHED"}
 
     def invoke(self, context, event):

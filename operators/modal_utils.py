@@ -7,7 +7,8 @@ from . import *
 import time
 from copy import deepcopy
 
-shader2Dcolor = gpu.shader.from_builtin('UNIFORM_COLOR')
+UNIFORM_COLOR = '2D_UNIFORM_COLOR' if bpy.app.version < (3,4,0) else 'UNIFORM_COLOR'
+shader2Dcolor = gpu.shader.from_builtin(UNIFORM_COLOR)
 shader2Dcolor.bind()
 
 # ##################################
@@ -102,7 +103,7 @@ shader_info.fragment_source(
     void main()
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced));
+        trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced)+g_data.texture_switch+g_data.intensity);
     
         if(advanced){
             // Texture Switch + Intensity
@@ -115,7 +116,7 @@ shader_info.fragment_source(
             tex.b = max(0.05, tex.b);
             
             fragColor = mix(vec4(1.0f), tex, g_data.texture_switch) * log(1+g_data.intensity) * pow((g_data.exposure+10)/11, 2);
-
+            
             // Color Overlay
             float gray = clamp(float(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114))), 0.0f, 1.0f);
             vec4 colored = g_data.color_overlay * gray;
@@ -192,7 +193,6 @@ UBO = gpu.types.GPUUniformBuf(
 lightIconShader.uniform_block("g_data", UBO)
 del vert_out
 del shader_info
-
 # #####################################################
 
 border_vertex_shader= '''
@@ -337,7 +337,10 @@ class Panel(Rectangle):
         self.button_send_to_bottom.function = send_light_to_bottom
 
         km, kmi = get_user_keymap_item('Object Mode', OT_LLSFast3DEdit.bl_idname)
-        self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        if kmi:
+            self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [{kmi.type}]')
+        else:
+            self.button_fast_3d_edit = Button(Vector((0,0)), f'Light Brush [F]')
         self.button_fast_3d_edit.function = fast_3d_edit
 
         self._move_buttons()
@@ -381,7 +384,10 @@ class Button(Rectangle):
         self.text = text
         blf.color(self.font_id, *self.font_color)
         blf.position(self.font_id, *loc, 0)
-        blf.size(self.font_id, self.font_size)
+        if bpy.app.version < (3, 4, 0):
+            blf.size(self.font_id, self.font_size, 72)
+        else:
+            blf.size(self.font_id, self.font_size)
         self.dimensions = blf.dimensions(self.font_id, text)
         self.function = lambda args : None
 
@@ -398,7 +404,10 @@ class Button(Rectangle):
         else:
             shader2Dcolor.uniform_float("color", self.bg_color)
         batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
-        blf.size(self.font_id, self.font_size)
+        if bpy.app.version < (3, 4, 0):
+            blf.size(self.font_id, self.font_size, 72)
+        else:
+            blf.size(self.font_id, self.font_size)
         blf.position(self.font_id, self.point_lt.x + 5, self.point_rb.y + 7, 0)
         blf.color(self.font_id, *self.font_color)
         blf.draw(self.font_id, self.text)
@@ -763,12 +772,13 @@ class LightImage(Rectangle):
         else:
             self.default_border.draw()
 
-        # lightIconShader.bind()
+        lightIconShader.bind()
         UBO_data.panel_point_lt = (ctypes.c_float * len(self.panel.point_lt))(*self.panel.point_lt)
         UBO_data.panel_point_rb = (ctypes.c_float * len(self.panel.point_rb))(*self.panel.point_rb)
         
         if self._lls_handle.LLStudio.type == 'ADVANCED':
             lightIconShader.uniform_bool("advanced", [True,])
+        
             lightIconShader.uniform_sampler("image", self.gpu_texture)
 
             try:
@@ -826,6 +836,7 @@ class LightImage(Rectangle):
                 pass
         else:
             lightIconShader.uniform_bool("advanced", [False,])
+        
 
             UBO_data.intensity = self._lls_object.data.LLStudio.intensity
             UBO_data.color_saturation = self._lls_object.data.LLStudio.color_saturation
