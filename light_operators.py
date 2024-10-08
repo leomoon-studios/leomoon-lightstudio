@@ -470,7 +470,9 @@ class SwitchToRenderer(bpy.types.Operator):
     bl_label = "Switch Render Engine"
     bl_options = {"REGISTER", "UNDO"}
 
-    engine: EnumProperty(items=[("CYCLES", "Cycles", "Cycles"), ("BLENDER_EEVEE", "EEVEE", "EEVEE")],
+    # determine the correct EEVEE engine name based on Blender version
+    eevee_engine = "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2, 0) else "BLENDER_EEVEE"
+    engine: EnumProperty(items=[("CYCLES", "Cycles", "Cycles"), (eevee_engine, "EEVEE", "EEVEE")],
         name="Engine",
         # description="Use Animated mode to select all light components for easier keyframe editing.",
         default="CYCLES")
@@ -529,7 +531,7 @@ class AddLLSLight(bpy.types.Operator):
 
                 # basic_light_layer = find_view_layer(basic_light_collection, context.view_layer.layer_collection)
                 # advanced_light_layer = find_view_layer(advanced_light_collection, context.view_layer.layer_collection)
-                if context.scene.render.engine == "BLENDER_EEVEE":
+                if context.scene.render.engine == "BLENDER_EEVEE" or context.scene.render.engine == "BLENDER_EEVEE_NEXT":
                     # basic_light_layer.exclude = False
                     # advanced_light_layer.exclude = True
                     light_object = basic_light_collection.objects[0]

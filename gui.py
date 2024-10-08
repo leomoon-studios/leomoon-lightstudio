@@ -13,6 +13,9 @@ class LLS_PT_Studio(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "LightStudio"
 
+    # determine the correct EEVEE engine name based on Blender version
+    eevee_engine = "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2, 0) else "BLENDER_EEVEE"
+
     @classmethod
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT'
@@ -26,7 +29,7 @@ class LLS_PT_Studio(bpy.types.Panel):
         col.operator('light_studio.control_panel', icon='MENU_PANEL')
         sub = col.row(align=True)
         sub.operator('scene.switch_to_renderer', text="Cycles", depress=context.scene.render.engine == 'CYCLES').engine='CYCLES'
-        sub.operator('scene.switch_to_renderer', text="EEVEE", depress=context.scene.render.engine == 'BLENDER_EEVEE').engine='BLENDER_EEVEE'
+        sub.operator('scene.switch_to_renderer', text="EEVEE", depress=context.scene.render.engine == self.eevee_engine).engine = self.eevee_engine
         col.operator('scene.set_light_studio_background')
         col.operator('lls.render_lights_exr')
         col.label(text="Light Visibility in Camera")
