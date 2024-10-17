@@ -356,6 +356,10 @@ class CreateBlenderLightStudio(bpy.types.Operator):
         script_file = os.path.realpath(__file__)
         dir = os.path.dirname(script_file)
 
+        # LightStudio works better in Cycles
+        # so this switches to cycles and user can switch back to EEVEE if they want
+        context.scene.render.engine = 'CYCLES'
+
         # In pre 3.0 Blenders, this apending (with active_collection=False) added LLS collection in the scene master collection.
         # Unfortunatelly, in 3.0 LLS collection is wrapped in 'Collection 2'
         # so, we have to make sure master collection is the active collection and append it with active_collection=True
@@ -438,7 +442,7 @@ class DeleteBlenderLightStudio(bpy.types.Operator):
 class SetBackground(bpy.types.Operator):
     bl_idname = "scene.set_light_studio_background"
     bl_description = "Darken background and disable background influence"
-    bl_label = "Background Setup (Optional)"
+    bl_label = "Setup Dark Background"
     bl_options = {"REGISTER", "UNDO"}
     # @classmethod
     # def poll(self, context):
@@ -450,17 +454,30 @@ class SetBackground(bpy.types.Operator):
         if bpy.data.worlds.get('LightStudio') is None:
             bpy.context.scene.world = bpy.data.worlds.new('LightStudio')
             bpy.context.scene.world.use_nodes = True
-            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.008, 1)
-            bpy.context.scene.world.cycles_visibility.diffuse = False
-            bpy.context.scene.world.cycles_visibility.glossy = False
-            bpy.context.scene.world.cycles_visibility.transmission = False
         else:
             bpy.context.scene.world = bpy.data.worlds['LightStudio']
             bpy.context.scene.world.use_nodes = True
-            bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.008, 1)
-            bpy.context.scene.world.cycles_visibility.diffuse = False
-            bpy.context.scene.world.cycles_visibility.glossy = False
-            bpy.context.scene.world.cycles_visibility.transmission = False
+
+        bpy.context.scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.008, 1)
+        bpy.context.scene.world.cycles_visibility.diffuse = False
+        bpy.context.scene.world.cycles_visibility.glossy = False
+        bpy.context.scene.world.cycles_visibility.transmission = False
+
+        return {"FINISHED"}
+
+class SetTransparentBackground(bpy.types.Operator):
+    bl_idname = "scene.set_light_studio_transparent_background"
+    bl_description = "Enable/Disable Transparent Background"
+    bl_label = "Transparent Background"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        scene = bpy.context.scene
+
+        if scene.render.film_transparent:
+            scene.render.film_transparent = False
+        else:
+            scene.render.film_transparent = True
 
         return {"FINISHED"}
 
