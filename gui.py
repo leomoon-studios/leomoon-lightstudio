@@ -30,12 +30,6 @@ class LLS_PT_Studio(bpy.types.Panel):
         sub = col.row(align=True)
         sub.operator('scene.switch_to_renderer', text="Cycles", depress=context.scene.render.engine == 'CYCLES').engine='CYCLES'
         sub.operator('scene.switch_to_renderer', text="EEVEE", depress=context.scene.render.engine == self.eevee_engine).engine = self.eevee_engine
-        col.operator('scene.set_light_studio_background')
-        col.operator('lls.render_lights_exr')
-        col.label(text="Light Visibility in Camera")
-        sub = col.row(align=True)
-        sub.operator('lls.camera_toggle_all_lights', text='Visible').visible_camera = True
-        sub.operator('lls.camera_toggle_all_lights', text='Hidden').visible_camera = False
 
 @force_register
 class LLS_PT_Mode(bpy.types.Panel):
@@ -181,6 +175,26 @@ class LLS_PT_Selected(bpy.types.Panel):
             col.prop(getLightMesh().parent, 'location', index=2, text="Distance") #light radius
 
 @force_register
+class LLS_PT_Background(bpy.types.Panel):
+    bl_idname = "LLS_PT_background"
+    bl_label = "Background"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "LightStudio"
+
+    @classmethod
+    def poll(cls, context):
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+
+        col = layout.column(align=True)
+        col.operator('scene.set_light_studio_background')
+        col.prop(scene.render, "film_transparent", text="Transparent Background")
+
+@force_register
 class LLS_PT_ProfileImportExport(bpy.types.Panel):
     bl_idname = "LLS_PT_profile_import_export"
     bl_label = "Import/Export"
@@ -197,9 +211,10 @@ class LLS_PT_ProfileImportExport(bpy.types.Panel):
         scene = context.scene
 
         box = layout.box()
-        box.label(text="Animation export not supported.", icon='ERROR')
+        box.label(text="Animation not supported.", icon='ERROR')
 
         col = layout.column(align=True)
+        col.operator('lls.render_lights_exr')
         col.operator('lls_list.export_profiles', text="Export Selected Profile")
         col.operator('lls_list.export_profiles', text="Export All Profiles").all=True
         col.operator('lls_list.import_profiles', text="Import Profiles")
@@ -221,6 +236,8 @@ class LLS_PT_Misc(bpy.types.Panel):
         layout = self.layout
 
         col = layout.column(align=True)
+        col.operator('lls.camera_toggle_all_lights', text='Show Lights in Camera').visible_camera = True
+        col.operator('lls.camera_toggle_all_lights', text='Hide Lights in Camera').visible_camera = False
         col.operator('lls.find_missing_textures')
         col.operator('lls.open_textures_folder')
         col.operator('light_studio.reset_control_panel')
