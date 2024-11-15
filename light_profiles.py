@@ -6,6 +6,7 @@ from . common import *
 from . light_data import *
 from . operators.modal import close_control_panel
 from . import light_list
+from mathutils import Matrix
 
 _ = os.sep
 
@@ -375,7 +376,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         return{'FINISHED'}
 
 class LIST_OT_SelectProfileHandle(bpy.types.Operator):
-
+    '''Select profile's handle'''
     bl_idname = "lls_list.select_profile_handle"
     bl_label = "Select Profile's Handle"
     bl_options = {"INTERNAL"}
@@ -403,9 +404,127 @@ class LIST_OT_SelectProfileHandle(bpy.types.Operator):
         handle = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
         handle.hide_viewport = False
         handle.hide_select = False
+        handle.hide_set(False)
         context.view_layer.objects.active = handle
         handle.select_set(True)
 
+        return{'FINISHED'}
+
+class LIST_OT_CreateProfileConstraint(bpy.types.Operator):
+    ''' Parent profile's handle via 'child of' constraint '''
+    bl_idname = "lls_list.create_profile_constraint"
+    bl_label = "Constrain Profile's Handle to Object"
+    bl_options = {"INTERNAL", "UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list. """
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        if props.profile_multimode:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list) and list[index].enabled
+        else:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list)
+
+    def execute(self, context):
+        # check_profiles_consistency(context)
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        
+        handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
+        # handle.hide_viewport = False
+        # handle.hide_select = False
+        # context.view_layer.objects.active = handle
+        # handle.select_set(True)
+
+        cons = handle.constraints.new('CHILD_OF')
+        cons.name = "LLS Child Of"
+        cons.use_location_x = True
+        cons.use_location_y = True
+        cons.use_location_z = True
+        
+        cons.use_rotation_x = False
+        cons.use_rotation_y = False
+        cons.use_rotation_z = True
+        
+        cons.use_scale_x = False
+        cons.use_scale_y = False
+        cons.use_scale_z = False
+
+        if context.active_object and context.active_object.select_get():
+            cons.target = context.active_object
+
+        return{'FINISHED'}
+
+class LIST_OT_ConstraintToggleParentInverse(bpy.types.Operator):
+    ''' Toggle constraint parent inverse '''
+    bl_idname = "lls_list.constraint_toggle_parent_inverse"
+    bl_label = "Toggle Constraint's Parent Inverse"
+    bl_options = {"INTERNAL", "UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list. """
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        if props.profile_multimode:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list) and list[index].enabled
+        else:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list)
+
+    def execute(self, context):
+        # check_profiles_consistency(context)
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        
+        handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
+        handle.hide_viewport = False
+        handle.hide_select = False
+
+        cons = handle.constraints["LLS Child Of"]
+        context_copy = bpy.context.copy()
+        context_copy["constraint"] = cons
+        if cons.inverse_matrix == Matrix.Identity(4):
+            with context.temp_override(constraint=cons, object=handle):
+                bpy.ops.constraint.childof_set_inverse(constraint=cons.name)
+        else:
+            with context.temp_override(constraint=cons, object=handle):
+                bpy.ops.constraint.childof_clear_inverse(constraint=cons.name)
+
+        return{'FINISHED'}
+
+class LIST_OT_ConstraintRemove(bpy.types.Operator):
+    ''' Remove constraint '''
+    bl_idname = "lls_list.remove_constraint"
+    bl_label = "Remove Constraint"
+    bl_options = {"INTERNAL", "UNDO"}
+
+    @classmethod
+    def poll(self, context):
+        """ Enable if there's something in the list. """
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        if props.profile_multimode:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list) and list[index].enabled
+        else:
+            return (context.mode in {'POSE', 'OBJECT'}) and len(list)
+
+    def execute(self, context):
+        # check_profiles_consistency(context)
+        props = context.scene.LLStudio
+        list = props.profile_list
+        index = props.profile_list_index
+        
+        handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
+
+        cons = handle.constraints["LLS Child Of"]
+        handle.constraints.remove(cons)
+        
         return{'FINISHED'}
 
 class LIST_OT_MoveItem(bpy.types.Operator):
@@ -525,7 +644,7 @@ def update_profile_list_index(props, context):
 import json, time
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
-VERSION = 3
+VERSION = 4
 from . import light_operators
 def parse_profile(context, props, profiles, version=VERSION, internal_copy=False):
     plist = props.profile_list
@@ -541,6 +660,10 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
             date = time.localtime()
             plist[-1].name += ' {}-{:02}-{:02} {:02}:{:02}'.format(str(date.tm_year)[-2:], date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min)
 
+        child_constraint = profile.get("child_constraint", None)
+        if child_constraint:
+            bpy.ops.lls_list.create_profile_constraint()
+        
         profile_empty = context.scene.objects[plist[-1].empty_name]
 
         if version > 1:
@@ -595,6 +718,14 @@ def compose_profile(list_index):
     profile_collection = get_collection(profile)
     handle = getProfileHandle(profile)
     profile_dict['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
+    
+    if "LLS Child Of" in handle.constraints:
+        cons = handle.constraints["LLS Child Of"]
+        # (target, parent inverse correction)
+        profile_dict['child_constraint'] = (cons.target.name, "CLEAR" if cons.inverse_matrix == Matrix.Identity(4) else "SET")
+    else:
+        profile_dict['child_constraint'] = None
+
     for light_collection in profile_collection.children:
         light = salvage_data(light_collection)
         profile_dict['lights'].append(light.dict)

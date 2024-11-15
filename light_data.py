@@ -55,7 +55,8 @@ class LightDict:
             1.0,
             1.0
         ],
-        "type": "ADVANCED"
+        "type": "ADVANCED",
+        "visible_camera": True,
     }
 
     def __init__(self, real_dict=None):
@@ -105,6 +106,7 @@ def salvage_data(lls_collection, only_validate=False):
             light['position'] = [lls_mesh.parent.rotation_euler.x, lls_mesh.parent.rotation_euler.y]
             light['rotation'] = -lls_mesh.rotation_euler.x
             light['type'] = 'ADVANCED'
+            light['visible_camera'] = lls_mesh.visible_camera
 
             light['light_name'] = lls_mesh.LLStudio.light_name
             light['order_index'] = lls_mesh.LLStudio.order_index
@@ -263,6 +265,7 @@ def salvage_data(lls_collection, only_validate=False):
             light['basic']['color'] = [lls_basic.data.LLStudio.color.r, lls_basic.data.LLStudio.color.g, lls_basic.data.LLStudio.color.b]
             light['basic']['color_saturation'] = lls_basic.data.LLStudio.color_saturation
             light['basic']['intensity'] = lls_basic.data.LLStudio.intensity
+            light['visible_camera'] = lls_basic.visible_camera
         except:
             if only_validate: raise InvalidLight()
             print("Handled error while parsing Light Handle")
@@ -313,6 +316,9 @@ def light_from_dict(from_dict, profile_collection):
 
     lhandle.location.z = light_dict['radius']
     lhandle.rotation_euler.y = light_dict['rotation']
+
+    for c in lhandle.children:
+        c.visible_camera = light_dict['visible_camera']
 
     actuator.rotation_euler.x = light_dict['position'][0]
     actuator.rotation_euler.y = light_dict['position'][1]

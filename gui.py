@@ -84,8 +84,21 @@ class LLS_PT_ProfileList(bpy.types.Panel):
         col.operator('lls_list.move_profile', text='', icon="TRIA_UP").direction = 'UP'
         col.operator('lls_list.move_profile', text='', icon="TRIA_DOWN").direction = 'DOWN'
 
-        row = layout.row()
-        row.operator('lls_list.select_profile_handle')
+        col = layout.column(align=True)
+        col.operator('lls_list.select_profile_handle')
+        
+        row = col.row(align=True)
+        list = props.profile_list
+        index = props.profile_list_index
+        if not list:
+            return
+        handle = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
+        if "LLS Child Of" in handle.constraints:
+            row.prop(handle.constraints["LLS Child Of"], 'target', expand=True, text="Constrain to")
+            row.operator('lls_list.constraint_toggle_parent_inverse', text="", icon="ORIENTATION_PARENT")
+            row.operator('lls_list.remove_constraint', text="", icon="X")
+        else:
+            row.operator('lls_list.create_profile_constraint')
 
 @force_register
 class LLS_PT_Lights(bpy.types.Panel):
@@ -230,7 +243,7 @@ class LLS_PT_Misc(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
+        return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
     def draw(self, context):
         layout = self.layout
@@ -269,9 +282,9 @@ class LLS_PT_Hotkeys(bpy.types.Panel):
     bl_category = "LightStudio"
     #bl_options = {'DEFAULT_CLOSED'}
 
-    #@classmethod
-    #def poll(cls, context):
-    #    return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' #and context.scene.LLStudio.initialized
+    @classmethod
+    def poll(cls, context):
+       return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
     scale_kmi_type = 'X'
     rotate_kmi_type = 'X'

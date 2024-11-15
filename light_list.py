@@ -27,6 +27,19 @@ def mute_set(self, value):
     view_layer.exclude = value
     mesh_object.LLStudio.mute = value
 
+def visible_camera_get(self):
+    try:
+        mesh_object = bpy.context.scene.objects[self.handle_name]
+        return all(o.visible_camera for o in mesh_object.children)
+    except Exception as e:
+        print('problem', e)
+        return False
+
+def visible_camera_set(self, value):
+    mesh_object = bpy.context.scene.objects[self.handle_name]
+    for o in mesh_object.children:
+        o.visible_camera = value
+
 class LightListItem(bpy.types.PropertyGroup):
     """ Group of properties representing an item in the list """
     def update_name(self, context):
@@ -46,10 +59,11 @@ class LightListItem(bpy.types.PropertyGroup):
             default="")
 
     mute: BoolProperty(get=mute_get, set=mute_set)
+    visible_camera: BoolProperty(get=visible_camera_get, set=visible_camera_set)
     exclude_isolate: IntProperty(default=-1)
 
 class LLS_UL_LightList(bpy.types.UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+    def draw_item(self, context, layout: bpy.types.UILayout, data, item, icon, active_data, active_propname, index):
         custom_icon = 'OUTLINER_OB_LIGHT' if index == context.scene.LLStudio.profile_list_index else 'LIGHT'
 
         if item.handle_name in context.scene.objects:
@@ -62,7 +76,9 @@ class LLS_UL_LightList(bpy.types.UIList):
 
                 view_layer = find_view_layer(mesh_collection, context.view_layer.layer_collection)
                 icon = 'LIGHT' if view_layer.exclude else 'OUTLINER_OB_LIGHT'
-                layout.operator('light_studio.mute_toggle', emboss=False, icon=icon, text="").index = index
+                sub = layout.row(align=True)
+                sub.operator('light_studio.mute_toggle', emboss=False, icon=icon, text="").index = index
+
 
                 
                 props = context.scene.LLStudio
@@ -76,7 +92,9 @@ class LLS_UL_LightList(bpy.types.UIList):
                     excluded += vl.exclude
                 
                 icon = 'SOLO_ON' if excluded == len(props.light_list)-1 and not view_layer.exclude else 'SOLO_OFF'
-                layout.operator('light_studio.isolate', emboss=False, icon=icon, text="").index = index
+                sub.operator('light_studio.isolate', emboss=False, icon=icon, text="").index = index
+                sub.prop(item, 'visible_camera', text='', icon='VIEW_CAMERA')
+                
 
             elif self.layout_type in {'GRID'}:
                 layout.alignment = 'CENTER'
