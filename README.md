@@ -39,25 +39,30 @@ LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
 ## Changelog
+### 2.16.0 2024-11-16
+* Improved plugin UI
+* Added light visibility in camera toggle in the light list
+* Added profile constraint to an object
+
 ### 2.15.3 2024-10-16
-* Moves Setup Background to Background section
-* Adds Transparent Background to Background section
-* Moves Export Lights as EXR to Import/Export section
-* Moves show/hide lights in camera to Misc section
+* Moved Setup Background to Background section
+* Added Transparent Background to Background section
+* Moved Export Lights as EXR to Import/Export section
+* Moved show/hide lights in camera to Misc section
 * LightStudio now switches to Cycles when it is created
 
 ### 2.15.2 2024-10-07
-* Adds EEVEE (EEVEE Next) support for Blender 4.2.x
+* Added EEVEE (EEVEE Next) support for Blender 4.2.x
 
 ### 2.15.1 2024-02-26
-* Fixes all issues with Blender 4.x
-* Adds backward compatibility for Blender 3.2 and later
+* Fixed all issues with Blender 4.x
+* Added backward compatibility for Blender 3.2 and later
 
 ### 2.15.0 2023-12-20
 * Added Blender 4 support
 * Added Ctrl+F hotkey to `point to add` a light
 * Made isolating light independent of visibility toggle
-* Addes support for handle rotation
+* Added support for handle rotation
 
 ### 2.14.0 2023-11-10
 * Added macOS Metal support
