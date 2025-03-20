@@ -86,7 +86,7 @@ class LLS_PT_ProfileList(bpy.types.Panel):
 
         col = layout.column(align=True)
         col.operator('lls_list.select_profile_handle')
-        
+
         row = col.row(align=True)
         list = props.profile_list
         index = props.profile_list_index

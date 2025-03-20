@@ -111,7 +111,7 @@ def raycast_add_light(context, event, diff, add_light=False):
     # ctrl y
     actuator.rotation_euler.y = copysign(Vector.angle(Vector((x,y,z)), Vector((x,y,0))), z)
     # actuator.rotation_euler.y = copysign(Vector.angle(Vector((x,y,z)), Vector((x,y,0))) + handle.rotation_euler.x, z)
-    
+
     return True
 
 def raycast(context, event, diff):
@@ -276,10 +276,10 @@ class OT_LLSFast3DEdit(bpy.types.Operator, LightOperator):
     bl_idname = "light_studio.fast_3d_edit"
     bl_label = "Fast 3D Edit"
     bl_options = {"UNDO"}
-    
+
     continuous: BoolProperty(default=False, name="Hold to use", description="Button behaviour.\n ON: Hold button to use. Release button to stop.\n OFF: Hold LMB to use, release LMB to stop.")
     normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
-    
+
     def modal(self, context, event):
         screens = [window.screen for window in context.window_manager.windows]
         regions3d = [(area.spaces[0].region_3d, region) for screen in screens for area in screen.areas if area.type == context.area.type for region in area.regions if region.type == context.region.type]
@@ -377,7 +377,7 @@ class OT_LLS3DAddLight(bpy.types.Operator, LightOperator):
     bl_idname = "light_studio.3d_add_light"
     bl_label = "Add Light in 3D"
     bl_options = {"UNDO"}
-    
+
     @classmethod
     def poll(cls, context):
         object = context.active_object
@@ -388,7 +388,7 @@ class OT_LLS3DAddLight(bpy.types.Operator, LightOperator):
 
     continuous: BoolProperty(default=False, name="Hold to use", description="Button behaviour.\n ON: Hold button to use. Release button to stop.\n OFF: Hold LMB to use, release LMB to stop.")
     normal_type: BoolProperty(default=False, name="Light along normal", description="Default reflection type.\n ON: Light along normal\n OFF: surface reflection (what you are looking for in most cases)")
-    
+
     def modal(self, context, event):
         screens = [window.screen for window in context.window_manager.windows]
         regions3d = [(area.spaces[0].region_3d, region) for screen in screens for area in screen.areas if area.type == context.area.type for region in area.regions if region.type == context.region.type]

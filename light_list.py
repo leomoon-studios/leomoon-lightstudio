@@ -53,7 +53,7 @@ class LightListItem(bpy.types.PropertyGroup):
             name="Profile Name",
             default="Untitled",
             update=update_name)
-    
+
     handle_name: StringProperty(
             description="",
             default="")
@@ -80,7 +80,7 @@ class LLS_UL_LightList(bpy.types.UIList):
                 sub.operator('light_studio.mute_toggle', emboss=False, icon=icon, text="").index = index
 
 
-                
+
                 props = context.scene.LLStudio
                 excluded=0
                 for li in props.light_list:
@@ -90,11 +90,11 @@ class LLS_UL_LightList(bpy.types.UIList):
                     mesh_collection = get_collection(mesh_object)
                     vl = find_view_layer(mesh_collection, context.view_layer.layer_collection)
                     excluded += vl.exclude
-                
+
                 icon = 'SOLO_ON' if excluded == len(props.light_list)-1 and not view_layer.exclude else 'SOLO_OFF'
                 sub.operator('light_studio.isolate', emboss=False, icon=icon, text="").index = index
                 sub.prop(item, 'visible_camera', text='', icon='VIEW_CAMERA')
-                
+
 
             elif self.layout_type in {'GRID'}:
                 layout.alignment = 'CENTER'
@@ -120,7 +120,7 @@ def set_list_index(self, index):
     light_layer = find_view_layer(light_collection, bpy.context.view_layer.layer_collection)
     if light_layer.exclude:
         return
-    
+
     bpy.ops.object.select_all(action='DESELECT') # Deselect all objects
 
     try:
@@ -175,7 +175,7 @@ def update_light_list_set(context, profile_idx=None):
         props.light_list.clear()
 
         lls_lights = set(profile_collection.children)
-        
+
         lights = [m for col in lls_lights for m in col.objects if m.name.startswith("LLS_LIGHT_HANDLE")]
         lights.sort(key= lambda m: m.LLStudio.order_index)
         for i, lls_handle in enumerate(lights):
@@ -217,7 +217,7 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
         from . light_profiles import check_profiles_consistency
         check_profiles_consistency(context)
         props = context.scene.LLStudio
-        
+
         #######
         muted = props.light_list[self.index].mute = not props.light_list[self.index].mute
         #######
@@ -225,13 +225,13 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
 
         handle_name = props.light_list[self.index].handle_name
         light_handle = context.scene.objects[handle_name]
-        
-        
+
+
         #######
         if not muted:
             light_handle.LLStudio.active_light_type_update(context)
         ########
-        
+
 
         # light_collection = get_collection(light_handle)
 
@@ -276,13 +276,13 @@ class LLS_OT_Isolate(bpy.types.Operator):
                     li.mute = True
             list_item.mute = False
 
-        
+
 
         # handle_name = props.light_list[self.index].handle_name
         # light_handle = context.scene.objects[handle_name]
         # light_collection = get_collection(light_handle)
         # view_layer = find_view_layer(light_collection, context.view_layer.layer_collection)
-        
+
         # view_layers=[]
         # excluded=0
         # for li in props.light_list:
@@ -361,7 +361,7 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
                light and \
                light.name.startswith('LLS_LIGHT_')):
             return False
-        
+
         if props.profile_multimode:
             profile = findLightProfileObject(light)
             if props.profile_list_index >= len(props.profile_list):
@@ -379,10 +379,10 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
         lls_collection, profile_collection = llscol_profilecol(context)
         lls_handle = context.object.parent
         lcol = [c for c in lls_handle.users_collection if c.name.startswith('LLS_Light')]
-        
+
         if not lcol:
             return{'CANCELLED'}
-        
+
         lcol = lcol[0]
         light_copy = duplicate_collection(lcol, profile_collection)
         lls_handle_copy = [lm for lm in light_copy.objects if lm.name.startswith('LLS_LIGHT_HANDLE')][0] # original light mesh exists so no checks necessary
@@ -395,7 +395,7 @@ class LIST_OT_LightListCopyItem(bpy.types.Operator):
             bpy.data.objects[e.handle_name].LLStudio.order_index += 1
 
         update_light_list_set(context)
-        
+
         light_object = [obj for obj in lls_handle_copy.children if obj.visible_get()][0]
         for o in context.selected_objects:
             o.select_set(False)
@@ -414,13 +414,13 @@ from bpy.app.handlers import persistent
 def load_post(scene):
     context = bpy.context
     props = bpy.context.scene.LLStudio
-    
+
     if not props.initialized:
         return
 
     for i in range(len(context.scene.LLStudio.profile_list)):
         context.scene.LLStudio.profile_list_index = i
-    
+
         lls_collection, profile_collection = llscol_profilecol(context)
 
         if profile_collection is None:
@@ -449,7 +449,7 @@ def load_post(scene):
             if any(x in elem.name for x in matches):
                 matching_names.append(elem.name)
 
-    
+
     from . import light_profiles
     light_profiles.add_profile_hashes()
     # light_profiles.check_profiles_consistency(context)

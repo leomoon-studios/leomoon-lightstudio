@@ -34,14 +34,14 @@ class DeleteOperator(bpy.types.Operator):
                 try:
                     _delete_leomoon_studio_light(context, obj)
                 except Exception as e:
-                    import traceback 
+                    import traceback
                     traceback.print_exc()
                     self.report({'WARNING', 'ERROR'}, "Error while deleting light")
                     return {'FINISHED'}
         except ReferenceError:
             return {'FINISHED'}
 
-        
+
         bpy.ops.object.delete('INVOKE_DEFAULT', use_global=self.use_global, confirm=False)
 
         if context.scene.LLStudio.initialized:

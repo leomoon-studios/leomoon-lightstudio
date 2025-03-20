@@ -7,7 +7,7 @@ _ = os.sep
 script_file = os.path.realpath(__file__)
 dir = os.path.dirname(script_file)
 directory=os.path.join(dir,"textures_real_lights")
-    
+
 def enum_previews_from_directory_items(self, context):
     """EnumProperty callback"""
     enum_items = []
@@ -16,19 +16,19 @@ def enum_previews_from_directory_items(self, context):
         return enum_items
 
     wm = context.window_manager
-    
+
     script_file = os.path.realpath(__file__)
     dir = os.path.dirname(script_file)
     directory=os.path.join(dir,"textures_real_lights"+_)
 
     # Get the preview collection (defined in register func).
     pcoll = preview_collections["main"]
-    
+
     dir_up = os.path.getmtime(directory)
     if pcoll.initiated and dir_up <= pcoll.dir_update_time:
         return pcoll.tex_previews
     pcoll.dir_update_time = dir_up
-    
+
     pcoll.clear()
 
     print("Scanning directory: %s" % directory)
@@ -60,23 +60,23 @@ def preview_enum_get(wm):
     nodes = getLightMesh().active_material.node_tree.nodes
     if not "Light Texture" in nodes:
         return -1
-    
+
     tex = nodes["Light Texture"].image.filepath
     tex = os.path.split(tex)[1]
     names = (p[0] for p in preview_collections["main"].tex_previews)
-    
+
     for i, name in enumerate(names):
         if name == tex:
             return i
     return -1
-    
+
 def preview_enum_set(wm, context):
     print("Set preview = %s" % context)
     name = preview_collections["main"].tex_previews[context][0]
-    
+
     light = getLightMesh()
     light.active_material.node_tree.nodes["Light Texture"].image = bpy.data.images.load(os.path.join(directory, name), check_existing=True)
-    
+
     return None
 
 def register():

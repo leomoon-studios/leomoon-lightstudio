@@ -57,13 +57,13 @@ def find_view_layer(collection, layer_collection):
             rcol = find_view_layer(collection, layer_collection=vc)
             if rcol:
                 return rcol
-            
+
 def get_view_layers(layer_collection):
     for lc in layer_collection.children:
         yield lc
         for clc in get_view_layers(layer_collection=lc):
             yield clc
-            
+
 def isFamily(ob=None):
     if not ob:
         ob = bpy.context.view_layer.objects.active
@@ -75,21 +75,21 @@ def isFamily(ob=None):
     while ob.parent:
         ob = ob.parent
         if ob.name.startswith('LEOMOON_LIGHT_STUDIO'): return True
-    
+
     return False
 
 def family(object):
     ''' Object + Grand children without ancestors '''
     family = [object.children[:]+(object,)]
-      
+
     def rec(object, family):
         family[0] += object.children
         for ob in object.children:
             rec(ob, family)
-        
+
     for ob in object.children:
         rec(ob, family)
-        
+
     return family.pop()
 
 def findLightGrp(ob):
@@ -101,7 +101,7 @@ def findLightGrp(ob):
 def findLightProfileObject(ob):
     if ob.name.startswith('LLS_PROFILE'):
         return ob
-    
+
     while ob and ob.parent:
         ob = ob.parent
         if ob.name.startswith('LLS_PROFILE.'): return ob
@@ -119,7 +119,7 @@ def getProfileHandle(ob=None):
     p = findLightProfileObject(ob)
     if not p:
         return None
-    
+
     h = [h for h in p.children if h.name.startswith('LLS_HANDLE')]
     if len(h):
         return h[0]
@@ -168,13 +168,13 @@ def duplicate_collection(collection, parent_collection):
 
         if parent_collection:
             parent_collection.children.link(new_collection)
-        
+
         iter_list = collection.children[:]
         parent_collection = new_collection
 
         for col in iter_list:
             rec_dup(col, parent_collection)
-        
+
         return parent_collection
 
     return rec_dup(collection, parent_collection)

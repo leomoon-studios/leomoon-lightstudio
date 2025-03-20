@@ -54,8 +54,8 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
     bl_label = "Rotate Light"
     bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # self.pivot = Vector((self.mouse_x, self.mouse_y))
         self.base_object_rotation = 0
         self.allow_precision_mode = True
@@ -100,7 +100,7 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _modal(self, context, event):
         global running_modals
-        
+
         if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.rotation_euler.y = self.base_object_rotation + self.angle()
         else:
@@ -136,8 +136,8 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
     bl_label = "Scale Light"
     bl_options = {"GRAB_CURSOR", "BLOCKING", "REGISTER", "UNDO", "INTERNAL"}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.pivot = Vector((self.mouse_x, self.mouse_y))
         self.base_object_scale = 0
         self.allow_xy_keys = True
@@ -182,10 +182,11 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _modal(self, context, event):
         new_scale = self.base_object_scale * self.delta_length_factor()
-        if self.x_key:
+        # Safely check x_key and y_key
+        if getattr(self, 'x_key', False):
             new_scale.y = self.base_object_scale.y
             new_scale.z = self.base_object_scale.z
-        if self.y_key:
+        if getattr(self, 'y_key', False):
             new_scale.x = self.base_object_scale.x
             new_scale.y = self.base_object_scale.y
 
@@ -208,8 +209,8 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
     bl_options = {"UNDO", "GRAB_CURSOR", "BLOCKING", "INTERNAL"}
 
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.pivot = Vector((self.mouse_x, self.mouse_y))
         self.base_object_rotation = Vector((0, 0, 0))
         self.allow_xy_keys = True
@@ -270,9 +271,10 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
 
     def _modal(self, context, event):
         dv = self.delta_vector()
-        if self.x_key:
+        # Safely check x_key and y_key attributes
+        if getattr(self, 'x_key', False):
             dv.y = 0
-        elif self.y_key:
+        elif getattr(self, 'y_key', False):
             dv.x = 0
 
         global running_modals
@@ -283,7 +285,8 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, LightOperator):
             x_factor = .0025 #2*pi / 500
             y_factor = .0025 #pi / 250
 
-        if self.z_key:
+        # Safely check z_key attribute
+        if getattr(self, 'z_key', False):
             self.light_handle.location.z = max(self.base_object_distance + dv.x * 0.05, 0)
             import bpy_extras
             start_pos = self.light_handle.matrix_world.to_translation() - self.profile_handle.location
@@ -363,7 +366,8 @@ class LLS_OT_control_panel(bpy.types.Operator):
     def poll(cls, context):
         return context.area.type == 'VIEW_3D' and context.mode == 'OBJECT' and context.scene.LLStudio.initialized
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.handler = None
         self.panel = None
         self.panel_moving = False
@@ -719,7 +723,10 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
     def poll(cls, context):
         global running_modals
         return running_modals > 0
-        
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def execute(self, context):
         aw = context.area.width
         width = min(aw-60, 800)
@@ -735,7 +742,7 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
             max(start_point.x, start_point.x+width),
             min(start_point.y, start_point.y+height),
             ))
-        
+
         panel_global.move(Vector([0,0]))
         LightImage.change_default_size(50)
         return {"FINISHED"}
@@ -779,10 +786,10 @@ def update_light_sets(panel, context, always=False):
                     light = salvage_data(col)
 
                     # Some crucial objects are missing. Delete whole light collection
-                    
+
                     for obj in family_obs:
                         bpy.data.objects.remove(obj)
-                    
+
                     bpy.data.collections.remove(col)
 
                     light_from_dict(light, profile_collection)

@@ -22,7 +22,7 @@ auto_annotations = False
 def init(ignore=[], make_annotations=False):
     global modules
     global ordered_classes
-    global ignored    
+    global ignored
     global fifo_cls
     global auto_annotations
 

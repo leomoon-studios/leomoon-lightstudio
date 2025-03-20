@@ -104,19 +104,19 @@ shader_info.fragment_source(
     {
         // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
         trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced)+g_data.texture_switch+g_data.intensity);
-    
+
         if(advanced){
             // Texture Switch + Intensity
             // log(1+g_data.intensity) so the images won't get overexposed too fast when high intensity values used
-            
+
             // set non-zero min color value to sort of simulate overexposure visible on real light object in viewport
             vec4 tex = texture(image, texCoord_interp);
             tex.r = max(0.05, tex.r);
             tex.g = max(0.05, tex.g);
             tex.b = max(0.05, tex.b);
-            
+
             fragColor = mix(vec4(1.0f), tex, g_data.texture_switch) * log(1+g_data.intensity) * pow((g_data.exposure+10)/11, 2);
-            
+
             // Color Overlay
             float gray = clamp(float(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114))), 0.0f, 1.0f);
             vec4 colored = g_data.color_overlay * gray;
@@ -182,7 +182,7 @@ shader_info.fragment_source(
         if((gl_FragCoord.x < g_data.panel_point_lt.x || gl_FragCoord.x > g_data.panel_point_rb.x)
          || (gl_FragCoord.y < g_data.panel_point_rb.y || gl_FragCoord.y > g_data.panel_point_lt.y))
             discard;
-    
+
     }
     """
 )
@@ -480,7 +480,7 @@ class Border(Rectangle):
         # print(self.color)
         # print(self.light_image.panel.point_lt)
         # print(self.light_image.panel.point_rb)
-        
+
         if lleft < bleft:
             left_verts2 = deepcopy(left_verts)
             for v in left_verts2:
@@ -591,7 +591,7 @@ class LightImage(Rectangle):
     def update_from_lls(self):
         if not self._lls_object:
             return False
-        
+
         if self._lls_object.select_get():
             LightImage.selected_object = self
 
@@ -752,7 +752,7 @@ class LightImage(Rectangle):
         shader2Dcolor.uniform_float("color", (0, 0, 0, 0))
         batch_for_shader(shader2Dcolor, 'POINTS', {"pos": [(0,0), ]}).draw(shader2Dcolor)
 
-        
+
 
         bleft = self.panel.point_lt[0]
         bright = self.panel.point_rb[0]
@@ -775,10 +775,10 @@ class LightImage(Rectangle):
         lightIconShader.bind()
         UBO_data.panel_point_lt = (ctypes.c_float * len(self.panel.point_lt))(*self.panel.point_lt)
         UBO_data.panel_point_rb = (ctypes.c_float * len(self.panel.point_rb))(*self.panel.point_rb)
-        
+
         if self._lls_handle.LLStudio.type == 'ADVANCED':
             lightIconShader.uniform_bool("advanced", [True,])
-        
+
             lightIconShader.uniform_sampler("image", self.gpu_texture)
 
             try:
@@ -814,7 +814,7 @@ class LightImage(Rectangle):
                 mask_ring_outer_radius = lls_node.inputs['Mask - Ring Outer Radius'].default_value
                 mask_ring_switch = lls_node.inputs['Mask - Ring Switch'].default_value
                 mask_top_to_bottom = lls_node.inputs['Mask - Top to Bottom'].default_value
-                
+
                 UBO_data.mask_bottom_to_top = mask_bottom_to_top
                 UBO_data.mask_diagonal_bottom_left = mask_diagonal_bottom_left
                 UBO_data.mask_diagonal_bottom_right = mask_diagonal_bottom_right
@@ -836,7 +836,7 @@ class LightImage(Rectangle):
                 pass
         else:
             lightIconShader.uniform_bool("advanced", [False,])
-        
+
 
             UBO_data.intensity = self._lls_object.data.LLStudio.intensity
             UBO_data.color_saturation = self._lls_object.data.LLStudio.color_saturation
@@ -844,7 +844,7 @@ class LightImage(Rectangle):
             UBO_data.color_overlay = (ctypes.c_float * len(v))(*v)
 
 
-        
+
         gpu.state.blend_set("ALPHA")
         UBO = gpu.types.GPUUniformBuf(
             gpu.types.Buffer("UBYTE", ctypes.sizeof(UBO_data), UBO_data)
@@ -942,7 +942,8 @@ class MouseWidget:
     mouse_x: bpy.props.FloatProperty()
     mouse_y: bpy.props.FloatProperty()
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._start_position = None
         self._end_position = Vector((0, 0))
         self._reference_end_position = Vector((0, 0))
@@ -994,12 +995,14 @@ class MouseWidget:
             self._cancel(context, event)
             return {'CANCELLED'}
 
-        if event.type == "RET" or (not self.continous and event.type == "LEFTMOUSE"):
+        # Safely check for continous attribute with getattr
+        continous = getattr(self, 'continous', False)
+        if event.type == "RET" or (not continous and event.type == "LEFTMOUSE"):
             self._unregister_handler()
             self._finish(context, event)
             return {'FINISHED'}
 
-        if self.continous and event.value == "RELEASE" and event.type == "LEFTMOUSE":
+        if continous and event.value == "RELEASE" and event.type == "LEFTMOUSE":
             self._unregister_handler()
             self._finish(context, event)
             return {'FINISHED'}
@@ -1008,27 +1011,38 @@ class MouseWidget:
         self.mouse_y = event.mouse_y - context.area.y
         self._end_position = Vector((self.mouse_x, self.mouse_y))
 
-        if self.allow_xy_keys:
+        # Safely check for allow_xy_keys attribute with getattr
+        if getattr(self, 'allow_xy_keys', False):
             if event.value == "PRESS":
                 if event.type == "X":
-                    self.x_key = not self.x_key
+                    # Safely toggle x_key
+                    current_x_key = getattr(self, 'x_key', False)
+                    self.x_key = not current_x_key
                     self.y_key = False
                     self.z_key = False
                 if event.type == "Y":
-                    self.y_key = not self.y_key
+                    # Safely toggle y_key
+                    current_y_key = getattr(self, 'y_key', False)
+                    self.y_key = not current_y_key
                     self.x_key = False
                     self.z_key = False
                 if event.type == "Z":
-                    self.z_key = not self.z_key
+                    # Safely toggle z_key
+                    current_z_key = getattr(self, 'z_key', False)
+                    self.z_key = not current_z_key
                     self.x_key = False
                     self.y_key = False
 
         if self.allow_precision_mode and event.value == "PRESS" and event.type == "LEFT_SHIFT":
             self.precision_mode = True
             self._precision_mode_mid_stop = self._end_position.copy()
-        elif self.allow_precision_mode and event.value == "RELEASE" and event.type == "LEFT_SHIFT" and self.precision_mode: #last condition in case when operator invoked with shift already pressed
+        elif self.allow_precision_mode and event.value == "RELEASE" and event.type == "LEFT_SHIFT" and getattr(self, 'precision_mode', False): #last condition in case when operator invoked with shift already pressed
             self.precision_mode = False
-            self.precision_offset += self._end_position - self._precision_mode_mid_stop
+            if hasattr(self, '_precision_mode_mid_stop'):
+                # Make sure precision_offset exists
+                if not hasattr(self, 'precision_offset'):
+                    self.precision_offset = Vector((0, 0))
+                self.precision_offset += self._end_position - self._precision_mode_mid_stop
 
         return self._modal(context, event)
 
@@ -1042,37 +1056,76 @@ class MouseWidget:
             pass
 
     def length(self):
+        if self._start_position is None:
+            return 0
         return (self._start_position - self._reference_end_position - self.delta_vector()).length
 
     def delta_vector(self):
-        precision_factor_inv = 1 - self.precision_factor
-        if self.precision_mode:
-            return self._precision_mode_mid_stop - self._reference_end_position - self.precision_offset * precision_factor_inv + (self._end_position - self._precision_mode_mid_stop) * self.precision_factor
-        return self._end_position - self._reference_end_position - self.precision_offset * precision_factor_inv
+        # Get all attributes safely with defaults
+        precision_factor = getattr(self, 'precision_factor', 0.1)
+        precision_factor_inv = 1 - precision_factor
+        precision_offset = getattr(self, 'precision_offset', Vector((0, 0)))
+        precision_mode = getattr(self, 'precision_mode', False)
+
+        # Safe access to reference positions
+        end_position = getattr(self, '_end_position', Vector((0, 0)))
+        reference_end_position = getattr(self, '_reference_end_position', Vector((0, 0)))
+
+        # Calculate the delta vector safely
+        if precision_mode and hasattr(self, '_precision_mode_mid_stop'):
+            precision_mode_mid_stop = getattr(self, '_precision_mode_mid_stop', Vector((0, 0)))
+            return precision_mode_mid_stop - reference_end_position - precision_offset * precision_factor_inv + (end_position - precision_mode_mid_stop) * precision_factor
+
+        return end_position - reference_end_position - precision_offset * precision_factor_inv
 
     def delta_length_factor(self):
-        return self.length() / ((self._start_position - self._reference_end_position).length)
+        # Get start position and reference end position safely
+        start_position = getattr(self, '_start_position', Vector((0, 0)))
+        reference_end_position = getattr(self, '_reference_end_position', Vector((0, 0)))
+
+        # Calculate length using safe methods
+        base_length = (start_position - reference_end_position).length
+
+        # Avoid division by zero
+        if base_length < 0.0001:
+            return 1.0
+
+        return self.length() / base_length
 
     def angle(self):
-        vec = self._reference_end_position - self._start_position + self.delta_vector() + self.precision_offset * (1 - self.precision_factor)
-        return atan2(vec.y, vec.x) - self._base_rotation
+        # Get all attributes safely with defaults
+        precision_offset = getattr(self, 'precision_offset', Vector((0, 0)))
+        precision_factor = getattr(self, 'precision_factor', 0.1)
+        start_position = getattr(self, '_start_position', Vector((0, 0)))
+        reference_end_position = getattr(self, '_reference_end_position', Vector((0, 0)))
+        base_rotation = getattr(self, '_base_rotation', 0)
+
+        # Calculate the vector
+        delta_vec = self.delta_vector()  # Already made safe
+        vec = reference_end_position - start_position + delta_vec + precision_offset * (1 - precision_factor)
+
+        # Return the angle
+        return atan2(vec.y, vec.x) - base_rotation
 
     def _draw(self, context, event):
         # first draw to reset buffer
         shader2Dcolor.uniform_float("color", (.5, .5, .5, .5))
         batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((0,0), (0,0))}).draw(shader2Dcolor)
 
-        if self.draw_guide:
+        if getattr(self, 'draw_guide', True):
             shader2Dcolor.uniform_float("color", (.5, .5, .5, .5))
-            batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position[:]), (self._end_position[:]))}).draw(shader2Dcolor)
+            if hasattr(self, '_start_position') and self._start_position is not None:
+                batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position[:]), (self._end_position[:]))}).draw(shader2Dcolor)
 
-        if self.allow_xy_keys:
-            if self.x_key:
+        if getattr(self, 'allow_xy_keys', False):
+            if getattr(self, 'x_key', False):
                 shader2Dcolor.uniform_float("color", (1, 0, 0, .5))
-                batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((0, self._start_position.y), (context.area.width, self._start_position.y))}).draw(shader2Dcolor)
-            elif self.y_key:
+                if hasattr(self, '_start_position') and self._start_position is not None:
+                    batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((0, self._start_position.y), (context.area.width, self._start_position.y))}).draw(shader2Dcolor)
+            elif getattr(self, 'y_key', False):
                 shader2Dcolor.uniform_float("color", (0, 1, 0, .5))
-                batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position.x, 0), (self._start_position.x, context.area.height))}).draw(shader2Dcolor)
-            elif self.z_key:
+                if hasattr(self, '_start_position') and self._start_position is not None:
+                    batch_for_shader(shader2Dcolor, 'LINES', {"pos": ((self._start_position.x, 0), (self._start_position.x, context.area.height))}).draw(shader2Dcolor)
+            elif getattr(self, 'z_key', False):
                 shader2Dcolor.uniform_float("color", (0, 0, 1, .5))
-                batch_for_shader(shader2Dcolor, 'LINES', {"pos": (self.z_start_position, self.z_end_position)}).draw(shader2Dcolor)
+                batch_for_shader(shader2Dcolor, 'LINES', {"pos": (getattr(self, 'z_start_position', Vector((0,0))), getattr(self, 'z_end_position', Vector((0,0))))}).draw(shader2Dcolor)

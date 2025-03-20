@@ -46,7 +46,7 @@ def check_profiles_consistency(context, invert_multimode=False):
                         hash = get_hash()
                         profile_menu_item.hash = this_profile_root['hash'] = hash
                         changed = True
-                    
+
                         # assume the scene was duplicated
                         # keep the active profile (as its hierarchy was duped) and remove all other profiles from the list (as they link to the original objects)
                         # while len(scene_profile_list) > 1 and scene_profile_list[0] != profile_menu_item:
@@ -54,7 +54,7 @@ def check_profiles_consistency(context, invert_multimode=False):
                         # while len(scene_profile_list) > 1:
                         #     scene_profile_list.remove(1)
 
-                        
+
                         for prof in scene_profile_list:
                             if prof == profile_menu_item: continue
                             prof_collection = get_collection(bpy.data.objects[prof.empty_name])
@@ -98,7 +98,7 @@ def check_profiles_consistency(context, invert_multimode=False):
             except Exception as e:
                 print("Something wrong with object hierarchy. Multi-Profile consistency check failed.", e)
     return changed
-    
+
 class LLS_OT_RefreshLightList(bpy.types.Operator):
     bl_idname = "light_studio.refresh_lightlist"
     bl_label = "Refresh Light List"
@@ -122,9 +122,9 @@ class ListItem(bpy.types.PropertyGroup):
             name="Name of Empty that holds the profile",
             description="",
             default="")
-    
+
     hash: StringProperty()
-    
+
     def enabled_update_func(self, context):
         if self.empty_name not in bpy.data.objects: return
         profile_collection = get_collection(bpy.data.objects[self.empty_name])
@@ -135,7 +135,7 @@ class ListItem(bpy.types.PropertyGroup):
             #link selected profile
             if bpy.data.collections[self.empty_name].name not in lls_collection.children:
                 lls_collection.children.link(bpy.data.collections[self.empty_name])
-            
+
             props = context.scene.LLStudio
             light_list.update_light_list_set(context, profile_idx=profile_list_index)
 
@@ -146,7 +146,7 @@ class ListItem(bpy.types.PropertyGroup):
                     lls_collection.children.unlink(profile_collection)
             light_list.update_light_list_set(context)
 
-    
+
     enabled: BoolProperty(default=False, update=enabled_update_func)
 
 class LLS_UL_ProfileList(bpy.types.UIList):
@@ -160,11 +160,11 @@ class LLS_UL_ProfileList(bpy.types.UIList):
                 layout.prop(item, 'name', text='', emboss=False, translate=False)
                 if props.profile_multimode:
                     layout.prop(item, 'enabled', text='', emboss=False, translate=False, icon=custom_icon)
-                    
+
                     enabled_count = 0
                     for p in props.profile_list:
                         enabled_count += p.enabled
-                    
+
                     custom_solo_icon = 'SOLO_ON' if enabled_count == 1 and item.enabled else 'SOLO_OFF'
                     layout.operator('lls_list.isolate_profile', emboss=False, icon=custom_solo_icon, text="").index = index
 
@@ -189,14 +189,14 @@ class LIST_OT_IsolateProfile(bpy.types.Operator):
         enabled_count = 0
         for p in props.profile_list:
             enabled_count += p.enabled
-        
+
         if enabled_count == 1 and props.profile_list[self.index].enabled:
             for p in props.profile_list:
                 p.enabled = True
         else:
             for p in props.profile_list:
                 p.enabled = False
-        
+
             props.profile_list[self.index].enabled = True
 
 
@@ -313,7 +313,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
         for ob in obsToRemove:
             collectionsToRemove.update(ob.users_collection)
             ob.use_fake_user = False
-        
+
         for obj in obsToRemove:
             bpy.data.objects.remove(obj)
 
@@ -370,7 +370,7 @@ class LIST_OT_CopyItem(bpy.types.Operator):
         while lastItemId > props.profile_list_index+1:
             list.move(lastItemId-1, lastItemId)
             lastItemId -= 1
-        
+
         props.profile_list_index += 1
 
         return{'FINISHED'}
@@ -400,7 +400,7 @@ class LIST_OT_SelectProfileHandle(bpy.types.Operator):
 
         for o in context.selected_objects:
             o.select_set(False)
-        
+
         handle = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
         handle.hide_viewport = False
         handle.hide_select = False
@@ -432,7 +432,7 @@ class LIST_OT_CreateProfileConstraint(bpy.types.Operator):
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
-        
+
         handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
         # handle.hide_viewport = False
         # handle.hide_select = False
@@ -444,11 +444,11 @@ class LIST_OT_CreateProfileConstraint(bpy.types.Operator):
         cons.use_location_x = True
         cons.use_location_y = True
         cons.use_location_z = True
-        
+
         cons.use_rotation_x = False
         cons.use_rotation_y = False
         cons.use_rotation_z = True
-        
+
         cons.use_scale_x = False
         cons.use_scale_y = False
         cons.use_scale_z = False
@@ -480,7 +480,7 @@ class LIST_OT_ConstraintToggleParentInverse(bpy.types.Operator):
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
-        
+
         handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
         handle.hide_viewport = False
         handle.hide_select = False
@@ -519,12 +519,12 @@ class LIST_OT_ConstraintRemove(bpy.types.Operator):
         props = context.scene.LLStudio
         list = props.profile_list
         index = props.profile_list_index
-        
+
         handle: bpy.types.Object = [o for o in bpy.data.objects[list[index].empty_name].children if o.name.startswith("LLS_HANDLE")][0]
 
         cons = handle.constraints["LLS Child Of"]
         handle.constraints.remove(cons)
-        
+
         return{'FINISHED'}
 
 class LIST_OT_MoveItem(bpy.types.Operator):
@@ -626,10 +626,10 @@ def _update_profile_list_index(props, context, multimode_override=False):
                 if light_objects and light_objects[0].select_get():
                     context.view_layer.objects.active = light_objects[0]
                     for ob in context.selected_objects:
-                        if ob is not light_objects[0]: 
+                        if ob is not light_objects[0]:
                             ob.select_set(False)
                     return
-            
+
             light_objects = [c for c in handle.children if c.visible_get()]
             if light_objects:
                 for ob in context.selected_objects:
@@ -663,7 +663,7 @@ def parse_profile(context, props, profiles, version=VERSION, internal_copy=False
         child_constraint = profile.get("child_constraint", None)
         if child_constraint:
             bpy.ops.lls_list.create_profile_constraint()
-        
+
         profile_empty = context.scene.objects[plist[-1].empty_name]
 
         if version > 1:
@@ -718,7 +718,7 @@ def compose_profile(list_index):
     profile_collection = get_collection(profile)
     handle = getProfileHandle(profile)
     profile_dict['handle_position'] = [handle.location.x, handle.location.y, handle.location.z]
-    
+
     if "LLS Child Of" in handle.constraints:
         cons = handle.constraints["LLS Child Of"]
         # (target, parent inverse correction)
@@ -730,7 +730,7 @@ def compose_profile(list_index):
         light = salvage_data(light_collection)
         profile_dict['lights'].append(light.dict)
         profile_dict['lights'].sort(key=lambda x: x["order_index"])
-        
+
         # import json
         # print(json.dumps(profile_dict, indent=4, separators=(',', ': ')))
     return profile_dict

@@ -4,7 +4,7 @@ bl_info = {
     "name": "LeoMoon LightStudio",
     "description": "Easy setup for complex studio lighting",
     "author": "LeoMoon Studios",
-    "version": (2, 16, 0),
+    "version": (2, 16, 1),
     "blender": (3, 2, 2),
     "location": "View3D -> Tools -> LightStudio",
     "wiki_url": "",
