@@ -362,8 +362,84 @@ class Panel(Rectangle):
         ))
 
     def draw(self):
+        # draw the panel background
         shader2Dcolor.uniform_float("color", (0.05, 0.05, 0.05, 1))
         batch_for_shader(shader2Dcolor, 'TRI_STRIP', {"pos": self.get_verts()}).draw(shader2Dcolor)
+
+        # draw a faint gray grid across the panel
+        # we can add some labels later
+        shader2Dcolor.uniform_float("color", (0.12, 0.12, 0.12, 1.0))  # dark gray with no transparency
+
+        # calculate grid size and spacing
+        panel_width = self.point_rb.x - self.point_lt.x
+        panel_height = self.point_lt.y - self.point_rb.y
+        grid_spacing_x = panel_width / 20   # 20 vertical grid lines
+        grid_spacing_y = panel_height / 10  # 20 horizontal grid lines
+
+        # draw vertical grid lines
+        vertical_lines = []
+        for i in range(1, 20):  # skip first and last to avoid drawing over the edges
+            x = self.point_lt.x + i * grid_spacing_x
+            vertical_lines.extend([(x, self.point_lt.y), (x, self.point_rb.y)])
+
+        if vertical_lines:
+            batch_for_shader(shader2Dcolor, 'LINES', {"pos": vertical_lines}).draw(shader2Dcolor)
+
+        # draw horizontal grid lines
+        horizontal_lines = []
+        for i in range(1, 10):  # skip first and last to avoid drawing over the edges
+            y = self.point_lt.y - i * grid_spacing_y
+            horizontal_lines.extend([(self.point_lt.x, y), (self.point_rb.x, y)])
+
+        if horizontal_lines:
+            batch_for_shader(shader2Dcolor, 'LINES', {"pos": horizontal_lines}).draw(shader2Dcolor)
+
+        # draw the blue horizontal line in the middle of the panel (z-axis rotation guide)
+        center_y = (self.point_lt.y + self.point_rb.y) / 2
+        shader2Dcolor.uniform_float("color", (0.1, 0.3, 0.8, 0.8))  # blue color with alpha
+        batch_for_shader(shader2Dcolor, 'LINES', {
+            "pos": [
+                (self.point_lt.x + 5, center_y),  # left point (plus buffer)
+                (self.point_rb.x - 5, center_y)   # right point (minus buffer)
+            ]
+        }).draw(shader2Dcolor)
+
+        # draw three vertical lines
+        panel_width = self.point_rb.x - self.point_lt.x
+        # calculate positions for the three vertical lines (evenly spaced)
+        center_x = (self.point_lt.x + self.point_rb.x) / 2
+        left_x = center_x - panel_width / 4
+        right_x = center_x + panel_width / 4
+
+        # draw green vertical lines on either side (y-axis)
+        shader2Dcolor.uniform_float("color", (0.2, 0.8, 0.2, 0.8))  # green color with alpha
+        batch_for_shader(shader2Dcolor, 'LINES', {
+            "pos": [
+                (left_x, self.point_lt.y - 5),   # top point of left line
+                (left_x, self.point_rb.y),       # bottom point of left line - extend to bottom of panel
+                (right_x, self.point_lt.y - 5),  # top point of right line
+                (right_x, self.point_rb.y)       # bottom point of right line - extend to bottom of panel
+            ]
+        }).draw(shader2Dcolor)
+
+        # draw red vertical line in the middle (x-axis)
+        shader2Dcolor.uniform_float("color", (0.8, 0.2, 0.2, 0.8))  # red color with alpha
+        batch_for_shader(shader2Dcolor, 'LINES', {
+            "pos": [
+                (center_x, self.point_lt.y - 5),  # top point (minus buffer for exit button)
+                (center_x, self.point_rb.y)       # bottom point - extend to bottom of panel
+            ]
+        }).draw(shader2Dcolor)
+
+        # draw red edges of the panel (x-)
+        batch_for_shader(shader2Dcolor, 'LINES', {
+            "pos": [
+                (self.point_lt.x, self.point_lt.y),  # top-left corner
+                (self.point_lt.x, self.point_rb.y),  # bottom-left corner
+                (self.point_rb.x, self.point_lt.y),  # top-right corner
+                (self.point_rb.x, self.point_rb.y)   # bottom-right corner
+            ]
+        }).draw(shader2Dcolor)
 
     def move(self, loc_diff):
         super().move(loc_diff)
