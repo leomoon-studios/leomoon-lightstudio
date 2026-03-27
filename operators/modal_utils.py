@@ -46,7 +46,6 @@ shader_info.typedef_source(
         float mask_top_to_bottom;
         float2 _pad;
     };
-    BLI_STATIC_ASSERT_ALIGN(Data, 16)
 """
 )
 
@@ -85,7 +84,6 @@ shader_info.vertex_in(1, 'VEC2', "texCoord")
 shader_info.uniform_buf(0, 'Data', "g_data")
 shader_info.vertex_out(vert_out)
 shader_info.fragment_out(0, 'VEC4', "fragColor")
-shader_info.fragment_out(1, 'VEC4', "trash")
 
 shader_info.vertex_source(
     """
@@ -102,9 +100,6 @@ shader_info.fragment_source(
     """
     void main()
     {
-        // Trash output - sum all uniforms to prevent compiler from skipping currently unused ones
-        trash = vec4(g_data.color_overlay.x+g_data.exposure+g_data.panel_point_lt.x+g_data.panel_point_rb.x+g_data.mask_bottom_to_top+g_data.mask_diagonal_bottom_left+g_data.mask_diagonal_bottom_right+g_data.mask_diagonal_top_left+g_data.mask_diagonal_top_right+g_data.mask_gradient_amount+g_data.mask_gradient_switch+g_data.mask_gradient_type+g_data.mask_left_to_right+g_data.mask_right_to_left+g_data.mask_ring_inner_radius+g_data.mask_ring_outer_radius+g_data.mask_ring_switch+g_data.mask_top_to_bottom+int(advanced)+g_data.texture_switch+g_data.intensity);
-
         if(advanced){
             // Texture Switch + Intensity
             // log(1+g_data.intensity) so the images won't get overexposed too fast when high intensity values used
