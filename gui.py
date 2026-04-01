@@ -159,6 +159,9 @@ class LLS_PT_Selected(bpy.types.Panel):
             row = col.row()
             # row.prop(context.scene.LLStudio, 'active_light_type', expand=True)
             row.prop(context.object.parent.LLStudio, 'type', expand=True)
+            eevee_engine = "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2, 0) else "BLENDER_EEVEE"
+            if context.scene.render.engine == eevee_engine:
+                row.enabled = False
             col.separator()
 
             if context.object.type == 'LIGHT':
