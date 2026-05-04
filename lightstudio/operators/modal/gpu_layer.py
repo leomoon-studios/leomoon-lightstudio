@@ -36,7 +36,7 @@ import blf
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
-from mathutils import Euler, Vector
+from mathutils import Vector
 
 from ...core.scene_utils import find_view_layer
 from ...core.widgets import Rectangle, clamp, is_in_rect
@@ -789,10 +789,6 @@ class Border(Rectangle):
         # near the poles where 1/cos(lat) is large).
         light = self.light_image
         light_verts = Rectangle.get_verts(light)
-        lleft = min(v[0] for v in light_verts)
-        lright = max(v[0] for v in light_verts)
-        bleft = light.panel.point_lt.x
-        bright = light.panel.point_rb.x
 
         shader.bind()
         gpu.state.blend_set("ALPHA")
@@ -1100,12 +1096,8 @@ class LightImage(Rectangle):
         solid.uniform_float("color", (0, 0, 0, 0))
         batch_for_shader(solid, "POINTS", {"pos": [(0, 0)]}).draw(solid)
 
-        bleft = self.panel.point_lt.x
-        bright = self.panel.point_rb.x
         verts = self.get_verts()
         uv_coords = self.get_tex_coords()
-        lleft = min(verts, key=lambda v: v[0])[0]
-        lright = max(verts, key=lambda v: v[0])[0]
 
         if self.mute:
             self.mute_border.draw()

@@ -11,7 +11,6 @@ from __future__ import annotations
 import bpy
 import rna_keymap_ui
 
-
 _PANEL_BG_DEFAULT = (0.05, 0.05, 0.05)
 _PANEL_GRID_DEFAULT = (0.12, 0.12, 0.12)
 
