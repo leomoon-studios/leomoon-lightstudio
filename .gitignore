@@ -103,3 +103,10 @@ venv.bak/
 # mypy
 .mypy_cache/
 /skrypt
+
+# Blender extension dev workflow
+.ruff_cache/
+*.zip
+*.blend1
+*.blend@
+*.orig

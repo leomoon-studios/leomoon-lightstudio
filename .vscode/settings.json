@@ -1,0 +1,11 @@
+{
+    "blender.addon.loadDirectory": "lightstudio",
+    "blender.addon.reloadOnSave": false,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true
+    },
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ]
+}

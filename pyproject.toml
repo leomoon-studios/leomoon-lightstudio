@@ -1,0 +1,39 @@
+[project]
+name = "leomoon-lightstudio"
+version = "3.0.0"
+description = "LeoMoon LightStudio — Blender 5.1+ extension"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["legacy", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "SIM", # simplify
+]
+ignore = [
+  "E501", # line length (handled by formatter)
+  "B008", # function calls in defaults (Blender bpy.props pattern)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+ignore_missing_imports = true
+exclude = ["legacy", "build", "dist"]
+
+[tool.pytest.ini_options]
+# Use importlib mode so pytest does not try to import the legacy top-level
+# `__init__.py` (which requires `bpy`) when collecting tests.
+addopts = "--import-mode=importlib"
+testpaths = ["tests"]

@@ -1,0 +1,44 @@
+schema_version = "1.0.0"
+
+id = "leomoon_lightstudio"
+version = "3.0.0"
+name = "LeoMoon LightStudio"
+tagline = "Easy setup for complex studio lighting"
+maintainer = "Amin Babaeipanah <contact@leomoon.com>"
+type = "add-on"
+
+website = "https://leomoon.com/downloads/plugins/leomoon-lightstudio/"
+
+# Allowed Blender categories (extension schema): pick the closest single primary
+# category — supplementary discoverability is via `tags`.
+tags = ["Lighting", "Render", "3D View"]
+
+blender_version_min = "5.1.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+# Filesystem-access permission is required because the add-on:
+#   - imports/exports profile .blend files via the file browser
+#   - renders an equirectangular EXR to a user-chosen path
+#   - opens the bundled textures folder in the system file browser
+[permissions]
+files = "Import/export profiles, render EXR HDRIs, open textures folder"
+
+# Files/folders to exclude from the built .zip
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "*.pyc",
+  "*.pyo",
+  "*.zip",
+  ".git/",
+  "tests/",
+  "legacy/",
+  "*.blend1",
+  ".venv/",
+  ".ruff_cache/",
+  ".mypy_cache/",
+  ".pytest_cache/",
+]

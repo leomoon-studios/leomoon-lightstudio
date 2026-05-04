@@ -1,0 +1,49 @@
+# GitHub Actions workflow: Build and release LeoMoon LightStudio extension zip
+# - Triggers on push of tags matching v*.*.* (e.g. v3.0.0)
+# - Zips the lightstudio/ folder, names the zip as leomoon-lightstudio-a.b.c_blender-x.y.z.zip
+# - Publishes a GitHub Release with the zip attached
+
+name: Build and Release Extension Zip
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract plugin and Blender version
+        id: get_version
+        run: |
+          PLUGIN_VERSION=$(grep -E '^version' lightstudio/blender_manifest.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          BLENDER_VERSION=$(grep -E '^blender_version_min' lightstudio/blender_manifest.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "plugin_version=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
+          echo "blender_version=$BLENDER_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Zip extension folder
+        run: |
+          ZIP_NAME="leomoon-lightstudio-${{ steps.get_version.outputs.plugin_version }}_blender-${{ steps.get_version.outputs.blender_version }}.zip"
+          cd lightstudio
+          zip -r "../$ZIP_NAME" . \
+            -x '__pycache__/*' '*/__pycache__/*' \
+               '*.pyc' '*.pyo' \
+               '*.zip' \
+               '.git/*' \
+               'tests/*' \
+               'legacy/*' \
+               '.venv/*' \
+               '*.blend1'
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.zip_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
