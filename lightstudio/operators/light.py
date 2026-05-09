@@ -247,21 +247,31 @@ class LLS_OT_Isolate(bpy.types.Operator):
         props = context.scene.LLStudio
         if self.index < 0 or self.index >= len(props.light_list):
             return {"CANCELLED"}
-        target = props.light_list[self.index]
-        included = sum(1 for li in props.light_list if not li.mute)
-        if not target.mute and included == 1:
-            # Restore previously-stored mute state for everyone.
-            for li in props.light_list:
-                li.mute = li.exclude_isolate > 0 if li.exclude_isolate > -1 else False
-                li.exclude_isolate = -1
-        else:
-            for li in props.light_list:
-                if li.exclude_isolate == -1:
-                    li.exclude_isolate = 1 if li.mute else 0
-                if not li.mute:
-                    li.mute = True
-            target.mute = False
+        apply_isolate(props, props.light_list[self.index])
         return {"FINISHED"}
+
+
+def apply_isolate(props, target) -> None:
+    """Toggle isolate on ``target`` while preserving previously-hidden lights.
+
+    Mirrors the behaviour of :class:`LLS_OT_Isolate` so it can be reused
+    by the 2-D Control Panel right-click handler. Hidden (muted) lights
+    have their state stashed in ``exclude_isolate`` on entering isolate
+    mode and restored when isolate is toggled off.
+    """
+    included = sum(1 for li in props.light_list if not li.mute)
+    if not target.mute and included == 1:
+        # Restore previously-stored mute state for everyone.
+        for li in props.light_list:
+            li.mute = li.exclude_isolate > 0 if li.exclude_isolate > -1 else False
+            li.exclude_isolate = -1
+    else:
+        for li in props.light_list:
+            if li.exclude_isolate == -1:
+                li.exclude_isolate = 1 if li.mute else 0
+            if not li.mute:
+                li.mute = True
+        target.mute = False
 
 
 class LLS_OT_LightListMove(bpy.types.Operator):

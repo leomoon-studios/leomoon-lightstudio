@@ -57,6 +57,35 @@ from .gpu_layer import (
     send_light_to_bottom,
     send_light_to_top,
 )
+from ..light import apply_isolate
+
+
+def _isolate_light_image(context: bpy.types.Context, clicked: LightImage) -> None:
+    """Toggle isolate for the LightImage's underlying LightListItem.
+
+    Delegates to :func:`apply_isolate` so hidden lights are preserved
+    when isolate is toggled off — same behaviour as the side-panel
+    isolate icon and the ``light_studio.isolate`` operator.
+    """
+    handle_name = clicked._lls_handle.name
+    props = context.scene.LLStudio
+    target = next(
+        (li for li in props.light_list if li.handle_name == handle_name),
+        None,
+    )
+    if target is None:
+        # Fallback to legacy behaviour if the list item can't be found.
+        muted = sum(1 for light in LightImage.lights if light.mute)
+        unmuted = len(LightImage.lights) - muted
+        if unmuted == 1 and not clicked.mute:
+            for light in LightImage.lights:
+                light.mute = False
+        else:
+            for light in LightImage.lights:
+                light.mute = True
+            clicked.mute = False
+        return
+    apply_isolate(props, target)
 
 VERBOSE = False
 
@@ -1044,19 +1073,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
                         return {"PASS_THROUGH"}
 
                     if hasattr(self.clicked_object, "mute"):
-                        muted = len([light for light in LightImage.lights if light.mute])
-                        unmuted = len(LightImage.lights) - muted
-                        if muted == 0:
-                            for light in LightImage.lights:
-                                light.mute = True
-                            self.clicked_object.mute = False
-                        elif unmuted == 1 and not self.clicked_object.mute:
-                            for light in LightImage.lights:
-                                light.mute = False
-                        else:
-                            for light in LightImage.lights:
-                                light.mute = True
-                            self.clicked_object.mute = False
+                        _isolate_light_image(context, self.clicked_object)
 
                     if hasattr(self.clicked_object, "select"):
                         self.clicked_object.select()
@@ -1080,19 +1097,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
                     if not self.ctrl and hasattr(self.clicked_object, "mute"):
                         if click_result == "TRIPLE":
-                            muted = len([light for light in LightImage.lights if light.mute]) - 1
-                            unmuted = len(LightImage.lights) - muted
-                            if muted == 0:
-                                for light in LightImage.lights:
-                                    light.mute = True
-                                self.clicked_object.mute = False
-                            elif unmuted == 1 and self.clicked_object.mute:
-                                for light in LightImage.lights:
-                                    light.mute = False
-                            else:
-                                for light in LightImage.lights:
-                                    light.mute = True
-                                self.clicked_object.mute = False
+                            _isolate_light_image(context, self.clicked_object)
                         elif click_result == "DOUBLE":
                             self.clicked_object.mute = not self.clicked_object.mute
 
