@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "leomoon_lightstudio"
-version = "3.0.0"
+version = "3.0.1"
 name = "LeoMoon LightStudio"
 tagline = "Easy setup for complex studio lighting"
 maintainer = "Amin Babaeipanah <contact@leomoon.com>"
