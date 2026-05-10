@@ -16,7 +16,7 @@ import bpy
 
 from .light_data import InvalidLight, LightDict
 from .paths import TEXTURES_DIR
-from .scene_utils import family
+from .scene_utils import family, find_view_layer
 
 
 def get_profile_handle(profile_obj: bpy.types.Object) -> bpy.types.Object | None:
@@ -78,6 +78,12 @@ def salvage_data(
     )
 
     light = LightDict()
+
+    light_view = find_view_layer(
+        lls_collection, bpy.context.view_layer.layer_collection
+    )
+    if light_view is not None:
+        light["mute"] = bool(light_view.exclude)
 
     if lls_mesh is not None:
         try:
@@ -274,3 +280,13 @@ def light_from_dict(
             new_mat_nodes["Light Texture"].image.filepath = os.path.join(
                 str(TEXTURES_DIR), tex
             )
+
+    new_collection = next(
+        (c for c in lgrp.users_collection if c.name.startswith("LLS")), None
+    )
+    if new_collection is not None:
+        light_view = find_view_layer(
+            new_collection, bpy.context.view_layer.layer_collection
+        )
+        if light_view is not None:
+            light_view.exclude = bool(light_dict["mute"])

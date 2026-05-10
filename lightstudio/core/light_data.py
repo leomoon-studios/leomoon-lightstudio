@@ -65,6 +65,7 @@ LIGHT_DEFAULTS: dict[str, Any] = {
     "scale": [1.0, 1.0, 1.0],
     "type": "ADVANCED",
     "visible_camera": True,
+    "mute": False,
 }
 
 

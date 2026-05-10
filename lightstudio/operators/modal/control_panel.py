@@ -49,6 +49,7 @@ from ...core.widgets import (
     clamp,
     is_in_rect,
 )
+from ..light import apply_isolate
 from .gpu_layer import (
     Button,
     LightImage,
@@ -57,7 +58,6 @@ from .gpu_layer import (
     send_light_to_bottom,
     send_light_to_top,
 )
-from ..light import apply_isolate
 
 
 def _isolate_light_image(context: bpy.types.Context, clicked: LightImage) -> None:
