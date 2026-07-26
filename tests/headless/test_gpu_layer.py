@@ -4,7 +4,7 @@ Asserts:
 
 1. ``lightstudio.operators.modal.gpu_layer`` imports without GPU
    context (lazy shader builders).
-2. ``UBO_data`` has the expected ctypes fields (21 inputs + 4 housekeeping).
+2. ``UBO_data`` has the expected ctypes fields.
 3. ``Panel`` and ``Button`` instantiate without raising — ``blf``
    dimension lookups gracefully fall back when the font system is
    unavailable in background mode.
@@ -44,13 +44,15 @@ def main() -> None:
     expected = {
         "color_overlay", "panel_point_lt", "panel_point_rb",
         "intensity", "exposure", "texture_switch", "color_saturation",
+        "desaturate",
         "mask_bottom_to_top", "mask_diagonal_bottom_left",
         "mask_diagonal_bottom_right", "mask_diagonal_top_left",
         "mask_diagonal_top_right", "mask_gradient_amount",
         "mask_gradient_switch", "mask_gradient_type",
         "mask_left_to_right", "mask_right_to_left",
         "mask_ring_inner_radius", "mask_ring_outer_radius",
-        "mask_ring_switch", "mask_top_to_bottom", "_pad",
+        "mask_ring_switch", "mask_top_to_bottom",
+        "mask_grid_columns", "mask_grid_rows", "_pad",
     }
     if set(field_names) != expected:
         _fail(f"UBO field mismatch: {set(field_names) ^ expected}")

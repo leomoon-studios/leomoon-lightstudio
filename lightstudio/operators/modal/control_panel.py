@@ -230,31 +230,54 @@ class MouseWidget:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._start_position: Vector | None = None
-        self._end_position = Vector((0, 0))
-        self._reference_end_position = Vector((0, 0))
-        self._base_rotation = 0.0
-        self.handler = None
+        self._ensure_widget_state()
 
-        self.draw_guide = True
+    def _ensure_widget_state(self) -> None:
+        """Initialize mixin state when Blender skips ``MouseWidget.__init__``."""
+        if not hasattr(self, "_start_position"):
+            self._start_position: Vector | None = None
+        if not hasattr(self, "_end_position"):
+            self._end_position = Vector((0, 0))
+        if not hasattr(self, "_reference_end_position"):
+            self._reference_end_position = Vector((0, 0))
+        if not hasattr(self, "_base_rotation"):
+            self._base_rotation = 0.0
+        if not hasattr(self, "handler"):
+            self.handler = None
 
-        self.allow_xy_keys = False
-        self.x_key = False
-        self.y_key = False
-        self.z_key = False
+        if not hasattr(self, "draw_guide"):
+            self.draw_guide = True
 
-        self.continous = False
+        if not hasattr(self, "allow_xy_keys"):
+            self.allow_xy_keys = False
+        if not hasattr(self, "x_key"):
+            self.x_key = False
+        if not hasattr(self, "y_key"):
+            self.y_key = False
+        if not hasattr(self, "z_key"):
+            self.z_key = False
 
-        self.allow_precision_mode = False
-        self.precision_mode = False
-        self.precision_offset = Vector((0, 0))
-        self.precision_factor = 0.1
+        if not hasattr(self, "continous"):
+            self.continous = False
 
-        self.z_start_position = Vector((0, 0))
-        self.z_end_position = Vector((0, 0))
+        if not hasattr(self, "allow_precision_mode"):
+            self.allow_precision_mode = False
+        if not hasattr(self, "precision_mode"):
+            self.precision_mode = False
+        if not hasattr(self, "precision_offset"):
+            self.precision_offset = Vector((0, 0))
+        if not hasattr(self, "precision_factor"):
+            self.precision_factor = 0.1
+
+        if not hasattr(self, "z_start_position"):
+            self.z_start_position = Vector((0, 0))
+        if not hasattr(self, "z_end_position"):
+            self.z_end_position = Vector((0, 0))
 
     def invoke(self, context, event):
         from math import atan2
+
+        self._ensure_widget_state()
 
         mouse_x = event.mouse_x - context.area.x
         mouse_y = event.mouse_y - context.area.y
@@ -275,6 +298,8 @@ class MouseWidget:
     def _finish(self, context, event) -> None: ...
 
     def modal(self, context, event):
+        self._ensure_widget_state()
+
         if not context.area:
             self._unregister_handler()
             self._cancel(context, event)

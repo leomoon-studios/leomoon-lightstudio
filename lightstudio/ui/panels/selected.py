@@ -10,6 +10,11 @@ from ...core.material_inspect import get_advanced_inputs
 from ...core.scene_utils import family, find_light_grp
 from .._common import PANEL_CATEGORY, PANEL_REGION, PANEL_SPACE, studio_initialized
 
+_INT_SOCKET_PROPS = {
+    "Mask - Grid Columns": "mask_grid_columns",
+    "Mask - Grid Rows": "mask_grid_rows",
+}
+
 
 def _active_light_mesh(context: bpy.types.Context) -> bpy.types.Object | None:
     obj = context.active_object
@@ -80,6 +85,13 @@ class LLS_PT_Selected(bpy.types.Panel):
                         if socket.type == "RGBA":
                             layout.prop(socket, "default_value", text=socket.name)
                             sub_col = layout.column(align=True)
+                        elif socket.name in _INT_SOCKET_PROPS:
+                            sub_col.prop(
+                                light_mesh.LLStudio,
+                                _INT_SOCKET_PROPS[socket.name],
+                                slider=True,
+                                text=socket.name,
+                            )
                         else:
                             sub_col.prop(
                                 socket, "default_value", text=socket.name

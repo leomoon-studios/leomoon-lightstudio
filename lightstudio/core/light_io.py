@@ -31,6 +31,7 @@ _GROUP_INPUT_KEYS = (
     "Texture Switch",
     "Color Overlay",
     "Color Saturation",
+    "Desaturate",
     "Intensity",
     "Exposure",
     "Mask - Gradient Switch",
@@ -48,7 +49,14 @@ _GROUP_INPUT_KEYS = (
     "Mask - Diagonal Bottom Right",
     "Mask - Diagonal Bottom Left",
     "Mask - Backface",
+    "Mask - Grid Columns",
+    "Mask - Grid Rows",
 )
+
+_INTEGER_GROUP_INPUT_KEYS = frozenset((
+    "Mask - Grid Columns",
+    "Mask - Grid Rows",
+))
 
 
 def salvage_data(
@@ -114,6 +122,8 @@ def salvage_data(
                     val = group.inputs[key].default_value
                     if hasattr(val, "__len__"):
                         light["advanced"][key] = list(val)
+                    elif key in _INTEGER_GROUP_INPUT_KEYS:
+                        light["advanced"][key] = int(round(float(val)))
                     else:
                         light["advanced"][key] = val
                 except (KeyError, AttributeError):
@@ -169,23 +179,26 @@ _GROUP_INPUT_INDEX = {
     "Texture Switch": 2,
     "Color Overlay": 3,
     "Color Saturation": 4,
-    "Intensity": 5,
-    "Exposure": 6,
-    "Mask - Gradient Switch": 7,
-    "Mask - Gradient Type": 8,
-    "Mask - Gradient Amount": 9,
-    "Mask - Ring Switch": 10,
-    "Mask - Ring Inner Radius": 11,
-    "Mask - Ring Outer Radius": 12,
-    "Mask - Top to Bottom": 13,
-    "Mask - Bottom to Top": 14,
-    "Mask - Left to Right": 15,
-    "Mask - Right to Left": 16,
-    "Mask - Diagonal Top Left": 17,
-    "Mask - Diagonal Top Right": 18,
-    "Mask - Diagonal Bottom Right": 19,
-    "Mask - Diagonal Bottom Left": 20,
-    "Mask - Backface": 21,
+    "Desaturate": 5,
+    "Intensity": 6,
+    "Exposure": 7,
+    "Mask - Gradient Switch": 8,
+    "Mask - Gradient Type": 9,
+    "Mask - Gradient Amount": 10,
+    "Mask - Ring Switch": 11,
+    "Mask - Ring Inner Radius": 12,
+    "Mask - Ring Outer Radius": 13,
+    "Mask - Top to Bottom": 14,
+    "Mask - Bottom to Top": 15,
+    "Mask - Left to Right": 16,
+    "Mask - Right to Left": 17,
+    "Mask - Diagonal Top Left": 18,
+    "Mask - Diagonal Top Right": 19,
+    "Mask - Diagonal Bottom Right": 20,
+    "Mask - Diagonal Bottom Left": 21,
+    "Mask - Backface": 22,
+    "Mask - Grid Columns": 23,
+    "Mask - Grid Rows": 24,
 }
 
 
@@ -263,7 +276,9 @@ def light_from_dict(
             continue
         val = advanced[key]
         try:
-            socket = group.inputs[idx]
+            if key in _INTEGER_GROUP_INPUT_KEYS:
+                val = int(round(float(val)))
+            socket = group.inputs.get(key) or group.inputs[idx]
             if hasattr(socket.default_value, "__len__"):
                 for i, v in enumerate(val):
                     socket.default_value[i] = v

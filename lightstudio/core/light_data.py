@@ -34,6 +34,7 @@ LIGHT_DEFAULTS: dict[str, Any] = {
         "Texture Switch": 1.0,
         "Color Overlay": [1.0, 0.4000000059604645, 0.15000000596046448, 1.0],
         "Color Saturation": 0.0,
+        "Desaturate": 0.0,
         "Intensity": 2.0,
         "Exposure": 1.0,
         "Mask - Gradient Switch": 0.0,
@@ -51,6 +52,8 @@ LIGHT_DEFAULTS: dict[str, Any] = {
         "Mask - Diagonal Bottom Right": 0.0,
         "Mask - Diagonal Bottom Left": 0.0,
         "Mask - Backface": 0.0,
+        "Mask - Grid Columns": 0.0,
+        "Mask - Grid Rows": 0.0,
     },
     "basic": {
         "color": [1.0, 1.0, 1.0],

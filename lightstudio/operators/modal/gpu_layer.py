@@ -42,7 +42,7 @@ from ...core.scene_utils import find_view_layer
 from ...core.widgets import Rectangle, clamp, is_in_rect
 
 # ---------------------------------------------------------------------------
-# UBO struct — 21 advanced shader inputs + panel clip rect + colour
+# UBO struct — advanced shader inputs + panel clip rect + colour
 # ---------------------------------------------------------------------------
 
 
@@ -56,6 +56,7 @@ class _UBO_struct(ctypes.Structure):
         ("exposure", ctypes.c_float),
         ("texture_switch", ctypes.c_float),
         ("color_saturation", ctypes.c_float),
+        ("desaturate", ctypes.c_float),
         ("mask_bottom_to_top", ctypes.c_float),
         ("mask_diagonal_bottom_left", ctypes.c_float),
         ("mask_diagonal_bottom_right", ctypes.c_float),
@@ -70,7 +71,9 @@ class _UBO_struct(ctypes.Structure):
         ("mask_ring_outer_radius", ctypes.c_float),
         ("mask_ring_switch", ctypes.c_float),
         ("mask_top_to_bottom", ctypes.c_float),
-        ("_pad", ctypes.c_float * 2),
+        ("mask_grid_columns", ctypes.c_float),
+        ("mask_grid_rows", ctypes.c_float),
+        ("_pad", ctypes.c_float * 3),
     ]
 
 
@@ -90,6 +93,7 @@ struct Data {
     float exposure;
     float texture_switch;
     float color_saturation;
+    float desaturate;
     float mask_bottom_to_top;
     float mask_diagonal_bottom_left;
     float mask_diagonal_bottom_right;
@@ -104,7 +108,9 @@ struct Data {
     float mask_ring_outer_radius;
     float mask_ring_switch;
     float mask_top_to_bottom;
-    float2 _pad;
+    float mask_grid_columns;
+    float mask_grid_rows;
+    float3 _pad;
 };
 """
 
@@ -133,6 +139,7 @@ void main()
         float gray = clamp(float(dot(fragColor.rgb, vec3(0.299, 0.587, 0.114))), 0.0f, 1.0f);
         vec4 colored = g_data.color_overlay * gray;
         fragColor = mix(fragColor, colored, g_data.color_saturation);
+        fragColor.rgb = mix(fragColor.rgb, vec3(gray), g_data.desaturate);
         fragColor.a = gray;
         fragColor.rgb *= fragColor.a;
 
@@ -163,6 +170,20 @@ void main()
         fragColor.a = 1-(1-texCoord_interp.x+texCoord_interp.y)/2 > g_data.mask_diagonal_top_left ? fragColor.a : 0;
         fragColor.a = (1-texCoord_interp.x+texCoord_interp.y)/2 > g_data.mask_diagonal_bottom_right ? fragColor.a : 0;
         fragColor.a = (texCoord_interp.x+texCoord_interp.y)/2 > g_data.mask_diagonal_bottom_left ? fragColor.a : 0;
+
+        float grid_columns = floor(g_data.mask_grid_columns + 0.5f);
+        float grid_rows = floor(g_data.mask_grid_rows + 0.5f);
+        if(grid_columns > 1.0f || grid_rows > 1.0f){
+            grid_columns = max(1.0f, grid_columns);
+            grid_rows = max(1.0f, grid_rows);
+            vec2 grid_uv = clamp(texCoord_interp, vec2(0.0f), vec2(0.999999f));
+            float grid_col = floor(grid_uv.x * grid_columns);
+            float grid_row = min(grid_rows - 1.0f, floor((1.0f - grid_uv.y) * grid_rows));
+            float grid_cell = mod(grid_col + grid_row, 2.0f);
+            bool mixed_parity_grid = mod(grid_columns + grid_rows, 2.0f) > 0.5f;
+            bool keep_grid_cell = mixed_parity_grid ? grid_cell > 0.5f : grid_cell < 0.5f;
+            fragColor.a = keep_grid_cell ? fragColor.a : 0.0f;
+        }
     } else {
         fragColor = mix(vec4(1.0f), g_data.color_overlay, g_data.color_saturation)
             * log(1+g_data.intensity);
@@ -1056,27 +1077,34 @@ class LightImage(Rectangle):
         return False
 
     def _push_advanced_inputs(self, lls_node) -> None:
-        """Copy 21 advanced shader inputs from the Group node into UBO_data."""
-        UBO_data.intensity = lls_node.inputs["Intensity"].default_value
-        UBO_data.exposure = lls_node.inputs["Exposure"].default_value
-        UBO_data.texture_switch = lls_node.inputs["Texture Switch"].default_value
-        color_overlay = lls_node.inputs["Color Overlay"].default_value
+        """Copy advanced shader inputs from the Group node into UBO_data."""
+        def input_value(name: str, default=0.0):
+            socket = lls_node.inputs.get(name)
+            return socket.default_value if socket is not None else default
+
+        UBO_data.intensity = input_value("Intensity")
+        UBO_data.exposure = input_value("Exposure")
+        UBO_data.texture_switch = input_value("Texture Switch", 1.0)
+        color_overlay = input_value("Color Overlay", (1.0, 1.0, 1.0, 1.0))
         UBO_data.color_overlay = (ctypes.c_float * len(color_overlay))(*color_overlay)
-        UBO_data.color_saturation = lls_node.inputs["Color Saturation"].default_value
-        UBO_data.mask_bottom_to_top = lls_node.inputs["Mask - Bottom to Top"].default_value
-        UBO_data.mask_diagonal_bottom_left = lls_node.inputs["Mask - Diagonal Bottom Left"].default_value
-        UBO_data.mask_diagonal_bottom_right = lls_node.inputs["Mask - Diagonal Bottom Right"].default_value
-        UBO_data.mask_diagonal_top_left = lls_node.inputs["Mask - Diagonal Top Left"].default_value
-        UBO_data.mask_diagonal_top_right = lls_node.inputs["Mask - Diagonal Top Right"].default_value
-        UBO_data.mask_gradient_amount = lls_node.inputs["Mask - Gradient Amount"].default_value
-        UBO_data.mask_gradient_switch = lls_node.inputs["Mask - Gradient Switch"].default_value
-        UBO_data.mask_gradient_type = lls_node.inputs["Mask - Gradient Type"].default_value
-        UBO_data.mask_left_to_right = lls_node.inputs["Mask - Left to Right"].default_value
-        UBO_data.mask_right_to_left = lls_node.inputs["Mask - Right to Left"].default_value
-        UBO_data.mask_ring_inner_radius = lls_node.inputs["Mask - Ring Inner Radius"].default_value
-        UBO_data.mask_ring_outer_radius = lls_node.inputs["Mask - Ring Outer Radius"].default_value
-        UBO_data.mask_ring_switch = lls_node.inputs["Mask - Ring Switch"].default_value
-        UBO_data.mask_top_to_bottom = lls_node.inputs["Mask - Top to Bottom"].default_value
+        UBO_data.color_saturation = input_value("Color Saturation")
+        UBO_data.desaturate = input_value("Desaturate")
+        UBO_data.mask_bottom_to_top = input_value("Mask - Bottom to Top")
+        UBO_data.mask_diagonal_bottom_left = input_value("Mask - Diagonal Bottom Left")
+        UBO_data.mask_diagonal_bottom_right = input_value("Mask - Diagonal Bottom Right")
+        UBO_data.mask_diagonal_top_left = input_value("Mask - Diagonal Top Left")
+        UBO_data.mask_diagonal_top_right = input_value("Mask - Diagonal Top Right")
+        UBO_data.mask_gradient_amount = input_value("Mask - Gradient Amount")
+        UBO_data.mask_gradient_switch = input_value("Mask - Gradient Switch")
+        UBO_data.mask_gradient_type = input_value("Mask - Gradient Type")
+        UBO_data.mask_left_to_right = input_value("Mask - Left to Right")
+        UBO_data.mask_right_to_left = input_value("Mask - Right to Left")
+        UBO_data.mask_ring_inner_radius = input_value("Mask - Ring Inner Radius")
+        UBO_data.mask_ring_outer_radius = input_value("Mask - Ring Outer Radius")
+        UBO_data.mask_ring_switch = input_value("Mask - Ring Switch")
+        UBO_data.mask_top_to_bottom = input_value("Mask - Top to Bottom")
+        UBO_data.mask_grid_columns = input_value("Mask - Grid Columns")
+        UBO_data.mask_grid_rows = input_value("Mask - Grid Rows")
 
     def draw(self) -> None:
         try:

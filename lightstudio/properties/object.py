@@ -15,6 +15,11 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
+_GRID_INPUT_NAMES = {
+    "mask_grid_columns": "Mask - Grid Columns",
+    "mask_grid_rows": "Mask - Grid Rows",
+}
+
 
 def _light_list_item_name_update(self: LightListItem, context: bpy.types.Context) -> None:
     obj = bpy.data.objects.get(self.handle_name)
@@ -107,6 +112,46 @@ def _active_light_type_update(self: LeoMoon_Light_Studio_Object_Properties, cont
         target.select_set(True)
 
 
+def _grid_input_get(self: LeoMoon_Light_Studio_Object_Properties, prop_name: str) -> int:
+    obj = self.id_data
+    socket_name = _GRID_INPUT_NAMES[prop_name]
+    try:
+        socket = obj.active_material.node_tree.nodes["Group"].inputs[socket_name]
+        return int(round(socket.default_value))
+    except (AttributeError, KeyError, TypeError):
+        return 0
+
+
+def _grid_input_set(
+    self: LeoMoon_Light_Studio_Object_Properties, prop_name: str, value: int
+) -> None:
+    obj = self.id_data
+    socket_name = _GRID_INPUT_NAMES[prop_name]
+    try:
+        socket = obj.active_material.node_tree.nodes["Group"].inputs[socket_name]
+        socket.default_value = int(value)
+    except (AttributeError, KeyError, TypeError):
+        return
+
+
+def _mask_grid_columns_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
+    return _grid_input_get(self, "mask_grid_columns")
+
+
+def _mask_grid_columns_set(
+    self: LeoMoon_Light_Studio_Object_Properties, value: int
+) -> None:
+    _grid_input_set(self, "mask_grid_columns", value)
+
+
+def _mask_grid_rows_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
+    return _grid_input_get(self, "mask_grid_rows")
+
+
+def _mask_grid_rows_set(self: LeoMoon_Light_Studio_Object_Properties, value: int) -> None:
+    _grid_input_set(self, "mask_grid_rows", value)
+
+
 class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
     """Per-object LLS metadata attached to ``Object.LLStudio``."""
 
@@ -121,6 +166,20 @@ class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
         ),
         default="ADVANCED",
         update=_active_light_type_update,
+    )
+    mask_grid_columns: IntProperty(
+        name="Mask - Grid Columns",
+        min=0,
+        soft_max=100,
+        get=_mask_grid_columns_get,
+        set=_mask_grid_columns_set,
+    )
+    mask_grid_rows: IntProperty(
+        name="Mask - Grid Rows",
+        min=0,
+        soft_max=100,
+        get=_mask_grid_rows_get,
+        set=_mask_grid_rows_set,
     )
 
 
