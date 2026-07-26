@@ -2,9 +2,9 @@
 
 Ports two persistent handlers from legacy ``light_operators.py``:
 
-* ``_lls_update_frame`` (``frame_change_post``) syncs LLS area-light
-  energy from the per-light ``intensity`` / ``color`` / ``color_saturation``
-  custom properties so animated parameters update on frame change.
+* ``_lls_update_frame`` (``frame_change_post``) syncs animated LLS state:
+  area-light energy from per-light properties and multi-profile collection
+  membership from keyed profile ``enabled`` flags.
 * ``_render_complete`` / ``_render_cancel`` restore camera + render
   settings after the EXR export bake (see
   :mod:`lightstudio.operators.exr_export`).
@@ -17,11 +17,48 @@ from bpy.app.handlers import persistent
 from mathutils import Vector
 
 
+def _sync_multimode_profile_visibility(scene: bpy.types.Scene) -> bool:
+    props = getattr(scene, "LLStudio", None)
+    if props is None or not props.initialized or not props.profile_multimode:
+        return False
+
+    lls_collection = next(
+        (col for col in scene.collection.children if col.name.startswith("LLS")),
+        None,
+    )
+    if lls_collection is None:
+        return False
+
+    changed = False
+    for profile in props.profile_list:
+        profile_collection = bpy.data.collections.get(profile.empty_name)
+        if profile_collection is None:
+            continue
+        is_linked = profile_collection.name in lls_collection.children
+        if profile.enabled and not is_linked:
+            lls_collection.children.link(profile_collection)
+            changed = True
+        elif not profile.enabled and is_linked:
+            lls_collection.children.unlink(profile_collection)
+            changed = True
+
+    if changed and bpy.context.scene == scene:
+        from ..core.scene_utils import update_light_list_set
+        from ..operators.modal.control_panel import panel_global, update_light_sets
+
+        update_light_list_set(bpy.context)
+        if panel_global:
+            update_light_sets(panel_global, bpy.context, always=True)
+
+    return changed
+
+
 @persistent
 def _lls_update_frame(scene: bpy.types.Scene, _depsgraph=None) -> None:
     props = getattr(scene, "LLStudio", None)
     if props is None or not props.initialized:
         return
+    _sync_multimode_profile_visibility(scene)
     for lls_area in (
         obj for obj in scene.objects if obj.name.startswith("LLS_LIGHT_AREA.")
     ):
