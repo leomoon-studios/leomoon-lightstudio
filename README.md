@@ -1,6 +1,8 @@
 # LeoMoon LightStudio
 
 ## Important Notice
+Download the installable add-on ZIP from the **[Releases page](https://github.com/leomoon-studios/leomoon-lightstudio/releases)**. Do not use GitHub's **Code > Download ZIP** source archive as the Blender extension package.
+
 LeoMoon LightStudio (formerly known as Blender Light Studio) is 100% free and open-source. You can download and use it from here without any limitations.
 
 ## Development Fund
@@ -9,26 +11,31 @@ If you think this plugin speeds up your workflow, consider funding the developme
 ## Introduction
 [![LeoMoon LightStudio 2.5.0 Demo](https://img.youtube.com/vi/XT_m2E_qsaU/sddefault.jpg)](https://www.youtube.com/watch?v=XT_m2E_qsaU)
 
-LeoMoon LightStudio (formerly known as Blender Light Studio) is the easiest, fastest and most advanced lighting system for Blender 2.8x. LeoMoon LightStudio is packed with features and the new Light Node has so many options so you can customize each light exactly the way you want.
+LeoMoon LightStudio (formerly known as Blender Light Studio) is the easiest, fastest and most advanced lighting system for Blender. LeoMoon LightStudio is packed with features and the Light Node has so many options so you can customize each light exactly the way you want.
 
 Video below shows the options that are available per light.
 
 [![New Light Node](https://img.youtube.com/vi/bKVe2n2tGvs/sddefault.jpg)](https://www.youtube.com/watch?v=bKVe2n2tGvs)
 
 ## Features
-- Add/Remove lights around objects
+- Add/remove lights around objects
 - Add multiple light profiles
 - Easily switch between light profiles with a single click
-- Each light has many options to customize
-- All options per light can be animated
+- Enable multiple profiles at once with Multi Profile Mode
+- Animate profile visibility in Multi Profile Mode
+- Each light has many options to customize, including texture, color, intensity, exposure, masks, desaturation, and grid controls
+- LightStudio light options can be animated
 - Each light can have a different light texture
 - Fastest render update while lighting
 - 15 Realistic HDR light textures included
-- Easy 2D manipulation of lights in the LightStudio Control Panel which translates to positioning of that light in 3D space
+- Easy 2D manipulation of lights in the LightStudio Control Panel, with an equirectangular preview that translates to positioning of that light in 3D space
 - Toggle a light by double clicking on it in the LightPanel
 - Isolate a light by right clicking on it in the LightPanel
-- Lights can be added to different renders layers
-- Import/Export light profiles
+- Lights can be added to different render layers
+- Export lights as EXR HDRIs
+- Import/export light profiles
+- Cycles support for advanced mesh lights
+- EEVEE support with Basic lights
 
 ## Limitations
 ~~LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh lights in real-time. Rendering is only supported in Cycles.~~
@@ -39,6 +46,18 @@ LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
 
 ## Changelog
+- 3.1.0 2026-07-25
+    - Adds Desaturate, Mask - Grid Columns, and Mask - Grid Rows in per-light profile IO
+    - Adds default schema values for the new advanced material inputs
+    - Restores material inputs by socket name first, with index fallback
+    - Exposes grid rows and columns as integer sidebar controls
+    - Forces grid rows and columns to integers during import/export
+    - Updates modal preview UBO for the new material inputs
+    - Adds grid mask rendering to the LightStudio panel preview
+    - Matches preview grid parity for even, odd, and mixed row/column counts
+    - Fixes modal scale precision state initialization crash
+    - Adds keyable profile switching in Multi Profile Mode
+
 - 3.0.1 2026-05-09
     - Adds persistent hidden lights in profile export/import
     - Fix: preserve hidden lights when toggling isolate from the Control Panel
