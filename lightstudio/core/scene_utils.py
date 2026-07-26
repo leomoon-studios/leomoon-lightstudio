@@ -254,6 +254,7 @@ def update_light_list_set(
 
     profile_collection = empty.users_collection[0]
     if not (item.enabled or not props.profile_multimode):
+        props.light_list.clear()
         return
 
     props.light_list.clear()
