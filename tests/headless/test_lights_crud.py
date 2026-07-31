@@ -13,12 +13,16 @@ Invoke directly::
 
 from __future__ import annotations
 
+import importlib
+import os
 import sys
+from pathlib import Path
 
 import addon_utils
 import bpy
 
 EXTENSION_MODULE = "bl_ext.user_default.leomoon_lightstudio"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _fail(msg: str) -> None:
@@ -34,10 +38,59 @@ def _override_view3d(context: bpy.types.Context):
     return None
 
 
+def _assert_new_light_unlinked(handle: bpy.types.Object, light_linking) -> None:
+    props = handle.LLStudio
+    bucket_names = (
+        "light_linking_include_targets",
+        "light_linking_exclude_targets",
+        "shadow_linking_include_targets",
+        "shadow_linking_exclude_targets",
+    )
+    for name in bucket_names:
+        if len(getattr(props, name)) != 0:
+            _fail(f"new light {handle.name} has non-empty {name}")
+    basic_area, advanced_mesh = light_linking.resolve_light_emitters(handle)
+    for emitter in (basic_area, advanced_mesh):
+        if emitter is None:
+            _fail(f"new light {handle.name} has incomplete emitter hierarchy")
+        if emitter.light_linking.receiver_collection is not None:
+            _fail(f"new light {handle.name} receiver collection should be None")
+        if emitter.light_linking.blocker_collection is not None:
+            _fail(f"new light {handle.name} blocker collection should be None")
+
+
+def _state_for_object(
+    collection: bpy.types.Collection,
+    obj: bpy.types.Object,
+) -> str | None:
+    index = collection.objects.find(obj.name)
+    if index < 0:
+        return None
+    return collection.collection_objects[index].light_linking.link_state
+
+
+def _state_for_collection(
+    collection: bpy.types.Collection,
+    child: bpy.types.Collection,
+) -> str | None:
+    index = collection.children.find(child.name)
+    if index < 0:
+        return None
+    return collection.collection_children[index].light_linking.link_state
+
+
 def main() -> None:
+    registered_locally = False
     addon_utils.disable(EXTENSION_MODULE, default_set=False)
-    if addon_utils.enable(EXTENSION_MODULE, default_set=False) is None:
-        _fail(f"could not enable {EXTENSION_MODULE}")
+    module = addon_utils.enable(EXTENSION_MODULE, default_set=False)
+    if module is None:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        module = importlib.import_module("lightstudio")
+        module.register()
+        registered_locally = True
+
+    light_linking = importlib.import_module(f"{module.__name__}.core.light_linking")
 
     scene = bpy.context.scene
     override = _override_view3d(bpy.context)
@@ -60,11 +113,34 @@ def main() -> None:
         _fail(
             f"expected 3 lights in light_list, got {len(scene.LLStudio.light_list)}"
         )
+    for item in scene.LLStudio.light_list:
+        _assert_new_light_unlinked(bpy.data.objects[item.handle_name], light_linking)
 
     # 3. Copy the second light. The copy should land directly after it.
     scene.LLStudio.light_list_index = 1
     second_handle_name = scene.LLStudio.light_list[1].handle_name
     second_handle = bpy.data.objects[second_handle_name]
+    receiver = bpy.data.objects.new("Light Linking Receiver", None)
+    bpy.context.scene.collection.objects.link(receiver)
+    blocker_collection = bpy.data.collections.new("Shadow Linking Blockers")
+    bpy.context.scene.collection.children.link(blocker_collection)
+    light_linking.add_light_linking_target_row(
+        second_handle,
+        "LIGHT",
+        "INCLUDE",
+        receiver,
+    )
+    light_linking.add_light_linking_target_row(
+        second_handle,
+        "SHADOW",
+        "EXCLUDE",
+        blocker_collection,
+    )
+    source_area, source_mesh = light_linking.resolve_light_emitters(second_handle)
+    source_receiver_wrapper = source_area.light_linking.receiver_collection
+    source_blocker_wrapper = source_mesh.light_linking.blocker_collection
+    if source_receiver_wrapper is None or source_blocker_wrapper is None:
+        _fail("source light linking wrappers were not assigned before copy")
     # Activate a child of the handle (the operator copies based on context.object.parent).
     visible = [c for c in second_handle.children if c.visible_get()]
     if not visible:
@@ -81,6 +157,31 @@ def main() -> None:
     copy_names = [li.name for li in scene.LLStudio.light_list]
     if not any(n.endswith("Copy") for n in copy_names):
         _fail(f"no '... Copy' entry in light_list: {copy_names}")
+    copied_handle = bpy.data.objects[scene.LLStudio.light_list[2].handle_name]
+    if len(copied_handle.LLStudio.light_linking_include_targets) != 1:
+        _fail("copied light did not copy Light Linking Include rows")
+    if len(copied_handle.LLStudio.shadow_linking_exclude_targets) != 1:
+        _fail("copied light did not copy Shadow Linking Exclude rows")
+    if copied_handle.LLStudio.light_linking_include_targets[0].object_target != receiver:
+        _fail("copied Light Linking row does not point at the same receiver object")
+    if (
+        copied_handle.LLStudio.shadow_linking_exclude_targets[0].collection_target
+        != blocker_collection
+    ):
+        _fail("copied Shadow Linking row does not point at the same blocker collection")
+    copied_area, copied_mesh = light_linking.resolve_light_emitters(copied_handle)
+    copied_receiver_wrapper = copied_area.light_linking.receiver_collection
+    copied_blocker_wrapper = copied_mesh.light_linking.blocker_collection
+    if copied_receiver_wrapper is None or copied_blocker_wrapper is None:
+        _fail("copied light native wrappers were not assigned")
+    if copied_receiver_wrapper == source_receiver_wrapper:
+        _fail("copied light reused source receiver wrapper")
+    if copied_blocker_wrapper == source_blocker_wrapper:
+        _fail("copied light reused source blocker wrapper")
+    if _state_for_object(copied_receiver_wrapper, receiver) != "INCLUDE":
+        _fail("copied receiver row did not preserve INCLUDE mode")
+    if _state_for_collection(copied_blocker_wrapper, blocker_collection) != "EXCLUDE":
+        _fail("copied shadow row did not preserve EXCLUDE mode")
 
     # 4. Move the last light up by one (DOWN of index 0 → swaps with index 1).
     scene.LLStudio.light_list_index = 0
@@ -129,8 +230,13 @@ def main() -> None:
         if bpy.ops.lls.camera_toggle_all_lights(visible_camera=False) != {"FINISHED"}:
             _fail("camera_toggle_all_lights failed")
 
-    addon_utils.disable(EXTENSION_MODULE, default_set=False)
+    if registered_locally:
+        module.unregister()
+    else:
+        addon_utils.disable(EXTENSION_MODULE, default_set=False)
     print("PASS: lights add/copy/move/mute/isolate clean")
+    sys.stdout.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

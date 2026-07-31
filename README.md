@@ -1,9 +1,9 @@
 # LeoMoon LightStudio
 
 ## Important Notice
-Download the installable add-on ZIP from the **[Releases page](https://github.com/leomoon-studios/leomoon-lightstudio/releases)**. Do not use GitHub's **Code > Download ZIP** source archive as the Blender extension package.
+Download the installable add-on ZIP from the **[Releases page](https://github.com/leomoon-studios/leomoon-lightstudio/releases)**. Do not use GitHub's **Code > Download ZIP**, because GitHub’s source ZIP is not packaged for Blender plugin installation.
 
-LeoMoon LightStudio (formerly known as Blender Light Studio) is 100% free and open-source. You can download and use it from here without any limitations.
+LeoMoon LightStudio is 100% free and open-source. You can download and use it from here without any limitations.
 
 ## Development Fund
 If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**. This will help to fix bugs, improve user interface and add new features.
@@ -11,7 +11,7 @@ If you think this plugin speeds up your workflow, consider funding the developme
 ## Introduction
 [![LeoMoon LightStudio 2.5.0 Demo](https://img.youtube.com/vi/XT_m2E_qsaU/sddefault.jpg)](https://www.youtube.com/watch?v=XT_m2E_qsaU)
 
-LeoMoon LightStudio (formerly known as Blender Light Studio) is the easiest, fastest and most advanced lighting system for Blender. LeoMoon LightStudio is packed with features and the Light Node has so many options so you can customize each light exactly the way you want.
+LeoMoon LightStudio is the easiest, fastest and most advanced lighting system for Blender. LeoMoon LightStudio is packed with features and the Light Node has so many options so you can customize each light exactly the way you want.
 
 Video below shows the options that are available per light.
 
@@ -34,6 +34,7 @@ Video below shows the options that are available per light.
 - Lights can be added to different render layers
 - Export lights as EXR HDRIs
 - Import/export light profiles
+- Native Blender Light Linking and Shadow Linking per LightStudio light
 - Cycles support for advanced mesh lights
 - EEVEE support with Basic lights
 
@@ -42,10 +43,31 @@ Video below shows the options that are available per light.
 
 LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 
+Advanced mesh lights use Cycles-only Blender light behavior. Basic lights are Blender area lights and are available in EEVEE.
+
+Light Linking target assignments are scene-local. They are not exported to `.lls` profiles because the linked objects or collections may not exist, or may mean something different, in another scene.
+
+## Light Linking
+Select a LightStudio light and use the `Light Linking` and `Shadow Linking` boxes in the `Selected Light` panel. Add an object or collection target, then choose `In` or `Ex` for that row.
+
+- `In` includes the target: the selected light affects that object or collection.
+- `Ex` excludes the target: the selected light affects everything except that object or collection.
+- Clearing the last `Light Linking` row returns receiver behavior to Blender's default.
+- Clearing the last `Shadow Linking` row returns shadow behavior to Blender's default.
+
+New LightStudio lights affect everything by default until targets are added. Duplicated lights copy their Light Linking and Shadow Linking rows, but profile import/export intentionally starts imported lights with no linked targets.
+
 ## Background HDR vs Manual Lighting
-Why not use the other background HDR light plugins? That's because template based light plugins are predictable and limited. For product renders, you want lots of options and control, NOT templates! However you can create your own light profiles in LeoMoon LightStudio and import/export light profiles in different projects.
+Why not just use a background HDR lighting plugin? Because template-based lighting is predictable and limited. For product renders, you need control and flexibility, not fixed presets.
+
+LeoMoon LightStudio lets you build your own lighting setups, save them as light profiles, and import/export those profiles across projects.
 
 ## Changelog
+- 3.2.0 unreleased
+    - Adds native Blender Light Linking and Shadow Linking rows to the Selected Light panel
+    - Supports object and collection targets with compact `In` / `Ex` row controls
+    - Keeps Light Linking target assignments scene-local and excludes them from `.lls` profile import/export
+
 - 3.1.1 2026-07-25
     - Fixes stale light list when keyed profiles are disabled
 

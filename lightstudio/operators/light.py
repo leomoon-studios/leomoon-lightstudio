@@ -22,6 +22,7 @@ from __future__ import annotations
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty
 
+from ..core.light_linking import copy_light_linking_properties, sync_light_linking_properties
 from ..core.log import log
 from ..core.paths import LLS_BLEND
 from ..core.scene_utils import (
@@ -136,6 +137,7 @@ class LLS_OT_AddLight(bpy.types.Operator):
         constraint.inverse_matrix.identity()
 
         update_light_list_set(context)
+        sync_light_linking_properties(light_handle)
         log("light added")
         return {"FINISHED"}
 
@@ -362,6 +364,7 @@ class LLS_OT_LightListCopy(bpy.types.Operator):
         )
         lls_handle_copy.LLStudio.light_name = base_name + " Copy"
         lls_handle_copy.LLStudio.order_index = lls_handle.LLStudio.order_index + 1
+        copy_light_linking_properties(lls_handle, lls_handle_copy)
 
         # Bump every light below the source by 1 so the copy lands directly under it.
         for e in props.light_list[lls_handle.LLStudio.order_index + 1 :]:

@@ -15,6 +15,7 @@ from . import (  # noqa: F401
     exr_export,
     light,
     light_brush,
+    light_linking,
     modal,
     profiles,
     studio,
@@ -26,6 +27,8 @@ def register() -> None:
     for cls in studio.classes:
         bpy.utils.register_class(cls)
     for cls in light.classes:
+        bpy.utils.register_class(cls)
+    for cls in light_linking.classes:
         bpy.utils.register_class(cls)
     for cls in profiles.classes:
         bpy.utils.register_class(cls)
@@ -44,7 +47,16 @@ def register() -> None:
 def unregister() -> None:
     profiles.unregister_handlers()
     modal.unregister()
-    for module in (exr_export, delete, light_brush, textures, profiles, light, studio):
+    for module in (
+        exr_export,
+        delete,
+        light_brush,
+        textures,
+        profiles,
+        light_linking,
+        light,
+        studio,
+    ):
         for cls in reversed(module.classes):
             with contextlib.suppress(RuntimeError, ValueError):
                 bpy.utils.unregister_class(cls)

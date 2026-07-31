@@ -12,7 +12,14 @@ and will be restored alongside their consumers in steps 10-12.
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
 from bpy.types import PropertyGroup
 
 _GRID_INPUT_NAMES = {
@@ -58,6 +65,42 @@ class LightListItem(PropertyGroup):
         set=_light_list_item_visible_camera_set,
     )
     exclude_isolate: IntProperty(default=-1)
+
+
+def _light_linking_target_update(
+    self: LightLinkingTargetItem,
+    context: bpy.types.Context,
+) -> None:
+    handle = self.id_data
+    if not isinstance(handle, bpy.types.Object):
+        return
+    from ..core.light_linking import sync_light_linking_properties
+
+    sync_light_linking_properties(handle)
+
+
+class LightLinkingTargetItem(PropertyGroup):
+    """One object or collection assigned to a LightStudio light-linking bucket."""
+
+    target_type: EnumProperty(
+        name="Target Type",
+        items=(
+            ("OBJECT", "Object", "Blender object target"),
+            ("COLLECTION", "Collection", "Blender collection target"),
+        ),
+        default="OBJECT",
+        update=_light_linking_target_update,
+    )
+    object_target: PointerProperty(
+        name="Object",
+        type=bpy.types.Object,
+        update=_light_linking_target_update,
+    )
+    collection_target: PointerProperty(
+        name="Collection",
+        type=bpy.types.Collection,
+        update=_light_linking_target_update,
+    )
 
 
 def _active_light_type_update(self: LeoMoon_Light_Studio_Object_Properties, context: bpy.types.Context) -> None:
@@ -110,6 +153,10 @@ def _active_light_type_update(self: LeoMoon_Light_Studio_Object_Properties, cont
     if target is not None and target.name in context.view_layer.objects:
         context.view_layer.objects.active = target
         target.select_set(True)
+
+    from ..core.light_linking import sync_light_linking_properties
+
+    sync_light_linking_properties(light_handle)
 
 
 def _grid_input_get(self: LeoMoon_Light_Studio_Object_Properties, prop_name: str) -> int:
@@ -181,9 +228,16 @@ class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
         get=_mask_grid_rows_get,
         set=_mask_grid_rows_set,
     )
+    show_light_linking: BoolProperty(name="Light Linking", default=True)
+    show_shadow_linking: BoolProperty(name="Shadow Linking", default=True)
+    light_linking_include_targets: CollectionProperty(type=LightLinkingTargetItem)
+    light_linking_exclude_targets: CollectionProperty(type=LightLinkingTargetItem)
+    shadow_linking_include_targets: CollectionProperty(type=LightLinkingTargetItem)
+    shadow_linking_exclude_targets: CollectionProperty(type=LightLinkingTargetItem)
 
 
 classes: tuple[type[PropertyGroup], ...] = (
     LightListItem,
+    LightLinkingTargetItem,
     LeoMoon_Light_Studio_Object_Properties,
 )
