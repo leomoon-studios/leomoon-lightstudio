@@ -16,7 +16,7 @@ import bpy
 
 from .light_data import InvalidLight, LightDict
 from .paths import TEXTURES_DIR
-from .scene_utils import family, find_view_layer
+from .scene_utils import family, find_view_layer, sync_light_type_visibility
 
 
 def get_profile_handle(profile_obj: bpy.types.Object) -> bpy.types.Object | None:
@@ -266,6 +266,7 @@ def light_from_dict(
     lbasic.data.LLStudio.intensity = light_dict["basic"]["intensity"]
 
     lhandle.LLStudio.type = light_dict["type"]
+    sync_light_type_visibility(lhandle, bpy.context)
 
     # Advanced shader inputs.
     new_mat_nodes = ladvanced.material_slots[0].material.node_tree.nodes

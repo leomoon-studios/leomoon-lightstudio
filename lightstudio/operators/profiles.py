@@ -669,6 +669,7 @@ class LLS_OT_CopyProfileToScene(bpy.types.Operator):
         _parse_profiles(
             context, context.scene.LLStudio, profiles, internal_copy=True
         )
+        update_light_list_set(context)
         _close_control_panel()
         return {"FINISHED"}
 

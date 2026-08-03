@@ -110,49 +110,13 @@ def _active_light_type_update(self: LeoMoon_Light_Studio_Object_Properties, cont
     two sibling collections (``LLS_Basic`` + ``LLS_Advanced``); only one
     is enabled at a time via the layer-collection ``exclude`` flag.
     """
-    from ..core.scene_utils import find_view_layer
-
-    scene_props = context.scene.LLStudio
-    try:
-        list_item = scene_props.light_list[self.order_index]
-        light_handle = bpy.data.objects[list_item.handle_name]
-    except (IndexError, KeyError):
+    light_handle = self.id_data
+    if not isinstance(light_handle, bpy.types.Object):
         return
 
-    basic_cols = [
-        child.users_collection[0]
-        for child in light_handle.children
-        if child.type == "LIGHT" and child.users_collection
-    ]
-    advanced_cols = [
-        child.users_collection[0]
-        for child in light_handle.children
-        if child.type == "MESH" and child.users_collection
-    ]
-    if not basic_cols or not advanced_cols:
-        return
-    basic_col = basic_cols[0]
-    advanced_col = advanced_cols[0]
+    from ..core.scene_utils import sync_light_type_visibility
 
-    basic_view = find_view_layer(basic_col, context.view_layer.layer_collection)
-    advanced_view = find_view_layer(
-        advanced_col, context.view_layer.layer_collection
-    )
-    if basic_view is None or advanced_view is None:
-        return
-
-    if self.type == "ADVANCED":
-        basic_view.exclude = True
-        advanced_view.exclude = False
-        target = advanced_col.objects[0] if advanced_col.objects else None
-    else:
-        basic_view.exclude = False
-        advanced_view.exclude = True
-        target = basic_col.objects[0] if basic_col.objects else None
-
-    if target is not None and target.name in context.view_layer.objects:
-        context.view_layer.objects.active = target
-        target.select_set(True)
+    sync_light_type_visibility(light_handle, context, select_active=True)
 
     from ..core.light_linking import sync_light_linking_properties
 

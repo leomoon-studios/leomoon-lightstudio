@@ -153,6 +153,49 @@ def llscol_profilecol_profile_handle(
     return lls_collection, profile_collection, profile, handle
 
 
+def sync_light_type_visibility(
+    light_handle: bpy.types.Object,
+    context: bpy.types.Context,
+    *,
+    select_active: bool = False,
+) -> bpy.types.Object | None:
+    """Apply the handle's Basic/Advanced type to child layer visibility."""
+    basic_cols = [
+        child.users_collection[0]
+        for child in light_handle.children
+        if child.type == "LIGHT" and child.users_collection
+    ]
+    advanced_cols = [
+        child.users_collection[0]
+        for child in light_handle.children
+        if child.type == "MESH" and child.users_collection
+    ]
+    if not basic_cols or not advanced_cols:
+        return None
+
+    basic_col = basic_cols[0]
+    advanced_col = advanced_cols[0]
+    layer_root = context.view_layer.layer_collection
+    basic_view = find_view_layer(basic_col, layer_root)
+    advanced_view = find_view_layer(advanced_col, layer_root)
+    if basic_view is None or advanced_view is None:
+        return None
+
+    if light_handle.LLStudio.type == "ADVANCED":
+        basic_view.exclude = True
+        advanced_view.exclude = False
+        target = advanced_col.objects[0] if advanced_col.objects else None
+    else:
+        basic_view.exclude = False
+        advanced_view.exclude = True
+        target = basic_col.objects[0] if basic_col.objects else None
+
+    if select_active and target is not None and target.name in context.view_layer.objects:
+        context.view_layer.objects.active = target
+        target.select_set(True)
+    return target
+
+
 def replace_link(obj: bpy.types.Object | bpy.types.Collection, collection_name: str) -> None:
     """Move ``obj`` from its current scene-root link to live inside
     ``bpy.data.collections[collection_name]``."""
@@ -264,48 +307,11 @@ def update_light_list_set(
             if ob.name.startswith(_LIGHT_HANDLE_PREFIX):
                 handles.append(ob)
     handles.sort(key=lambda m: m.LLStudio.order_index)
-    layer_root = context.view_layer.layer_collection
     for i, handle in enumerate(handles):
         handle.LLStudio.order_index = i
         ll = props.light_list.add()
         ll.handle_name = handle.name
         ll.name = handle.LLStudio.light_name or f"Light {i}"
 
-        # Restore Basic/Advanced visibility from the persisted LLStudio.type
-        # on the light handle (re-linking a profile collection rebuilds
-        # the LayerCollection tree with default exclude=False, so without
-        # this both sub-collections would appear).
-        if not handle.users_collection:
-            continue
-        light_collection = handle.users_collection[0]
-        light_view = find_view_layer(light_collection, layer_root)
-        if light_view is None or light_view.exclude:
-            continue
-        basic = next(
-            (
-                c
-                for c in light_collection.children
-                if c.name.startswith("LLS_Basic")
-            ),
-            None,
-        )
-        advanced = next(
-            (
-                c
-                for c in light_collection.children
-                if c.name.startswith("LLS_Advanced")
-            ),
-            None,
-        )
-        if basic is None or advanced is None:
-            continue
-        basic_view = find_view_layer(basic, layer_root)
-        advanced_view = find_view_layer(advanced, layer_root)
-        if basic_view is None or advanced_view is None:
-            continue
-        if handle.LLStudio.type == "ADVANCED":
-            basic_view.exclude = True
-            advanced_view.exclude = False
-        else:
-            basic_view.exclude = False
-            advanced_view.exclude = True
+        # Restore Basic/Advanced visibility from the persisted LLStudio.type.
+        sync_light_type_visibility(handle, context)
