@@ -363,6 +363,135 @@ def _make_equirect_projector(panel, center_px_x: float, center_px_y: float):
     return project
 
 
+def _equirect_basis(panel, center_px_x: float, center_px_y: float):
+    panel_left = panel.point_lt.x
+    panel_bot = panel.point_rb.y
+    pw = panel.point_rb.x - panel_left
+    ph = panel.point_lt.y - panel_bot
+    if pw <= 0 or ph <= 0:
+        return None
+
+    rad_per_px_x = 2 * pi / pw
+    _LAT_SCALE = 0.85
+    rad_per_px_y = pi / ph * _LAT_SCALE
+
+    lon0 = (center_px_x - panel_left) / pw * 2 * pi - pi
+    lat0 = (center_px_y - panel_bot) / ph * pi - pi / 2
+    cos_lon0, sin_lon0 = cos(lon0), sin(lon0)
+    cos_lat0, sin_lat0 = cos(lat0), sin(lat0)
+
+    center = (
+        cos_lat0 * cos_lon0,
+        cos_lat0 * sin_lon0,
+        sin_lat0,
+    )
+    east = (-sin_lon0, cos_lon0, 0.0)
+    north = (
+        -sin_lat0 * cos_lon0,
+        -sin_lat0 * sin_lon0,
+        cos_lat0,
+    )
+    return panel_left, panel_bot, pw, ph, rad_per_px_x, rad_per_px_y, center, east, north
+
+
+def _tessellate_inverse_equirect_light(
+    panel,
+    center_x: float,
+    center_y: float,
+    width_px: float,
+    height_px: float,
+    uvs,
+    nx: int = 160,
+    ny: int = 48,
+):
+    """Tessellate the exact equirectangular footprint by inverse projection.
+
+    Used for pole-crossing lights, where a forward-projected quad cannot
+    represent the many panel longitudes that collapse to one pole direction.
+    """
+    basis = _equirect_basis(panel, center_x, center_y)
+    if basis is None:
+        return [], [] if uvs is not None else None, []
+
+    (
+        panel_left,
+        panel_bot,
+        pw,
+        ph,
+        rad_per_px_x,
+        rad_per_px_y,
+        center,
+        east,
+        north,
+    ) = basis
+    cx, cy, cz = center
+    ex, ey, ez = east
+    nx_, ny_, nz = north
+    half_u = max(1e-6, width_px * rad_per_px_x / 2)
+    half_v = max(1e-6, height_px * rad_per_px_y / 2)
+
+    has_uv = uvs is not None
+    if has_uv:
+        uv_lt, uv_lb, uv_rt, uv_rb = uvs
+    positions: list[tuple[float, float]] = []
+    tex_coords: list[tuple[float, float]] | None = [] if has_uv else None
+    inside: list[bool] = []
+
+    for j in range(ny + 1):
+        y = panel_bot + ph * j / ny
+        lat = (y - panel_bot) / ph * pi - pi / 2
+        cos_lat, sin_lat = cos(lat), sin(lat)
+        for i in range(nx + 1):
+            x = panel_left + pw * i / nx
+            lon = (x - panel_left) / pw * 2 * pi - pi
+            dx = cos_lat * cos(lon)
+            dy = cos_lat * sin(lon)
+            dz = sin_lat
+            denom = dx * cx + dy * cy + dz * cz
+            valid = denom > 1e-6
+            u = v = 0.0
+            if valid:
+                px = dx / denom - cx
+                py = dy / denom - cy
+                pz = dz / denom - cz
+                u = px * ex + py * ey + pz * ez
+                v = px * nx_ + py * ny_ + pz * nz
+                valid = abs(u) <= half_u and abs(v) <= half_v
+
+            positions.append((x, y))
+            inside.append(valid)
+            if has_uv:
+                tx = max(0.0, min(1.0, (u / half_u + 1) / 2))
+                ty = max(0.0, min(1.0, (v / half_v + 1) / 2))
+                ulx = uv_lb[0] + (uv_lt[0] - uv_lb[0]) * ty
+                uly = uv_lb[1] + (uv_lt[1] - uv_lb[1]) * ty
+                urx = uv_rb[0] + (uv_rt[0] - uv_rb[0]) * ty
+                ury = uv_rb[1] + (uv_rt[1] - uv_rb[1]) * ty
+                tex_coords.append((
+                    ulx + (urx - ulx) * tx,
+                    uly + (ury - uly) * tx,
+                ))
+
+    indices: list[tuple[int, int, int]] = []
+    stride = nx + 1
+    for j in range(ny):
+        for i in range(nx):
+            i0 = j * stride + i
+            i1 = i0 + 1
+            i2 = i0 + stride
+            i3 = i2 + 1
+            # Boundary cells often straddle the light edge while morphing
+            # through a pole. Requiring all four corners to be inside erodes
+            # the fill into visible rectangular holes; keeping cells with any
+            # inside corner gives the preview the same continuous band shape
+            # as the EXR render.
+            if not (inside[i0] or inside[i1] or inside[i2] or inside[i3]):
+                continue
+            indices.append((i0, i2, i1))
+            indices.append((i1, i2, i3))
+    return positions, tex_coords, indices
+
+
 def _tessellate_warped_quad(
     verts,
     uvs,
@@ -370,6 +499,7 @@ def _tessellate_warped_quad(
     center_x: float,
     n: int = _EQUIRECT_DIVISIONS,
     center_y: float | None = None,
+    y_mode: str = "ALL",
 ):
     """Bilinearly subdivide a quad into an ``n×n`` grid then project
     each vertex through the true equirectangular projection.
@@ -392,6 +522,7 @@ def _tessellate_warped_quad(
     project = _make_equirect_projector(panel, center_x, center_y)
 
     positions: list[tuple[float, float]] = []
+    source_positions: list[tuple[float, float]] = []
     tex_coords: list[tuple[float, float]] | None = [] if has_uv else None
 
     for j in range(n + 1):
@@ -409,12 +540,22 @@ def _tessellate_warped_quad(
             tx = i / n
             x = lx + (rx - lx) * tx
             y = ly + (ry - ly) * tx
+            source_positions.append((x, y))
             positions.append(project(x, y))
             if has_uv:
                 tex_coords.append((
                     ulx + (urx - ulx) * tx,
                     uly + (ury - uly) * tx,
                 ))
+
+    def _include_cell(cell_y: float) -> bool:
+        if y_mode == "INSIDE":
+            return panel.point_rb.y <= cell_y <= panel.point_lt.y
+        if y_mode == "BELOW":
+            return cell_y < panel.point_rb.y
+        if y_mode == "ABOVE":
+            return cell_y > panel.point_lt.y
+        return True
 
     indices: list[tuple[int, int, int]] = []
     stride = n + 1
@@ -424,10 +565,66 @@ def _tessellate_warped_quad(
             i1 = i0 + 1
             i2 = i0 + stride
             i3 = i2 + 1
+            cell_y = (
+                source_positions[i0][1]
+                + source_positions[i1][1]
+                + source_positions[i2][1]
+                + source_positions[i3][1]
+            ) / 4
+            if not _include_cell(cell_y):
+                continue
             indices.append((i0, i2, i1))
             indices.append((i1, i2, i3))
 
     return positions, tex_coords, indices
+
+
+def _equirect_tile_specs(panel, verts) -> tuple[tuple[float, str], ...]:
+    """Return longitude tile offsets and source-latitude filters.
+
+    Normal seam wrapping repeats every full panel width (360 degrees).
+    A light crossing a pole also reappears half a panel away (180 degrees),
+    but only the geometry past that pole should be drawn in those copies.
+    """
+    pw = panel.width
+    if pw <= 0:
+        return ((0.0, "ALL"),)
+
+    ys = [v[1] for v in verts]
+    panel_top = panel.point_lt.y
+    panel_bottom = panel.point_rb.y
+    crosses_bottom = min(ys) < panel_bottom
+    crosses_top = max(ys) > panel_top
+    regular_mode = "INSIDE" if crosses_bottom or crosses_top else "ALL"
+
+    specs: list[tuple[float, str]] = [(-pw, regular_mode), (0.0, regular_mode), (pw, regular_mode)]
+    if crosses_bottom or crosses_top:
+        half = pw / 2
+        if crosses_bottom:
+            specs.extend((
+                (-pw - half, "BELOW"),
+                (-half, "BELOW"),
+                (half, "BELOW"),
+                (pw + half, "BELOW"),
+            ))
+        if crosses_top:
+            specs.extend((
+                (-pw - half, "ABOVE"),
+                (-half, "ABOVE"),
+                (half, "ABOVE"),
+                (pw + half, "ABOVE"),
+            ))
+    return tuple(specs)
+
+
+def _equirect_crosses_pole(panel, verts) -> bool:
+    ys = [v[1] for v in verts]
+    return min(ys) < panel.point_rb.y or max(ys) > panel.point_lt.y
+
+
+def _equirect_tile_offsets(panel, verts) -> tuple[float, ...]:
+    """Compatibility wrapper returning unique offsets for tests/tools."""
+    return tuple(sorted({offset for offset, _mode in _equirect_tile_specs(panel, verts)}))
 
 
 def _point_in_triangle(px: float, py: float, a, b, c) -> bool:
@@ -828,13 +1025,9 @@ class Border(Rectangle):
                 shader, "TRIS", {"pos": positions}, indices=indices,
             ).draw(shader)
 
-        # Always draw three horizontally-tiled copies. Lights near the
-        # poles project to a full-360° wrap that overflows the panel in
-        # both directions; the shader-side panel clip discards the
-        # off-panel pixels so this is cheap and handles the seam case
-        # uniformly without special-casing.
-        pw = panel.width
-        for offset in (-pw, 0.0, pw):
+        # Keep borders to regular seam tiles. The fill is pole-split; drawing
+        # the outline's half-panel pole fragments creates vertical artifacts.
+        for offset in (-panel.width, 0.0, panel.width):
             shifted = [(v[0] + offset, v[1]) for v in light_verts]
             _draw_outline(shifted, offset_x=offset)
         gpu.state.blend_set("NONE")
@@ -1051,14 +1244,12 @@ class LightImage(Rectangle):
 
         verts = self.get_verts()
         cx = self.loc.x
-        pw = self.panel.width
-
-        for offset in (-pw, 0.0, pw):
+        for offset, y_mode in _equirect_tile_specs(self.panel, verts):
             shifted = deepcopy(verts)
             for v in shifted:
                 v[0] += offset
             positions, _tex_coords, indices = _tessellate_warped_quad(
-                shifted, None, self.panel, cx + offset,
+                shifted, None, self.panel, cx + offset, y_mode=y_mode,
             )
 
             min_x = min(p[0] for p in positions)
@@ -1167,9 +1358,9 @@ class LightImage(Rectangle):
         # its silhouette widens horizontally as it approaches the poles.
         cx = self.loc.x
 
-        def _draw_icon(pos, offset_x: float = 0.0):
+        def _draw_icon(pos, offset_x: float = 0.0, y_mode: str = "ALL"):
             positions, tex_coords, indices = _tessellate_warped_quad(
-                pos, uv_coords, self.panel, cx + offset_x,
+                pos, uv_coords, self.panel, cx + offset_x, y_mode=y_mode,
             )
             batch_for_shader(
                 light_icon,
@@ -1178,16 +1369,27 @@ class LightImage(Rectangle):
                 indices=indices,
             ).draw(light_icon)
 
-        # Always draw three horizontally-tiled copies (-pw, 0, +pw).
-        # Polar lights wrap a full 360° of longitude, which overflows
-        # the panel on both sides; the shader-side panel clip handles
-        # the off-panel pixels. Subsumes the seam-crossing case too.
-        pw = self.panel.width
-        for offset in (-pw, 0.0, pw):
-            shifted = deepcopy(verts)
-            for v in shifted:
-                v[0] += offset
-            _draw_icon(shifted, offset_x=offset)
+        if _equirect_crosses_pole(self.panel, verts):
+            positions, tex_coords, indices = _tessellate_inverse_equirect_light(
+                self.panel,
+                cx,
+                self.loc.y,
+                self.width,
+                self.height,
+                uv_coords,
+            )
+            batch_for_shader(
+                light_icon,
+                "TRIS",
+                {"pos": positions, "texCoord": tex_coords},
+                indices=indices,
+            ).draw(light_icon)
+        else:
+            for offset, y_mode in _equirect_tile_specs(self.panel, verts):
+                shifted = deepcopy(verts)
+                for v in shifted:
+                    v[0] += offset
+                _draw_icon(shifted, offset_x=offset, y_mode=y_mode)
         gpu.state.blend_set("NONE")
 
     def update_visual_location(self) -> None:

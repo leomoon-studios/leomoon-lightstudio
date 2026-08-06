@@ -88,6 +88,9 @@ def _isolate_light_image(context: bpy.types.Context, clicked: LightImage) -> Non
     apply_isolate(props, target)
 
 VERBOSE = False
+_PANEL_ASPECT = 16 / 9
+_MIN_PANEL_WIDTH = 100.0
+_MIN_PANEL_HEIGHT = _MIN_PANEL_WIDTH / _PANEL_ASPECT
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +112,88 @@ def _update_clear() -> None:
 def _set_updated() -> None:
     global _UPDATED
     _UPDATED = True
+
+
+def _resize_panel_aspect_locked(
+    panel: Panel,
+    touch: int,
+    mouse_x: float,
+    mouse_y: float,
+) -> None:
+    """Resize the panel without changing its calibrated preview aspect."""
+    left, right = panel.point_lt.x, panel.point_rb.x
+    top, bottom = panel.point_lt.y, panel.point_rb.y
+
+    if touch & W_LEFT and not touch & (W_TOP | W_BOTTOM):
+        width = max(_MIN_PANEL_WIDTH, right - mouse_x)
+        panel.point_lt.x = right - width
+        center_y = (top + bottom) / 2
+        height = max(_MIN_PANEL_HEIGHT, width / _PANEL_ASPECT)
+        panel.point_lt.y = center_y + height / 2
+        panel.point_rb.y = center_y - height / 2
+        return
+
+    if touch & W_RIGHT and not touch & (W_TOP | W_BOTTOM):
+        width = max(_MIN_PANEL_WIDTH, mouse_x - left)
+        panel.point_rb.x = left + width
+        center_y = (top + bottom) / 2
+        height = max(_MIN_PANEL_HEIGHT, width / _PANEL_ASPECT)
+        panel.point_lt.y = center_y + height / 2
+        panel.point_rb.y = center_y - height / 2
+        return
+
+    if touch & W_TOP and not touch & (W_LEFT | W_RIGHT):
+        height = max(_MIN_PANEL_HEIGHT, mouse_y - bottom)
+        width = height * _PANEL_ASPECT
+        center_x = (left + right) / 2
+        panel.point_lt.x = center_x - width / 2
+        panel.point_rb.x = center_x + width / 2
+        panel.point_lt.y = bottom + height
+        return
+
+    if touch & W_BOTTOM and not touch & (W_LEFT | W_RIGHT):
+        height = max(_MIN_PANEL_HEIGHT, top - mouse_y)
+        width = height * _PANEL_ASPECT
+        center_x = (left + right) / 2
+        panel.point_lt.x = center_x - width / 2
+        panel.point_rb.x = center_x + width / 2
+        panel.point_rb.y = top - height
+        return
+
+    anchor_x = right if touch & W_LEFT else left
+    anchor_y = bottom if touch & W_TOP else top
+    width = max(abs(mouse_x - anchor_x), abs(mouse_y - anchor_y) * _PANEL_ASPECT, _MIN_PANEL_WIDTH)
+    height = width / _PANEL_ASPECT
+
+    if touch & W_LEFT:
+        panel.point_lt.x = anchor_x - width
+        panel.point_rb.x = anchor_x
+    else:
+        panel.point_lt.x = anchor_x
+        panel.point_rb.x = anchor_x + width
+
+    if touch & W_TOP:
+        panel.point_lt.y = anchor_y + height
+        panel.point_rb.y = anchor_y
+    else:
+        panel.point_lt.y = anchor_y
+        panel.point_rb.y = anchor_y - height
+
+
+def _resize_panel_aspect_locked_and_lights(
+    panel: Panel,
+    touch: int,
+    mouse_x: float,
+    mouse_y: float,
+) -> None:
+    """Resize the panel and scale preview lights by the same ratio."""
+    old_width = panel.width
+    _resize_panel_aspect_locked(panel, touch, mouse_x, mouse_y)
+    if old_width <= 0:
+        return
+    scale = panel.width / old_width
+    if abs(scale - 1.0) > 1e-6:
+        LightImage.change_default_size(LightImage.default_size * scale)
 
 
 # ---------------------------------------------------------------------------
@@ -844,7 +929,7 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
     def execute(self, context):
         aw = context.area.width
         width = min(aw - 60, 800)
-        height = width * (9 / 16)
+        height = width / _PANEL_ASPECT
         start_point = Vector((15, 45))
         panel_global.point_lt = Vec2((
             min(start_point.x, start_point.x + width),
@@ -932,7 +1017,7 @@ class LLS_OT_control_panel(bpy.types.Operator):
         pw = min(aw - 60, 800)
 
         if not panel_global:
-            panel_global = Panel(Vector((15, 45)), pw, pw * (9 / 16))
+            panel_global = Panel(Vector((15, 45)), pw, pw / _PANEL_ASPECT)
         self.panel = panel_global
         LightImage.default_size = 50
 
@@ -1056,14 +1141,12 @@ class LLS_OT_control_panel(bpy.types.Operator):
 
                 touch_point = self._border_touch_point(context, area_mouse_x, area_mouse_y)
                 if self.border_touch and event.value_prev == "PRESS":
-                    if self.border_touch & W_LEFT:
-                        self.panel.point_lt.x = min(area_mouse_x, self.panel.point_rb.x - 100)
-                    elif self.border_touch & W_RIGHT:
-                        self.panel.point_rb.x = max(area_mouse_x, self.panel.point_lt.x + 100)
-                    if self.border_touch & W_TOP:
-                        self.panel.point_lt.y = max(area_mouse_y, self.panel.point_rb.y + 100)
-                    elif self.border_touch & W_BOTTOM:
-                        self.panel.point_rb.y = min(area_mouse_y, self.panel.point_lt.y - 100)
+                    _resize_panel_aspect_locked_and_lights(
+                        self.panel,
+                        self.border_touch,
+                        area_mouse_x,
+                        area_mouse_y,
+                    )
                     self.panel.move(Vector([0, 0]))
 
                 if self.clicked_object and self.panel_moving:
