@@ -23,6 +23,47 @@ from ..core.scene_utils import get_lls_collection
 _temp_state: dict = {}
 
 
+def _remove_temp_datablocks(
+    export_camera_name: str | None,
+    camera_data_name: str | None,
+) -> None:
+    """Remove EXR temp datablocks outside Blender's render callback stack."""
+    export_camera = (
+        bpy.data.objects.get(export_camera_name) if export_camera_name else None
+    )
+    if export_camera is not None:
+        for scene in bpy.data.scenes:
+            if scene.camera == export_camera:
+                scene.camera = None
+        with contextlib.suppress(ReferenceError, RuntimeError):
+            bpy.data.objects.remove(export_camera, do_unlink=True)
+
+    camera_data = (
+        bpy.data.cameras.get(camera_data_name) if camera_data_name else None
+    )
+    if camera_data is not None and camera_data.users == 0:
+        with contextlib.suppress(ReferenceError, RuntimeError):
+            bpy.data.cameras.remove(camera_data)
+
+
+def _defer_temp_datablock_removal(
+    export_camera_name: str | None,
+    camera_data_name: str | None,
+) -> None:
+    if not export_camera_name and not camera_data_name:
+        return
+
+    def cleanup():
+        _remove_temp_datablocks(export_camera_name, camera_data_name)
+        return None
+
+    # Timer registration can fail during Blender shutdown. In that case avoid
+    # synchronous removal from render callbacks; Blender will clean process-local
+    # temp datablocks on exit.
+    with contextlib.suppress(RuntimeError):
+        bpy.app.timers.register(cleanup, first_interval=0.1)
+
+
 def _restore_image_settings(image_settings, saved: dict) -> None:
     if "file_format" in saved:
         image_settings.file_format = saved["file_format"]
@@ -36,32 +77,33 @@ def restore_after_render(scene: bpy.types.Scene) -> None:
     if not _temp_state:
         return
 
+    state = dict(_temp_state)
+    _temp_state.clear()
+
     rd = scene.render
     image_settings = rd.image_settings
 
-    rd.filepath = _temp_state.get("old_filepath", rd.filepath)
+    rd.filepath = state.get("old_filepath", rd.filepath)
 
-    old_camera_name = _temp_state.get("old_camera")
+    old_camera_name = state.get("old_camera")
     if old_camera_name and old_camera_name in bpy.data.objects:
         scene.camera = bpy.data.objects[old_camera_name]
 
-    export_camera_name = _temp_state.get("export_camera")
-    camera_data_name = _temp_state.get("camera_data")
-    if export_camera_name and export_camera_name in bpy.data.objects:
-        bpy.data.objects.remove(bpy.data.objects[export_camera_name])
-    if camera_data_name and camera_data_name in bpy.data.cameras:
-        bpy.data.cameras.remove(bpy.data.cameras[camera_data_name])
+    _defer_temp_datablock_removal(
+        state.get("export_camera"),
+        state.get("camera_data"),
+    )
 
-    _restore_image_settings(image_settings, _temp_state.get("image_settings", {}))
-    for k, v in _temp_state.get("render", {}).items():
+    _restore_image_settings(image_settings, state.get("image_settings", {}))
+    for k, v in state.get("render", {}).items():
         with contextlib.suppress(AttributeError, TypeError, ValueError):
             setattr(rd, k, v)
 
     cycles = getattr(scene, "cycles", None)
-    if cycles is not None and "cycles_samples" in _temp_state:
-        cycles.samples = _temp_state["cycles_samples"]
+    if cycles is not None and "cycles_samples" in state:
+        cycles.samples = state["cycles_samples"]
 
-    for obj_name, visible in _temp_state.get("old_camera_visibility", {}).items():
+    for obj_name, visible in state.get("old_camera_visibility", {}).items():
         ob = bpy.data.objects.get(obj_name)
         if ob is not None:
             ob.visible_camera = visible
@@ -75,11 +117,9 @@ def restore_after_render(scene: bpy.types.Scene) -> None:
                 if space.type != "VIEW_3D":
                     continue
                 key = f"shading::{id(space)}"
-                if key in _temp_state:
+                if key in state:
                     with contextlib.suppress(AttributeError, TypeError):
-                        space.shading.type = _temp_state[key]
-
-    _temp_state.clear()
+                        space.shading.type = state[key]
 
 
 class LLS_OT_RenderLightsEXR(bpy.types.Operator):
@@ -121,12 +161,14 @@ class LLS_OT_RenderLightsEXR(bpy.types.Operator):
         rd = scene.render
         image_settings = rd.image_settings
 
+        if _temp_state:
+            self.report({"WARNING"}, "LightStudio EXR export is already running")
+            return {"CANCELLED"}
+
         lls_collection = get_lls_collection(context)
         if lls_collection is None:
             self.report({"ERROR"}, "No LightStudio collection found")
             return {"CANCELLED"}
-
-        _temp_state.clear()
 
         # Force every rendered-shading viewport to SOLID first, otherwise
         # switching the render engine triggers Cycles' view_update before
