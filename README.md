@@ -1,9 +1,9 @@
 # LeoMoon LightStudio
 
 ## Important Notice
-Download the installable add-on ZIP from the **[Releases page](https://github.com/leomoon-studios/leomoon-lightstudio/releases)**. Do not use GitHub's **Code > Download ZIP**, because GitHub’s source ZIP is not packaged for Blender plugin installation.
-
 LeoMoon LightStudio is 100% free and open-source. You can download and use it from here without any limitations.
+
+Download the installable add-on ZIP from the **[Releases page](https://github.com/leomoon-studios/leomoon-lightstudio/releases)**. Do not use GitHub's **Code > Download ZIP**, because GitHub’s source ZIP is not packaged for Blender plugin installation.
 
 ## Development Fund
 If you think this plugin speeds up your workflow, consider funding the development of it by **[purchasing it here](https://blendermarket.com/products/leomoon-lightstudio)**. This will help to fix bugs, improve user interface and add new features.
@@ -39,8 +39,6 @@ Video below shows the options that are available per light.
 - EEVEE support with Basic lights
 
 ## Limitations
-~~LeoMoon LightStudio uses mesh lights and currently, EEVEE does not support mesh lights in real-time. Rendering is only supported in Cycles.~~
-
 LeoMoon LightStudio now supports EEVEE if "Basic light" is used.
 
 Advanced mesh lights use Cycles-only Blender light behavior. Basic lights are Blender area lights and are available in EEVEE.
@@ -64,28 +62,30 @@ LeoMoon LightStudio lets you build your own lighting setups, save them as light 
 
 ## Changelog
 - 3.2.0 unreleased
-    - Adds native Blender Light Linking and Shadow Linking rows to the Selected Light panel
-    - Supports object and collection targets with compact `In` / `Ex` row controls
-    - Keeps Light Linking target assignments scene-local and excludes them from `.lls` profile import/export
+    - Fixed the EXR cancel cleanup that causes Bledner to crash
+    - Improved LightStudio preview
+    - Fixed advanced light visibility after profile copy to secene
+    - Added native Blender Light Linking and Shadow Linking rows to the Selected Light panel
+    - Added support for object and collection targets with compact `In` / `Ex` row controls
 
 - 3.1.1 2026-07-25
-    - Fixes stale light list when keyed profiles are disabled
+    - Fixed stale light list when keyed profiles are disabled
 
 - 3.1.0 2026-07-25
-    - Adds Desaturate, Mask - Grid Columns, and Mask - Grid Rows in per-light profile IO
-    - Adds default schema values for the new advanced material inputs
-    - Restores material inputs by socket name first, with index fallback
-    - Exposes grid rows and columns as integer sidebar controls
-    - Forces grid rows and columns to integers during import/export
-    - Updates modal preview UBO for the new material inputs
-    - Adds grid mask rendering to the LightStudio panel preview
-    - Matches preview grid parity for even, odd, and mixed row/column counts
-    - Fixes modal scale precision state initialization crash
-    - Adds keyable profile switching in Multi Profile Mode
+    - Added Desaturate, Mask - Grid Columns, and Mask - Grid Rows in per-light profile IO
+    - Added default schema values for the new advanced material inputs
+    - Restored material inputs by socket name first, with index fallback
+    - Exposed grid rows and columns as integer sidebar controls
+    - Forced grid rows and columns to integers during import/export
+    - Updated modal preview UBO for the new material inputs
+    - Added grid mask rendering to the LightStudio panel preview
+    - Matched preview grid parity for even, odd, and mixed row/column counts
+    - Fixed modal scale precision state initialization crash
+    - Added keyable profile switching in Multi Profile Mode
 
 - 3.0.1 2026-05-09
-    - Adds persistent hidden lights in profile export/import
-    - Fix: preserve hidden lights when toggling isolate from the Control Panel
+    - Added persistent hidden lights in profile export/import
+    - Fixed preserve hidden lights when toggling isolate from the Control Panel
 
 - 3.0.0 2026-05-02
     - Ported to Blender 5.1+ modern extension format
