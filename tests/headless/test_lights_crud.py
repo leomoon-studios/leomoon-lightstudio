@@ -225,7 +225,21 @@ def main() -> None:
         muted = [(i, li.mute) for i, li in enumerate(scene.LLStudio.light_list)]
         _fail(f"after isolate-restore, lights still muted: {muted}")
 
-    # 7. Camera-toggle off.
+    # 7. Camera-toggle one light off and on.
+    start_visible_camera = scene.LLStudio.light_list[1].visible_camera
+    with bpy.context.temp_override(**override):
+        if bpy.ops.light_studio.camera_toggle(index=1) != {"FINISHED"}:
+            _fail("camera_toggle failed")
+    if scene.LLStudio.light_list[1].visible_camera == start_visible_camera:
+        _fail("light 1 camera visibility did not change after camera_toggle")
+
+    with bpy.context.temp_override(**override):
+        if bpy.ops.light_studio.camera_toggle(index=1) != {"FINISHED"}:
+            _fail("second camera_toggle failed")
+    if scene.LLStudio.light_list[1].visible_camera != start_visible_camera:
+        _fail("light 1 camera visibility did not restore after second camera_toggle")
+
+    # 8. Camera-toggle all lights off.
     with bpy.context.temp_override(**override):
         if bpy.ops.lls.camera_toggle_all_lights(visible_camera=False) != {"FINISHED"}:
             _fail("camera_toggle_all_lights failed")

@@ -253,6 +253,32 @@ class LLS_OT_Isolate(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class LLS_OT_CameraToggle(bpy.types.Operator):
+    bl_idname = "light_studio.camera_toggle"
+    bl_label = "Camera Visibility"
+    bl_description = "Toggle this light's visibility in cameras"
+    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
+
+    index: IntProperty(default=-1)
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return (
+            context.area is not None
+            and context.area.type == "VIEW_3D"
+            and context.mode == "OBJECT"
+            and context.scene.LLStudio.initialized
+        )
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        props = context.scene.LLStudio
+        if self.index < 0 or self.index >= len(props.light_list):
+            return {"CANCELLED"}
+        item = props.light_list[self.index]
+        item.visible_camera = not item.visible_camera
+        return {"FINISHED"}
+
+
 def apply_isolate(props, target) -> None:
     """Toggle isolate on ``target`` while preserving previously-hidden lights.
 
@@ -513,6 +539,7 @@ classes: tuple[type[bpy.types.Operator], ...] = (
     LLS_OT_DeleteLight,
     LLS_OT_MuteToggle,
     LLS_OT_Isolate,
+    LLS_OT_CameraToggle,
     LLS_OT_LightListMove,
     LLS_OT_LightListCopy,
     LLS_OT_CameraToggleAllLights,

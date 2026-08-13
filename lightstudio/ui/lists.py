@@ -12,6 +12,53 @@ import bpy
 from ..core.scene_utils import find_view_layer, get_collection
 
 
+def _row_has_target(row: bpy.types.PropertyGroup) -> bool:
+    if row.target_type == "COLLECTION":
+        return row.collection_target is not None
+    return row.object_target is not None
+
+
+def _handle_has_targets(
+    handle: bpy.types.Object,
+    prop_names: tuple[str, str],
+) -> bool:
+    props = getattr(handle, "LLStudio", None)
+    return bool(
+        props
+        and any(
+            _row_has_target(row)
+            for prop_name in prop_names
+            for row in getattr(props, prop_name, ())
+        )
+    )
+
+
+class LLS_OT_LightLinkBadge(bpy.types.Operator):
+    bl_idname = "light_studio.light_link_badge"
+    bl_label = "Light Linking"
+    bl_options = {"INTERNAL"}
+
+    @classmethod
+    def description(cls, context: bpy.types.Context, properties) -> str:
+        return "This light has Light Linking targets"
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        return {"FINISHED"}
+
+
+class LLS_OT_ShadowLinkBadge(bpy.types.Operator):
+    bl_idname = "light_studio.shadow_link_badge"
+    bl_label = "Shadow Linking"
+    bl_options = {"INTERNAL"}
+
+    @classmethod
+    def description(cls, context: bpy.types.Context, properties) -> str:
+        return "This light has Shadow Linking targets"
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        return {"FINISHED"}
+
+
 class LLS_UL_ProfileList(bpy.types.UIList):
     bl_idname = "LLS_UL_ProfileList"
 
@@ -102,6 +149,26 @@ class LLS_UL_LightList(bpy.types.UIList):
             mute_icon = "LIGHT" if mute_excluded else "OUTLINER_OB_LIGHT"
 
             sub = layout.row(align=True)
+            if _handle_has_targets(
+                mesh_object,
+                ("light_linking_include_targets", "light_linking_exclude_targets"),
+            ):
+                sub.operator(
+                    "light_studio.light_link_badge",
+                    emboss=False,
+                    icon="LINKED",
+                    text="",
+                )
+            if _handle_has_targets(
+                mesh_object,
+                ("shadow_linking_include_targets", "shadow_linking_exclude_targets"),
+            ):
+                sub.operator(
+                    "light_studio.shadow_link_badge",
+                    emboss=False,
+                    icon="OBJECT_HIDDEN",
+                    text="",
+                )
             sub.operator(
                 "light_studio.mute_toggle", emboss=False, icon=mute_icon, text=""
             ).index = index
@@ -126,13 +193,21 @@ class LLS_UL_LightList(bpy.types.UIList):
             sub.operator(
                 "light_studio.isolate", emboss=False, icon=solo_icon, text=""
             ).index = index
-            sub.prop(item, "visible_camera", text="", icon="VIEW_CAMERA")
+            camera_icon = "VIEW_CAMERA" if item.visible_camera else "VIEW_CAMERA_UNSELECTED"
+            sub.operator(
+                "light_studio.camera_toggle",
+                emboss=False,
+                icon=camera_icon,
+                text="",
+            ).index = index
         elif self.layout_type == "GRID":
             layout.alignment = "CENTER"
             layout.label(text="", icon="OUTLINER_OB_LIGHT")
 
 
-classes: tuple[type[bpy.types.UIList], ...] = (
+classes: tuple[type[bpy.types.Operator] | type[bpy.types.UIList], ...] = (
+    LLS_OT_LightLinkBadge,
+    LLS_OT_ShadowLinkBadge,
     LLS_UL_ProfileList,
     LLS_UL_LightList,
 )
