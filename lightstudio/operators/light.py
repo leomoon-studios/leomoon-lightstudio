@@ -249,7 +249,7 @@ class LLS_OT_Isolate(bpy.types.Operator):
         props = context.scene.LLStudio
         if self.index < 0 or self.index >= len(props.light_list):
             return {"CANCELLED"}
-        apply_isolate(props, props.light_list[self.index])
+        apply_isolate(props, props.light_list[self.index], context)
         return {"FINISHED"}
 
 
@@ -279,7 +279,16 @@ class LLS_OT_CameraToggle(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def apply_isolate(props, target) -> None:
+def _sync_light_list_type_visibility(props, context: bpy.types.Context) -> None:
+    from ..core.scene_utils import sync_light_type_visibility
+
+    for item in props.light_list:
+        handle = bpy.data.objects.get(item.handle_name)
+        if handle is not None:
+            sync_light_type_visibility(handle, context)
+
+
+def apply_isolate(props, target, context: bpy.types.Context | None = None) -> None:
     """Toggle isolate on ``target`` while preserving previously-hidden lights.
 
     Mirrors the behaviour of :class:`LLS_OT_Isolate` so it can be reused
@@ -287,6 +296,8 @@ def apply_isolate(props, target) -> None:
     have their state stashed in ``exclude_isolate`` on entering isolate
     mode and restored when isolate is toggled off.
     """
+    if context is None:
+        context = bpy.context
     included = sum(1 for li in props.light_list if not li.mute)
     if not target.mute and included == 1:
         # Restore previously-stored mute state for everyone.
@@ -300,6 +311,7 @@ def apply_isolate(props, target) -> None:
             if not li.mute:
                 li.mute = True
         target.mute = False
+    _sync_light_list_type_visibility(props, context)
 
 
 class LLS_OT_LightListMove(bpy.types.Operator):

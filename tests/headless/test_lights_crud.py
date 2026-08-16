@@ -79,6 +79,44 @@ def _state_for_collection(
     return collection.collection_children[index].light_linking.link_state
 
 
+def _child_collection(
+    light_handle: bpy.types.Object,
+    prefix: str,
+) -> bpy.types.Collection:
+    for child in light_handle.children:
+        if child.users_collection and child.users_collection[0].name.startswith(prefix):
+            return child.users_collection[0]
+    _fail(f"{light_handle.name} has no {prefix} child collection")
+
+
+def _assert_light_type_visibility(
+    context: bpy.types.Context,
+    light_handle: bpy.types.Object,
+    scene_utils,
+) -> None:
+    basic = _child_collection(light_handle, "LLS_Basic")
+    advanced = _child_collection(light_handle, "LLS_Advanced")
+    basic_view = scene_utils.find_view_layer(basic, context.view_layer.layer_collection)
+    advanced_view = scene_utils.find_view_layer(
+        advanced,
+        context.view_layer.layer_collection,
+    )
+    if basic_view is None or advanced_view is None:
+        _fail("missing Basic/Advanced layer collection")
+
+    expected = (
+        (True, False)
+        if light_handle.LLStudio.type == "ADVANCED"
+        else (False, True)
+    )
+    actual = (basic_view.exclude, advanced_view.exclude)
+    if actual != expected:
+        _fail(
+            f"{light_handle.name} Basic/Advanced excludes are {actual}, "
+            f"expected {expected}"
+        )
+
+
 def main() -> None:
     registered_locally = False
     addon_utils.disable(EXTENSION_MODULE, default_set=False)
@@ -91,6 +129,7 @@ def main() -> None:
         registered_locally = True
 
     light_linking = importlib.import_module(f"{module.__name__}.core.light_linking")
+    scene_utils = importlib.import_module(f"{module.__name__}.core.scene_utils")
 
     scene = bpy.context.scene
     override = _override_view3d(bpy.context)
@@ -102,8 +141,22 @@ def main() -> None:
         if bpy.ops.scene.create_leomoon_light_studio() != {"FINISHED"}:
             _fail("create studio failed")
 
-    # 2. Add 3 lights.
-    for i in range(3):
+    # 2. Add the first light and verify one-light isolate preserves
+    # Basic/Advanced child visibility.
+    with bpy.context.temp_override(**override):
+        result = bpy.ops.scene.add_leomoon_studio_light()
+    if result != {"FINISHED"}:
+        _fail(f"add light #0 returned {result!r}")
+    first_handle = bpy.data.objects[scene.LLStudio.light_list[0].handle_name]
+    first_handle.LLStudio.type = "ADVANCED"
+    scene_utils.sync_light_type_visibility(first_handle, bpy.context)
+    with bpy.context.temp_override(**override):
+        if bpy.ops.light_studio.isolate(index=0) != {"FINISHED"}:
+            _fail("one-light isolate failed")
+    _assert_light_type_visibility(bpy.context, first_handle, scene_utils)
+
+    # Add 2 more lights for the rest of the CRUD coverage.
+    for i in range(1, 3):
         with bpy.context.temp_override(**override):
             result = bpy.ops.scene.add_leomoon_studio_light()
         if result != {"FINISHED"}:
