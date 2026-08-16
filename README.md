@@ -62,11 +62,12 @@ LeoMoon LightStudio lets you build your own lighting setups, save them as light 
 
 ## Changelog
 - 3.2.0 unreleased
-    - Fixed the EXR cancel cleanup that causes Bledner to crash
-    - Improved LightStudio preview
-    - Fixed advanced light visibility after profile copy to secene
     - Added native Blender Light Linking and Shadow Linking rows to the Selected Light panel
     - Added support for object and collection targets with compact `In` / `Ex` row controls
+    - Improved LightStudio preview
+    - Fixed advanced light visibility after profile copy to secene
+    - Fixed the EXR cancel cleanup that causes Bledner to crash
+    - Fixed one-light isolate visibility bug
 
 - 3.1.1 2026-07-25
     - Fixed stale light list when keyed profiles are disabled
