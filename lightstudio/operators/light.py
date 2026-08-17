@@ -207,6 +207,7 @@ class LLS_OT_DeleteLight(bpy.types.Operator):
 class LLS_OT_MuteToggle(bpy.types.Operator):
     bl_idname = "light_studio.mute_toggle"
     bl_label = "Mute Light"
+    bl_description = "Toggle this light's viewport visibility"
     bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
     index: IntProperty(default=-1)
@@ -232,6 +233,7 @@ class LLS_OT_MuteToggle(bpy.types.Operator):
 class LLS_OT_Isolate(bpy.types.Operator):
     bl_idname = "light_studio.isolate"
     bl_label = "Isolate Light"
+    bl_description = "Show only this light and hide the other lights"
     bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
     index: IntProperty(default=-1)

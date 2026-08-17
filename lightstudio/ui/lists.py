@@ -33,27 +33,36 @@ def _handle_has_targets(
     )
 
 
-class LLS_OT_LightLinkBadge(bpy.types.Operator):
-    bl_idname = "light_studio.light_link_badge"
+class LLS_OT_LinkBadge(bpy.types.Operator):
+    bl_idname = "light_studio.link_badge"
     bl_label = "Light Linking"
     bl_options = {"INTERNAL"}
 
+    has_light_links: bpy.props.BoolProperty(default=False)
+    has_shadow_links: bpy.props.BoolProperty(default=False)
+
     @classmethod
     def description(cls, context: bpy.types.Context, properties) -> str:
-        return "This light has Light Linking targets"
+        lines = []
+        if properties.has_light_links:
+            lines.append("This light has Light Linking targets")
+        if properties.has_shadow_links:
+            lines.append("This light has Shadow Linking targets")
+        return "\n".join(lines) if lines else "This light has no linking targets"
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         return {"FINISHED"}
 
 
-class LLS_OT_ShadowLinkBadge(bpy.types.Operator):
-    bl_idname = "light_studio.shadow_link_badge"
-    bl_label = "Shadow Linking"
+class LLS_OT_LinkDivider(bpy.types.Operator):
+    bl_idname = "light_studio.link_divider"
+    bl_label = ""
+    bl_description = "Devider."
     bl_options = {"INTERNAL"}
 
     @classmethod
     def description(cls, context: bpy.types.Context, properties) -> str:
-        return "This light has Shadow Linking targets"
+        return ""
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         return {"FINISHED"}
@@ -149,24 +158,28 @@ class LLS_UL_LightList(bpy.types.UIList):
             mute_icon = "LIGHT" if mute_excluded else "OUTLINER_OB_LIGHT"
 
             sub = layout.row(align=True)
-            if _handle_has_targets(
+            has_light_links = _handle_has_targets(
                 mesh_object,
                 ("light_linking_include_targets", "light_linking_exclude_targets"),
-            ):
-                sub.operator(
-                    "light_studio.light_link_badge",
+            )
+            has_shadow_links = _handle_has_targets(
+                mesh_object,
+                ("shadow_linking_include_targets", "shadow_linking_exclude_targets"),
+            )
+            if has_light_links or has_shadow_links:
+                badge = sub.operator(
+                    "light_studio.link_badge",
                     emboss=False,
                     icon="LINKED",
                     text="",
                 )
-            if _handle_has_targets(
-                mesh_object,
-                ("shadow_linking_include_targets", "shadow_linking_exclude_targets"),
-            ):
+                badge.has_light_links = has_light_links
+                badge.has_shadow_links = has_shadow_links
+                # sub.separator(factor=2)
                 sub.operator(
-                    "light_studio.shadow_link_badge",
+                    "light_studio.link_divider",
                     emboss=False,
-                    icon="OBJECT_HIDDEN",
+                    icon="GRIP_V",
                     text="",
                 )
             sub.operator(
@@ -206,8 +219,8 @@ class LLS_UL_LightList(bpy.types.UIList):
 
 
 classes: tuple[type[bpy.types.Operator] | type[bpy.types.UIList], ...] = (
-    LLS_OT_LightLinkBadge,
-    LLS_OT_ShadowLinkBadge,
+    LLS_OT_LinkBadge,
+    LLS_OT_LinkDivider,
     LLS_UL_ProfileList,
     LLS_UL_LightList,
 )
