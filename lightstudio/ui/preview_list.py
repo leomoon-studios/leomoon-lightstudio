@@ -47,18 +47,9 @@ def _enum_items(self, context):
 
 
 def _active_light_mesh():
-    from ..core.scene_utils import family, find_light_grp
+    from ..core.selected_light import light_mesh_from_handle, selected_light_handle
 
-    obj = bpy.context.active_object
-    if obj is None:
-        return None
-    lg = find_light_grp(obj)
-    if lg is None:
-        return None
-    for child in family(lg):
-        if child.name.startswith("LLS_LIGHT_MESH"):
-            return child
-    return None
+    return light_mesh_from_handle(selected_light_handle(bpy.context))
 
 
 def _enum_get(_wm) -> int:

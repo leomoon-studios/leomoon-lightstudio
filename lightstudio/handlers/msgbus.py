@@ -20,6 +20,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from ..core.scene_utils import find_light_grp
+from ..core.selected_light import retarget_pin_to_active_light
 
 _owner = object()
 _SUBSCRIBE_TO = (bpy.types.LayerObjects, "active")
@@ -29,6 +30,8 @@ def _msgbus_callback(*_args) -> None:
     active_object = bpy.context.active_object
     scene = bpy.context.scene
     props = getattr(scene, "LLStudio", None)
+    if props is not None and props.initialized:
+        retarget_pin_to_active_light(bpy.context)
     if (
         not active_object
         or props is None

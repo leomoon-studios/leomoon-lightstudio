@@ -6,6 +6,7 @@ import bpy
 from bpy.props import EnumProperty, IntProperty
 
 from ..core import light_linking
+from ..core.selected_light import selected_light_handle
 
 _CATEGORY_ITEMS = (
     ("LIGHT", "Light Linking", "Light receiver linking"),
@@ -22,14 +23,14 @@ _TARGET_TYPE_ITEMS = (
 
 
 def _active_handle(context: bpy.types.Context) -> bpy.types.Object | None:
-    return light_linking.resolve_light_handle(context.active_object)
+    return selected_light_handle(context)
 
 
 def _can_edit_light_linking(context: bpy.types.Context) -> bool:
     return (
         light_linking.has_native_light_linking_api()
         and light_linking.has_native_light_linking_row_state()
-        and light_linking.is_valid_lightstudio_light(context.active_object)
+        and light_linking.is_valid_lightstudio_light(_active_handle(context))
     )
 
 

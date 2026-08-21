@@ -8,26 +8,17 @@ import bpy
 
 from ...core import light_linking
 from ...core.material_inspect import get_advanced_inputs
-from ...core.scene_utils import family, find_light_grp
+from ...core.selected_light import (
+    light_mesh_from_handle,
+    light_object_for_handle,
+    selected_light_handle,
+)
 from .._common import PANEL_CATEGORY, PANEL_REGION, PANEL_SPACE, studio_initialized
 
 _INT_SOCKET_PROPS = {
     "Mask - Grid Columns": "mask_grid_columns",
     "Mask - Grid Rows": "mask_grid_rows",
 }
-
-
-def _active_light_mesh(context: bpy.types.Context) -> bpy.types.Object | None:
-    obj = context.active_object
-    if obj is None:
-        return None
-    lg = find_light_grp(obj)
-    if lg is None:
-        return None
-    for child in family(lg):
-        if child.name.startswith("LLS_LIGHT_MESH"):
-            return child
-    return None
 
 
 def _target_list_name(category: str, mode: str) -> str:
@@ -179,15 +170,16 @@ class LLS_PT_Selected(bpy.types.Panel):
         return studio_initialized(context)
 
     def draw(self, context: bpy.types.Context) -> None:
-        obj = context.active_object
-        if not (obj and obj.name.startswith("LLS_LIGHT_") and obj.parent):
+        handle = selected_light_handle(context)
+        obj = light_object_for_handle(handle)
+        if handle is None or obj is None:
             return
         layout = self.layout
         wm = context.window_manager
 
         col = layout.column(align=True)
         row = col.row()
-        row.prop(obj.parent.LLStudio, "type", expand=True)
+        row.prop(handle.LLStudio, "type", expand=True)
         if context.scene.render.engine == "BLENDER_EEVEE":
             row.enabled = False
         col.separator()
@@ -204,7 +196,7 @@ class LLS_PT_Selected(bpy.types.Panel):
             inner.label(text=os.path.splitext(wm.lls_tex_previews)[0])
 
             layout.separator()
-            light_mesh = _active_light_mesh(context)
+            light_mesh = light_mesh_from_handle(handle)
             if (
                 light_mesh is None
                 or not light_mesh.active_material
@@ -235,11 +227,10 @@ class LLS_PT_Selected(bpy.types.Panel):
                                 socket, "default_value", text=socket.name
                             )
 
-        light_mesh = _active_light_mesh(context)
+        light_mesh = light_mesh_from_handle(handle)
         if light_mesh is not None and light_mesh.parent is not None:
             col.prop(light_mesh.parent, "location", index=2, text="Distance")
 
-        handle = light_linking.resolve_light_handle(obj)
         if handle is not None and light_linking.is_valid_lightstudio_light(obj):
             _draw_light_linking_section(layout, handle)
 

@@ -206,6 +206,15 @@ class LLS_UL_LightList(bpy.types.UIList):
             sub.operator(
                 "light_studio.isolate", emboss=False, icon=solo_icon, text=""
             ).index = index
+            pinned = props.pin_selected_light and props.pinned_light_handle_name == item.handle_name
+            pin_icon = "PINNED" if pinned else "UNPINNED"
+            sub.operator(
+                "light_studio.pin_light",
+                emboss=False,
+                icon=pin_icon,
+                text="",
+                depress=pinned,
+            ).index = index
             camera_icon = "VIEW_CAMERA" if item.visible_camera else "VIEW_CAMERA_UNSELECTED"
             sub.operator(
                 "light_studio.camera_toggle",

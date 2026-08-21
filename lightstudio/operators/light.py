@@ -281,13 +281,35 @@ class LLS_OT_CameraToggle(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def _sync_light_list_type_visibility(props, context: bpy.types.Context) -> None:
-    from ..core.scene_utils import sync_light_type_visibility
+class LLS_OT_PinLight(bpy.types.Operator):
+    bl_idname = "light_studio.pin_light"
+    bl_label = "Pin Light"
+    bl_description = "Keep this LightStudio light shown when regular Blender objects are selected"
+    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    for item in props.light_list:
-        handle = bpy.data.objects.get(item.handle_name)
-        if handle is not None:
-            sync_light_type_visibility(handle, context)
+    index: IntProperty(default=-1)
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return (
+            context.area is not None
+            and context.area.type == "VIEW_3D"
+            and context.mode == "OBJECT"
+            and context.scene.LLStudio.initialized
+        )
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        props = context.scene.LLStudio
+        if self.index < 0 or self.index >= len(props.light_list):
+            return {"CANCELLED"}
+        item = props.light_list[self.index]
+        if props.pin_selected_light and props.pinned_light_handle_name == item.handle_name:
+            props.pin_selected_light = False
+            props.pinned_light_handle_name = ""
+        else:
+            props.pin_selected_light = True
+            props.pinned_light_handle_name = item.handle_name
+        return {"FINISHED"}
 
 
 def apply_isolate(props, target, context: bpy.types.Context | None = None) -> None:
@@ -313,7 +335,12 @@ def apply_isolate(props, target, context: bpy.types.Context | None = None) -> No
             if not li.mute:
                 li.mute = True
         target.mute = False
-    _sync_light_list_type_visibility(props, context)
+    handle = bpy.data.objects.get(target.handle_name)
+    if handle is not None:
+        from ..core.scene_utils import sync_light_type_visibility
+
+        sync_light_type_visibility(handle, context)
+    context.view_layer.update()
 
 
 class LLS_OT_LightListMove(bpy.types.Operator):
@@ -554,6 +581,7 @@ classes: tuple[type[bpy.types.Operator], ...] = (
     LLS_OT_MuteToggle,
     LLS_OT_Isolate,
     LLS_OT_CameraToggle,
+    LLS_OT_PinLight,
     LLS_OT_LightListMove,
     LLS_OT_LightListCopy,
     LLS_OT_CameraToggleAllLights,

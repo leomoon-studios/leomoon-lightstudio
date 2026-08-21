@@ -209,6 +209,12 @@ class LeoMoon_Light_Studio_Properties(PropertyGroup):
         get=_light_list_index_get,
         set=_light_list_index_set,
     )
+    pin_selected_light: BoolProperty(
+        name="Pin Selected Light",
+        description="Keep showing the pinned LightStudio light when regular Blender objects are selected.",
+        default=False,
+    )
+    pinned_light_handle_name: StringProperty(default="")
 
     lls_mode: EnumProperty(
         items=[
