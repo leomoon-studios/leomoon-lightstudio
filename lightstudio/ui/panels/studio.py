@@ -21,10 +21,12 @@ class LLS_PT_Studio(bpy.types.Panel):
     def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         col = layout.column(align=True)
+        col.operator("lls.donate", text="Donate", icon="FUND")
+        col.separator()
         if not context.scene.LLStudio.initialized:
-            col.operator("scene.create_leomoon_light_studio")
+            col.operator("scene.create_leomoon_light_studio", icon="FILE_NEW")
         else:
-            col.operator("scene.delete_leomoon_light_studio")
+            col.operator("scene.delete_leomoon_light_studio", icon="TRASH")
         col.separator()
 
         col.operator("light_studio.control_panel", icon="MENU_PANEL")

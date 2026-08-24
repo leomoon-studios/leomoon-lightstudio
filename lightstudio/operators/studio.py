@@ -30,6 +30,7 @@ from ..core.paths import LLS_BLEND
 
 _DARK_GREY = (0.050876, 0.050876, 0.050876, 1.0)
 _VERY_DARK_GREY = (0.008, 0.008, 0.008, 1.0)
+_DONATE_URL = "https://www.paypal.com/donate?hosted_button_id=TYDVJHYA9VYKN"
 
 
 def _is_lls_collection(col: bpy.types.Collection) -> bool:
@@ -107,6 +108,16 @@ class LLS_OT_CreateStudio(bpy.types.Operator):
 
         context.scene.LLStudio.initialized = True
         log("studio created")
+        return {"FINISHED"}
+
+
+class LLS_OT_Donate(bpy.types.Operator):
+    bl_idname = "lls.donate"
+    bl_label = "Donate"
+    bl_description = "Support the continued development of LeoMoon LightStudio"
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        bpy.ops.wm.url_open(url=_DONATE_URL)
         return {"FINISHED"}
 
 
@@ -229,6 +240,7 @@ class LLS_OT_SwitchRenderer(bpy.types.Operator):
 
 
 classes: tuple[type[bpy.types.Operator], ...] = (
+    LLS_OT_Donate,
     LLS_OT_CreateStudio,
     LLS_OT_DeleteStudio,
     LLS_OT_SetBackground,
