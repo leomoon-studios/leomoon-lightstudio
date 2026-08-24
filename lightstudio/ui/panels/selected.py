@@ -16,6 +16,9 @@ from ...core.selected_light import (
 from .._common import PANEL_CATEGORY, PANEL_REGION, PANEL_SPACE, studio_initialized
 
 _INT_SOCKET_PROPS = {
+    "Mask - Gradient Switch": "mask_gradient_switch",
+    "Mask - Ring Switch": "mask_ring_switch",
+    "Mask - Backface": "mask_backface",
     "Mask - Grid Columns": "mask_grid_columns",
     "Mask - Grid Rows": "mask_grid_rows",
 }

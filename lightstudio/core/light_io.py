@@ -58,6 +58,20 @@ _INTEGER_GROUP_INPUT_KEYS = frozenset((
     "Mask - Grid Rows",
 ))
 
+_BINARY_GROUP_INPUT_KEYS = frozenset((
+    "Mask - Gradient Switch",
+    "Mask - Ring Switch",
+    "Mask - Backface",
+))
+
+
+def _coerce_group_input_value(key: str, value):
+    if key in _BINARY_GROUP_INPUT_KEYS:
+        return 1 if float(value) > 0 else 0
+    if key in _INTEGER_GROUP_INPUT_KEYS:
+        return int(round(float(value)))
+    return value
+
 
 def salvage_data(
     lls_collection: bpy.types.Collection, only_validate: bool = False
@@ -122,11 +136,9 @@ def salvage_data(
                     val = group.inputs[key].default_value
                     if hasattr(val, "__len__"):
                         light["advanced"][key] = list(val)
-                    elif key in _INTEGER_GROUP_INPUT_KEYS:
-                        light["advanced"][key] = int(round(float(val)))
                     else:
-                        light["advanced"][key] = val
-                except (KeyError, AttributeError):
+                        light["advanced"][key] = _coerce_group_input_value(key, val)
+                except (KeyError, AttributeError, TypeError, ValueError):
                     if only_validate:
                         raise InvalidLight() from None
         except Exception:
@@ -277,15 +289,14 @@ def light_from_dict(
             continue
         val = advanced[key]
         try:
-            if key in _INTEGER_GROUP_INPUT_KEYS:
-                val = int(round(float(val)))
+            val = _coerce_group_input_value(key, val)
             socket = group.inputs.get(key) or group.inputs[idx]
             if hasattr(socket.default_value, "__len__"):
                 for i, v in enumerate(val):
                     socket.default_value[i] = v
             else:
                 socket.default_value = val
-        except (IndexError, KeyError, TypeError):
+        except (IndexError, KeyError, TypeError, ValueError):
             pass
 
     tex = advanced.get("tex", "")

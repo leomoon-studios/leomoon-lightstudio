@@ -22,9 +22,18 @@ from bpy.props import (
 )
 from bpy.types import PropertyGroup
 
-_GRID_INPUT_NAMES = {
+_INTEGER_INPUT_NAMES = {
+    "mask_gradient_switch": "Mask - Gradient Switch",
+    "mask_ring_switch": "Mask - Ring Switch",
+    "mask_backface": "Mask - Backface",
     "mask_grid_columns": "Mask - Grid Columns",
     "mask_grid_rows": "Mask - Grid Rows",
+}
+
+_BINARY_INPUT_PROPS = {
+    "mask_gradient_switch",
+    "mask_ring_switch",
+    "mask_backface",
 }
 
 
@@ -125,11 +134,13 @@ def _active_light_type_update(self: LeoMoon_Light_Studio_Object_Properties, cont
 
 def _grid_input_get(self: LeoMoon_Light_Studio_Object_Properties, prop_name: str) -> int:
     obj = self.id_data
-    socket_name = _GRID_INPUT_NAMES[prop_name]
+    socket_name = _INTEGER_INPUT_NAMES[prop_name]
     try:
         socket = obj.active_material.node_tree.nodes["Group"].inputs[socket_name]
+        if prop_name in _BINARY_INPUT_PROPS:
+            return 1 if float(socket.default_value) > 0 else 0
         return int(round(socket.default_value))
-    except (AttributeError, KeyError, TypeError):
+    except (AttributeError, KeyError, TypeError, ValueError):
         return 0
 
 
@@ -137,12 +148,45 @@ def _grid_input_set(
     self: LeoMoon_Light_Studio_Object_Properties, prop_name: str, value: int
 ) -> None:
     obj = self.id_data
-    socket_name = _GRID_INPUT_NAMES[prop_name]
+    socket_name = _INTEGER_INPUT_NAMES[prop_name]
     try:
         socket = obj.active_material.node_tree.nodes["Group"].inputs[socket_name]
-        socket.default_value = int(value)
-    except (AttributeError, KeyError, TypeError):
+        if prop_name in _BINARY_INPUT_PROPS:
+            socket.default_value = 1 if int(value) > 0 else 0
+        else:
+            socket.default_value = int(value)
+    except (AttributeError, KeyError, TypeError, ValueError):
         return
+
+
+def _mask_gradient_switch_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
+    return _grid_input_get(self, "mask_gradient_switch")
+
+
+def _mask_gradient_switch_set(
+    self: LeoMoon_Light_Studio_Object_Properties, value: int
+) -> None:
+    _grid_input_set(self, "mask_gradient_switch", value)
+
+
+def _mask_ring_switch_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
+    return _grid_input_get(self, "mask_ring_switch")
+
+
+def _mask_ring_switch_set(
+    self: LeoMoon_Light_Studio_Object_Properties, value: int
+) -> None:
+    _grid_input_set(self, "mask_ring_switch", value)
+
+
+def _mask_backface_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
+    return _grid_input_get(self, "mask_backface")
+
+
+def _mask_backface_set(
+    self: LeoMoon_Light_Studio_Object_Properties, value: int
+) -> None:
+    _grid_input_set(self, "mask_backface", value)
 
 
 def _mask_grid_columns_get(self: LeoMoon_Light_Studio_Object_Properties) -> int:
@@ -177,6 +221,30 @@ class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
         ),
         default="ADVANCED",
         update=_active_light_type_update,
+    )
+    mask_gradient_switch: IntProperty(
+        name="Mask - Gradient Switch",
+        min=0,
+        max=1,
+        default=0,
+        get=_mask_gradient_switch_get,
+        set=_mask_gradient_switch_set,
+    )
+    mask_ring_switch: IntProperty(
+        name="Mask - Ring Switch",
+        min=0,
+        max=1,
+        default=0,
+        get=_mask_ring_switch_get,
+        set=_mask_ring_switch_set,
+    )
+    mask_backface: IntProperty(
+        name="Mask - Backface",
+        min=0,
+        max=1,
+        default=0,
+        get=_mask_backface_get,
+        set=_mask_backface_set,
     )
     mask_grid_columns: IntProperty(
         name="Mask - Grid Columns",
