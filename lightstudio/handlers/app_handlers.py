@@ -59,6 +59,9 @@ def _lls_update_frame(scene: bpy.types.Scene, _depsgraph=None) -> None:
     if props is None or not props.initialized:
         return
     _sync_multimode_profile_visibility(scene)
+    from ..core.light_animation import sync_scene_animation
+
+    sync_scene_animation(scene)
     for lls_area in (
         obj for obj in scene.objects if obj.name.startswith("LLS_LIGHT_AREA.")
     ):
@@ -91,18 +94,42 @@ def _render_cancel(scene: bpy.types.Scene) -> None:
     restore_after_render(scene)
 
 
+@persistent
+def _load_post_initialize_animation(scene: bpy.types.Scene) -> None:
+    from ..core.light_animation import sync_scene_animation
+
+    sync_scene_animation(scene)
+
+
+def _initialize_animation_timer() -> None:
+    scene = getattr(bpy.context, "scene", None)
+    if scene is not None:
+        from ..core.light_animation import sync_scene_animation
+
+        sync_scene_animation(scene)
+    return None
+
+
 def register() -> None:
     if _lls_update_frame not in bpy.app.handlers.frame_change_post:
         bpy.app.handlers.frame_change_post.append(_lls_update_frame)
+    if _load_post_initialize_animation not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_load_post_initialize_animation)
     if _render_complete not in bpy.app.handlers.render_complete:
         bpy.app.handlers.render_complete.append(_render_complete)
     if _render_cancel not in bpy.app.handlers.render_cancel:
         bpy.app.handlers.render_cancel.append(_render_cancel)
+    if not bpy.app.timers.is_registered(_initialize_animation_timer):
+        bpy.app.timers.register(_initialize_animation_timer, first_interval=0)
 
 
 def unregister() -> None:
+    if bpy.app.timers.is_registered(_initialize_animation_timer):
+        bpy.app.timers.unregister(_initialize_animation_timer)
     if _lls_update_frame in bpy.app.handlers.frame_change_post:
         bpy.app.handlers.frame_change_post.remove(_lls_update_frame)
+    if _load_post_initialize_animation in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_load_post_initialize_animation)
     if _render_complete in bpy.app.handlers.render_complete:
         bpy.app.handlers.render_complete.remove(_render_complete)
     if _render_cancel in bpy.app.handlers.render_cancel:

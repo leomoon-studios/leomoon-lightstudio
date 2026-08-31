@@ -27,6 +27,7 @@ _addon_keymaps: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
 _ENTRIES: tuple = (
     (light_brush.OT_LLSFast3DEdit, "F", "PRESS", {}, {"continuous": False}),
     (light_brush.OT_LLS3DAddLight, "F", "PRESS", {"ctrl": True}, {"continuous": False}),
+    ("lls.insert_key_active_light", "I", "PRESS", {}, {}),
     # Shift+D wrapper for LLS_OT_DuplicateMove (light copy via Shift+D).
     ("lls_object.duplicate_move", "D", "PRESS", {"shift": True}, {}),
 )

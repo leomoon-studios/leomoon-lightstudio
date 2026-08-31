@@ -39,6 +39,7 @@ from ...core.scene_utils import (
     llscol_profilecol_profile_handle,
     update_light_list_set,
 )
+from ...core.light_animation import sync_emitters_from_rig
 from ...core.widgets import (
     W_BOTTOM,
     W_LEFT,
@@ -599,8 +600,10 @@ class LLS_OT_Rotate(bpy.types.Operator, MouseWidget, _LightOperator):
             LightImage.selected_object._lls_handle.rotation_euler.y = (
                 self.base_object_rotation + self.angle()
             )
+            sync_emitters_from_rig(LightImage.selected_object._lls_handle)
         else:
             context.object.parent.rotation_euler.y = self.base_object_rotation + self.angle()
+            sync_emitters_from_rig(context.object)
 
         bpy.context.workspace.status_text_set(f"Rot: {self.angle():.3f}")
 
@@ -665,8 +668,10 @@ class LLS_OT_Scale(bpy.types.Operator, MouseWidget, _LightOperator):
 
         if running_modals and multiprofile_conditions(context):
             LightImage.selected_object._lls_handle.scale = new_scale
+            sync_emitters_from_rig(LightImage.selected_object._lls_handle)
         else:
             _set_scale_adapter(context.object, new_scale)
+            sync_emitters_from_rig(context.object)
         bpy.context.workspace.status_text_set(
             f"Scale X: {new_scale.x:.3f} Y: {new_scale.z:.3f}  [X/Y] Axis, [Shift] Precision mode"
         )
@@ -809,6 +814,7 @@ class LLS_OT_Grab(bpy.types.Operator, MouseWidget, _LightOperator):
                 self.light_actuator.rotation_euler.y,
                 pi / 2 - 0.000001,
             )
+        sync_emitters_from_rig(self.light_handle)
 
         bpy.context.workspace.status_text_set(
             f"Move Dx: {dv.x * x_factor:.3f} Dy: {dv.y * y_factor:.3f}   "

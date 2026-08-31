@@ -137,6 +137,10 @@ class LLS_OT_AddLight(bpy.types.Operator):
         constraint.inverse_matrix.identity()
 
         update_light_list_set(context)
+        from ..core.light_animation import ensure_shared_action, sync_emitters_from_rig
+
+        sync_emitters_from_rig(light_handle)
+        ensure_shared_action(light_handle)
         sync_light_linking_properties(light_handle)
         log("light added")
         return {"FINISHED"}
@@ -440,6 +444,10 @@ class LLS_OT_LightListCopy(bpy.types.Operator):
                 obj.LLStudio.order_index += 1
 
         update_light_list_set(context)
+        from ..core.light_animation import ensure_shared_action, sync_emitters_from_rig
+
+        sync_emitters_from_rig(lls_handle_copy)
+        ensure_shared_action(lls_handle_copy)
 
         # Mirror the source light's Basic/Advanced visibility onto the copy so
         # only the engine-appropriate sub-light is shown (LayerCollection.exclude

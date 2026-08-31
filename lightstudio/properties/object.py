@@ -16,6 +16,8 @@ from bpy.props import (
     BoolProperty,
     CollectionProperty,
     EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
     IntProperty,
     PointerProperty,
     StringProperty,
@@ -35,6 +37,17 @@ _BINARY_INPUT_PROPS = {
     "mask_ring_switch",
     "mask_backface",
 }
+
+
+def _animation_owner_update(
+    self: LeoMoon_Light_Studio_Object_Properties,
+    context: bpy.types.Context,
+) -> None:
+    from ..core.light_animation import sync_from_emitter
+
+    obj = self.id_data
+    if isinstance(obj, bpy.types.Object):
+        sync_from_emitter(obj)
 
 
 def _light_list_item_name_update(self: LightListItem, context: bpy.types.Context) -> None:
@@ -266,6 +279,151 @@ class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
     light_linking_exclude_targets: CollectionProperty(type=LightLinkingTargetItem)
     shadow_linking_include_targets: CollectionProperty(type=LightLinkingTargetItem)
     shadow_linking_exclude_targets: CollectionProperty(type=LightLinkingTargetItem)
+
+    anim_owner_initialized: BoolProperty(default=False)
+    anim_distance: FloatProperty(
+        name="Distance",
+        min=0.0,
+        default=30.0,
+        update=_animation_owner_update,
+    )
+    anim_position_x: FloatProperty(
+        name="Position X",
+        update=_animation_owner_update,
+    )
+    anim_position_y: FloatProperty(
+        name="Position Y",
+        update=_animation_owner_update,
+    )
+    anim_rotation: FloatProperty(
+        name="Rotation",
+        update=_animation_owner_update,
+    )
+    anim_scale_x: FloatProperty(
+        name="Scale X",
+        default=1.0,
+        update=_animation_owner_update,
+    )
+    anim_scale_y: FloatProperty(
+        name="Scale Y",
+        default=1.0,
+        update=_animation_owner_update,
+    )
+    anim_scale_z: FloatProperty(
+        name="Scale Z",
+        default=1.0,
+        update=_animation_owner_update,
+    )
+
+    adv_texture_switch: FloatProperty(
+        name="Texture Switch",
+        default=1.0,
+        update=_animation_owner_update,
+    )
+    adv_color_saturation: FloatProperty(
+        name="Color Saturation",
+        min=0.0,
+        max=1.0,
+        update=_animation_owner_update,
+    )
+    adv_desaturate: FloatProperty(
+        name="Desaturate",
+        min=0.0,
+        max=1.0,
+        update=_animation_owner_update,
+    )
+    adv_color_overlay: FloatVectorProperty(
+        name="Color Overlay",
+        subtype="COLOR",
+        size=4,
+        default=(1.0, 0.5, 0.25, 1.0),
+        soft_min=0.0,
+        soft_max=1.0,
+        update=_animation_owner_update,
+    )
+    adv_intensity: FloatProperty(
+        name="Intensity",
+        default=2.0,
+        soft_min=0.0,
+        soft_max=10000.0,
+        update=_animation_owner_update,
+    )
+    adv_exposure: FloatProperty(
+        name="Exposure",
+        default=1.0,
+        update=_animation_owner_update,
+    )
+    adv_mask_gradient_type: FloatProperty(
+        name="Mask - Gradient Type",
+        update=_animation_owner_update,
+    )
+    adv_mask_gradient_amount: FloatProperty(
+        name="Mask - Gradient Amount",
+        update=_animation_owner_update,
+    )
+    adv_mask_ring_inner_radius: FloatProperty(
+        name="Mask - Ring Inner Radius",
+        update=_animation_owner_update,
+    )
+    adv_mask_ring_outer_radius: FloatProperty(
+        name="Mask - Ring Outer Radius",
+        update=_animation_owner_update,
+    )
+    adv_mask_top_to_bottom: FloatProperty(
+        name="Mask - Top to Bottom",
+        update=_animation_owner_update,
+    )
+    adv_mask_bottom_to_top: FloatProperty(
+        name="Mask - Bottom to Top",
+        update=_animation_owner_update,
+    )
+    adv_mask_left_to_right: FloatProperty(
+        name="Mask - Left to Right",
+        update=_animation_owner_update,
+    )
+    adv_mask_right_to_left: FloatProperty(
+        name="Mask - Right to Left",
+        update=_animation_owner_update,
+    )
+    adv_mask_diagonal_top_left: FloatProperty(
+        name="Mask - Diagonal Top Left",
+        update=_animation_owner_update,
+    )
+    adv_mask_diagonal_top_right: FloatProperty(
+        name="Mask - Diagonal Top Right",
+        update=_animation_owner_update,
+    )
+    adv_mask_diagonal_bottom_right: FloatProperty(
+        name="Mask - Diagonal Bottom Right",
+        update=_animation_owner_update,
+    )
+    adv_mask_diagonal_bottom_left: FloatProperty(
+        name="Mask - Diagonal Bottom Left",
+        update=_animation_owner_update,
+    )
+
+    basic_color: FloatVectorProperty(
+        name="Color",
+        subtype="COLOR",
+        default=(1.0, 1.0, 1.0),
+        size=3,
+        soft_min=0.0,
+        soft_max=1.0,
+        update=_animation_owner_update,
+    )
+    basic_color_saturation: FloatProperty(
+        name="Color Saturation",
+        min=0.0,
+        max=1.0,
+        update=_animation_owner_update,
+    )
+    basic_intensity: FloatProperty(
+        name="Intensity",
+        soft_min=0.0,
+        soft_max=10000.0,
+        default=2.0,
+        update=_animation_owner_update,
+    )
 
 
 classes: tuple[type[PropertyGroup], ...] = (

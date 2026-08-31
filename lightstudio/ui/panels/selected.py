@@ -7,6 +7,10 @@ import os
 import bpy
 
 from ...core import light_linking
+from ...core.light_animation import (
+    ADVANCED_FLOAT_INPUT_NAMES,
+    ADVANCED_VECTOR_INPUT_NAMES,
+)
 from ...core.material_inspect import get_advanced_inputs
 from ...core.selected_light import (
     light_mesh_from_handle,
@@ -21,6 +25,14 @@ _INT_SOCKET_PROPS = {
     "Mask - Backface": "mask_backface",
     "Mask - Grid Columns": "mask_grid_columns",
     "Mask - Grid Rows": "mask_grid_rows",
+}
+
+_ADVANCED_SOCKET_PROPS = {
+    socket_name: prop_name
+    for prop_name, socket_name in {
+        **ADVANCED_FLOAT_INPUT_NAMES,
+        **ADVANCED_VECTOR_INPUT_NAMES,
+    }.items()
 }
 
 
@@ -189,9 +201,9 @@ class LLS_PT_Selected(bpy.types.Panel):
 
         if obj.type == "LIGHT":
             row = col.row()
-            row.prop(obj.data.LLStudio, "color")
-            col.prop(obj.data.LLStudio, "color_saturation", slider=True)
-            col.prop(obj.data.LLStudio, "intensity")
+            row.prop(obj.LLStudio, "basic_color", text="Color")
+            col.prop(obj.LLStudio, "basic_color_saturation", slider=True)
+            col.prop(obj.LLStudio, "basic_intensity", text="Intensity")
         elif obj.type == "MESH":
             box = layout.box()
             inner = box.column()
@@ -216,7 +228,15 @@ class LLS_PT_Selected(bpy.types.Panel):
                     group_inputs = nodes["Group"].inputs
                     for socket in group_inputs[2:]:
                         if socket.type == "RGBA":
-                            layout.prop(socket, "default_value", text=socket.name)
+                            prop_name = _ADVANCED_SOCKET_PROPS.get(socket.name)
+                            if prop_name is not None:
+                                layout.prop(
+                                    light_mesh.LLStudio,
+                                    prop_name,
+                                    text=socket.name,
+                                )
+                            else:
+                                layout.prop(socket, "default_value", text=socket.name)
                             sub_col = layout.column(align=True)
                         elif socket.name in _INT_SOCKET_PROPS:
                             sub_col.prop(
@@ -225,14 +245,20 @@ class LLS_PT_Selected(bpy.types.Panel):
                                 slider=True,
                                 text=socket.name,
                             )
+                        elif socket.name in _ADVANCED_SOCKET_PROPS:
+                            sub_col.prop(
+                                light_mesh.LLStudio,
+                                _ADVANCED_SOCKET_PROPS[socket.name],
+                                text=socket.name,
+                            )
                         else:
                             sub_col.prop(
                                 socket, "default_value", text=socket.name
                             )
 
         light_mesh = light_mesh_from_handle(handle)
-        if light_mesh is not None and light_mesh.parent is not None:
-            col.prop(light_mesh.parent, "location", index=2, text="Distance")
+        if light_mesh is not None:
+            col.prop(light_mesh.LLStudio, "anim_distance", text="Distance")
 
         if handle is not None and light_linking.is_valid_lightstudio_light(obj):
             _draw_light_linking_section(layout, handle)

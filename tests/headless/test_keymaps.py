@@ -21,25 +21,47 @@ Run with::
 
 from __future__ import annotations
 
+import contextlib
+import importlib
+import os
 import sys
+from pathlib import Path
 
 import addon_utils
 import bpy
 
 ADDON_ID = "bl_ext.user_default.leomoon_lightstudio"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _fail(msg: str) -> None:
     print(f"FAIL: {msg}")
-    sys.exit(1)
+    _quit(1)
+
+
+def _quit(code: int) -> None:
+    with contextlib.suppress(Exception):
+        bpy.ops.wm.quit_blender()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 def main() -> None:
-    if addon_utils.enable(ADDON_ID, default_set=True, persistent=True) is None:
-        _fail(f"could not enable {ADDON_ID}")
+    addon_utils.disable(ADDON_ID, default_set=False)
+    module = addon_utils.enable(ADDON_ID, default_set=True, persistent=True)
+    registered_locally = False
+    if module is None:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        module = importlib.import_module("lightstudio")
+        module.register()
+        registered_locally = True
 
-    from bl_ext.user_default.leomoon_lightstudio.handlers import keymaps
-    from bl_ext.user_default.leomoon_lightstudio.operators.modal import control_panel
+    keymaps = importlib.import_module(f"{module.__name__}.handlers.keymaps")
+    control_panel = importlib.import_module(
+        f"{module.__name__}.operators.modal.control_panel"
+    )
 
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
@@ -58,6 +80,7 @@ def main() -> None:
     expected_modifiers = [
         ("light_studio.fast_3d_edit", "F", False, False, False),
         ("light_studio.add_light_3d", "F", True, False, False),
+        ("lls.insert_key_active_light", "I", False, False, False),
         ("lls_object.duplicate_move", "D", False, True, False),
     ]
     for entry in expected_modifiers:
@@ -87,11 +110,18 @@ def main() -> None:
         )
 
     # LLSPreferences registered.
-    prefs = bpy.context.preferences.addons.get(ADDON_ID)
-    if prefs is None or prefs.preferences is None:
-        _fail("LLSPreferences not attached to addon")
+    if registered_locally:
+        prefs_cls = importlib.import_module(f"{module.__name__}.ui.preferences").LLSPreferences
+        if prefs_cls.bl_idname != module.__name__:
+            _fail("LLSPreferences not registered for local module")
+    else:
+        prefs = bpy.context.preferences.addons.get(ADDON_ID)
+        if prefs is None or prefs.preferences is None:
+            _fail("LLSPreferences not attached to addon")
 
     addon_utils.disable(ADDON_ID, default_set=True)
+    if registered_locally:
+        module.unregister()
 
     if keymaps._addon_keymaps:
         _fail(f"keymaps._addon_keymaps leaked: {keymaps._addon_keymaps}")
@@ -100,7 +130,8 @@ def main() -> None:
             f"control_panel._addon_keymaps leaked: {control_panel._addon_keymaps}"
         )
 
-    print("PASS: central keymap registry binds F/Ctrl+F/Shift+D/Del + G/S/R clean")
+    print("PASS: central keymap registry binds F/Ctrl+F/I/Shift+D/Del + G/S/R clean")
+    _quit(0)
 
 
 if __name__ == "__main__":

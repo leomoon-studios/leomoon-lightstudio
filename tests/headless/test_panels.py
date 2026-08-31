@@ -8,16 +8,20 @@ Run with::
 
 from __future__ import annotations
 
+import contextlib
+import importlib
+import os
 import sys
+from pathlib import Path
 
 import addon_utils
 import bpy
 
 ADDON_ID = "bl_ext.user_default.leomoon_lightstudio"
+ROOT = Path(__file__).resolve().parents[2]
 
 EXPECTED_PANELS = (
     "LLS_PT_studio",
-    "LLS_PT_mode",
     "LLS_PT_profile_list",
     "LLS_PT_lights",
     "LLS_PT_selected",
@@ -35,12 +39,28 @@ EXPECTED_UILISTS = (
 
 def fail(msg: str) -> None:
     print(f"FAIL: {msg}")
-    sys.exit(1)
+    _quit(1)
+
+
+def _quit(code: int) -> None:
+    with contextlib.suppress(Exception):
+        bpy.ops.wm.quit_blender()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 def main() -> None:
-    if addon_utils.enable(ADDON_ID, default_set=False, persistent=False) is None:
-        fail(f"could not enable {ADDON_ID}")
+    addon_utils.disable(ADDON_ID, default_set=False)
+    module = addon_utils.enable(ADDON_ID, default_set=False, persistent=False)
+    registered_locally = False
+    if module is None:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        module = importlib.import_module("lightstudio")
+        module.register()
+        module.ui.panels.register()
+        registered_locally = True
 
     # Panel & UIList classes register their bl_idname on bpy.types.
     for bl_idname in EXPECTED_PANELS + EXPECTED_UILISTS:
@@ -54,20 +74,24 @@ def main() -> None:
     # Preferences class is registered but AddonPreferences are not
     # exposed on bpy.types under their class name — confirm via the
     # package module instead.
-    from bl_ext.user_default.leomoon_lightstudio.ui import preferences
+    preferences = importlib.import_module(f"{module.__name__}.ui.preferences")
 
-    if preferences.LLSPreferences.bl_idname != ADDON_ID:
+    expected_addon_id = module.__name__ if registered_locally else ADDON_ID
+    if preferences.LLSPreferences.bl_idname != expected_addon_id:
         fail(
             f"LLSPreferences.bl_idname = {preferences.LLSPreferences.bl_idname!r}, "
-            f"expected {ADDON_ID!r}"
+            f"expected {expected_addon_id!r}"
         )
     print(f"preferences class registered: bl_idname={preferences.LLSPreferences.bl_idname}")
 
     addon_utils.disable(ADDON_ID, default_set=False)
+    if registered_locally:
+        module.unregister()
     for bl_idname in EXPECTED_PANELS + EXPECTED_UILISTS:
         if hasattr(bpy.types, bl_idname):
             fail(f"{bl_idname} still registered after disable")
     print("PASS: panels + UILists register and unregister cleanly")
+    _quit(0)
 
 
 if __name__ == "__main__":

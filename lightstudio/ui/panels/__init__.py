@@ -18,7 +18,6 @@ from . import (
     import_export,
     lights,
     misc,
-    mode,
     profile_list,
     selected,
     studio,
@@ -26,7 +25,6 @@ from . import (
 
 _PANEL_MODULES = (
     studio,
-    mode,
     profile_list,
     lights,
     selected,
