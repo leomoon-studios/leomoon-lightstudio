@@ -205,6 +205,7 @@ panel_global: Panel | None = None
 running_modals: int = 0
 GRABBING: bool = False
 _scene_before_frame_change: str | None = None
+_last_panel_frame_key: tuple[str, int, float] | None = None
 
 # Step 15d: every ``SpaceView3D.draw_handler_add`` return value is
 # tracked here so a single ``_remove_all_draw_handlers()`` flush can
@@ -837,28 +838,49 @@ from bpy.app.handlers import persistent  # noqa: E402
 @persistent
 def _load_pre_handler(_dummy):
     """Flush every leftover draw handler before a new file is loaded."""
-    global running_modals, panel_global
+    global running_modals, panel_global, _last_panel_frame_key
     running_modals = 0
     _remove_all_draw_handlers()
     panel_global = None
+    _last_panel_frame_key = None
 
 
 @persistent
 def _load_handler(_dummy):
-    global running_modals, panel_global
+    global running_modals, panel_global, _last_panel_frame_key
     running_modals = 0
     # Belt-and-suspenders: also flush on load_post in case load_pre
     # was bypassed (e.g. recovering from an autosave path).
     _remove_all_draw_handlers()
     panel_global = None
+    _last_panel_frame_key = None
 
 
 @persistent
 def _frame_change_handler(scene):
-    global _scene_before_frame_change
-    if running_modals and panel_global is not None and scene.name != _scene_before_frame_change:
+    global _scene_before_frame_change, _last_panel_frame_key
+    if not running_modals or panel_global is None:
+        return
+
+    frame_key = (scene.name, scene.frame_current, scene.frame_subframe)
+    if frame_key == _last_panel_frame_key:
+        return
+    _last_panel_frame_key = frame_key
+
+    from ...core.light_animation import sync_scene_animation
+
+    sync_scene_animation(scene)
+    if scene.name != _scene_before_frame_change:
         update_light_sets(panel_global, bpy.context, always=True)
         _scene_before_frame_change = scene.name
+    LightImage.refresh()
+
+    wm = bpy.context.window_manager
+    if wm is not None:
+        for window in wm.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
 
 
 # ---------------------------------------------------------------------------
