@@ -355,50 +355,74 @@ class LeoMoon_Light_Studio_Object_Properties(PropertyGroup):
     )
     adv_mask_gradient_type: FloatProperty(
         name="Mask - Gradient Type",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_gradient_amount: FloatProperty(
         name="Mask - Gradient Amount",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_ring_inner_radius: FloatProperty(
         name="Mask - Ring Inner Radius",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_ring_outer_radius: FloatProperty(
         name="Mask - Ring Outer Radius",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_top_to_bottom: FloatProperty(
         name="Mask - Top to Bottom",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_bottom_to_top: FloatProperty(
         name="Mask - Bottom to Top",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_left_to_right: FloatProperty(
         name="Mask - Left to Right",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_right_to_left: FloatProperty(
         name="Mask - Right to Left",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_diagonal_top_left: FloatProperty(
         name="Mask - Diagonal Top Left",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_diagonal_top_right: FloatProperty(
         name="Mask - Diagonal Top Right",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_diagonal_bottom_right: FloatProperty(
         name="Mask - Diagonal Bottom Right",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
     adv_mask_diagonal_bottom_left: FloatProperty(
         name="Mask - Diagonal Bottom Left",
+        min=0.0,
+        max=1.0,
         update=_animation_owner_update,
     )
 

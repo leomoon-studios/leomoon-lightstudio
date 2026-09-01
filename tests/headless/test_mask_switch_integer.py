@@ -38,6 +38,36 @@ def _group_inputs(light_mesh: bpy.types.Object):
     return light_mesh.active_material.node_tree.nodes["Group"].inputs
 
 
+def _assert_mask_float_clamps(mesh: bpy.types.Object, inputs) -> None:
+    mask_props = {
+        "adv_mask_gradient_type": "Mask - Gradient Type",
+        "adv_mask_gradient_amount": "Mask - Gradient Amount",
+        "adv_mask_ring_inner_radius": "Mask - Ring Inner Radius",
+        "adv_mask_ring_outer_radius": "Mask - Ring Outer Radius",
+        "adv_mask_top_to_bottom": "Mask - Top to Bottom",
+        "adv_mask_bottom_to_top": "Mask - Bottom to Top",
+        "adv_mask_left_to_right": "Mask - Left to Right",
+        "adv_mask_right_to_left": "Mask - Right to Left",
+        "adv_mask_diagonal_top_left": "Mask - Diagonal Top Left",
+        "adv_mask_diagonal_top_right": "Mask - Diagonal Top Right",
+        "adv_mask_diagonal_bottom_right": "Mask - Diagonal Bottom Right",
+        "adv_mask_diagonal_bottom_left": "Mask - Diagonal Bottom Left",
+    }
+
+    for prop_name, socket_name in mask_props.items():
+        setattr(mesh.LLStudio, prop_name, 2.0)
+        if getattr(mesh.LLStudio, prop_name) != 1.0:
+            _fail(f"{socket_name} property did not clamp above 1.0")
+        if inputs[socket_name].default_value != 1.0:
+            _fail(f"{socket_name} socket did not receive clamped 1.0")
+
+        setattr(mesh.LLStudio, prop_name, -1.0)
+        if getattr(mesh.LLStudio, prop_name) != 0.0:
+            _fail(f"{socket_name} property did not clamp below 0.0")
+        if inputs[socket_name].default_value != 0.0:
+            _fail(f"{socket_name} socket did not receive clamped 0.0")
+
+
 def _parent_collection(child: bpy.types.Collection) -> bpy.types.Collection:
     for collection in bpy.data.collections:
         if collection.children.find(child.name) >= 0:
@@ -94,6 +124,8 @@ def main() -> None:
         _fail("ring switch setter did not write 1")
     if inputs["Mask - Backface"].default_value != 0:
         _fail("backface setter did not write 0")
+
+    _assert_mask_float_clamps(mesh, inputs)
 
     exported = light_io.salvage_data(light_collection)
     if exported["advanced"]["Mask - Gradient Switch"] != 0:
