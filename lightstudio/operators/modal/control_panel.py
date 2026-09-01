@@ -32,6 +32,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 from mathutils.geometry import intersect_line_line_2d
 
+from ...core.light_animation import sync_emitters_from_rig
 from ...core.scene_utils import (
     family,
     find_light_profile_object,
@@ -39,7 +40,6 @@ from ...core.scene_utils import (
     llscol_profilecol_profile_handle,
     update_light_list_set,
 )
-from ...core.light_animation import sync_emitters_from_rig
 from ...core.widgets import (
     W_BOTTOM,
     W_LEFT,
