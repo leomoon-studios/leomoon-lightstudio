@@ -946,8 +946,8 @@ def update_light_sets(panel: Panel, context, always: bool = False) -> None:
 
 class LLS_OT_ResetControlPanel(bpy.types.Operator):
     bl_idname = "light_studio.reset_control_panel"
-    bl_label = "Reset Control Panel"
-    bl_description = "Reset Control Panel to default position and icon size"
+    bl_label = "Reset LightPanel"
+    bl_description = "Reset LightPanel to default position and icon size"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -979,8 +979,8 @@ class LLS_OT_ResetControlPanel(bpy.types.Operator):
 
 class LLS_OT_control_panel(bpy.types.Operator):
     bl_idname = "light_studio.control_panel"
-    bl_label = "LightStudio Control Panel"
-    bl_description = "Show/Hide LightStudio Control Panel"
+    bl_label = "Show/Hide LightPanel"
+    bl_description = "Show/Hide LightPanel"
 
     mouse_x: bpy.props.IntProperty()  # type: ignore[valid-type]
     mouse_y: bpy.props.IntProperty()  # type: ignore[valid-type]

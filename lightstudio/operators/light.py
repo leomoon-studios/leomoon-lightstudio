@@ -520,6 +520,54 @@ class LLS_OT_CameraToggleAllLights(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class LLS_OT_ChangeAllLightsType(bpy.types.Operator):
+    bl_idname = "lls.change_all_lights_type"
+    bl_label = "Change Lights Type"
+    bl_description = "Change all listed LightStudio lights to Basic or Advanced"
+    bl_options = {"REGISTER", "UNDO"}
+
+    target_type: EnumProperty(
+        name="Light Type",
+        items=(
+            ("ADVANCED", "Advanced", "Change lights to Advanced"),
+            ("BASIC", "Basic", "Change lights to Basic"),
+        ),
+        default="ADVANCED",
+    )
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        props = getattr(context.scene, "LLStudio", None)
+        return bool(props and props.initialized and len(props.light_list))
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        from ..core.light_animation import sync_emitters_from_rig
+        from ..core.scene_utils import sync_light_type_visibility
+        from .modal.control_panel import LightImage, panel_global, update_light_sets
+
+        props = context.scene.LLStudio
+        changed = 0
+        for item in props.light_list:
+            handle = bpy.data.objects.get(item.handle_name)
+            if handle is None:
+                continue
+            if handle.LLStudio.type != self.target_type:
+                handle.LLStudio.type = self.target_type
+                changed += 1
+            sync_light_type_visibility(handle, context)
+            sync_light_linking_properties(handle)
+            sync_emitters_from_rig(handle)
+
+        context.view_layer.update()
+        if panel_global is not None:
+            update_light_sets(panel_global, context, always=True)
+            LightImage.refresh()
+
+        label = "Advanced" if self.target_type == "ADVANCED" else "Basic"
+        self.report({"INFO"}, f"Changed {changed} LightStudio lights to {label}")
+        return {"FINISHED"}
+
+
 class LLS_OT_DuplicateMove(bpy.types.Operator):
     bl_idname = "lls_object.duplicate_move"
     bl_label = "Duplicate LLS Light"
@@ -593,5 +641,6 @@ classes: tuple[type[bpy.types.Operator], ...] = (
     LLS_OT_LightListMove,
     LLS_OT_LightListCopy,
     LLS_OT_CameraToggleAllLights,
+    LLS_OT_ChangeAllLightsType,
     LLS_OT_DuplicateMove,
 )

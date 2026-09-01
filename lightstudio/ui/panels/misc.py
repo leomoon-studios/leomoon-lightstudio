@@ -21,15 +21,8 @@ class LLS_PT_Misc(bpy.types.Panel):
     def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         col = layout.column(align=True)
-        col.operator(
-            "lls.camera_toggle_all_lights", text="Show Lights in Camera"
-        ).visible_camera = True
-        col.operator(
-            "lls.camera_toggle_all_lights", text="Hide Lights in Camera"
-        ).visible_camera = False
         col.operator("lls.find_missing_textures")
         col.operator("lls.open_textures_folder")
-        col.operator("light_studio.reset_control_panel")
         if op_registered("LLS_OT_lls_keyingset"):
             col.operator("lls.lls_keyingset")
             active = context.scene.keying_sets.active

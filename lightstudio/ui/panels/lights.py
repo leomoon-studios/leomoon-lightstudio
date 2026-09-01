@@ -53,5 +53,17 @@ class LLS_PT_Lights(bpy.types.Panel):
             "lls_list.move_light", text="", icon="TRIA_DOWN"
         ).direction = "DOWN"
 
+        col = layout.column(align=True)
+        op = col.operator("lls.change_all_lights_type", text="Change Lights to Advanced")
+        op.target_type = "ADVANCED"
+        op = col.operator("lls.change_all_lights_type", text="Change Lights to Basic")
+        op.target_type = "BASIC"
+        col.operator(
+            "lls.camera_toggle_all_lights", text="Show Lights in Camera"
+        ).visible_camera = True
+        col.operator(
+            "lls.camera_toggle_all_lights", text="Hide Lights in Camera"
+        ).visible_camera = False
+
 
 classes: tuple[type[bpy.types.Panel], ...] = (LLS_PT_Lights,)

@@ -30,6 +30,7 @@ class LLS_PT_Studio(bpy.types.Panel):
         col.separator()
 
         col.operator("light_studio.control_panel", icon="MENU_PANEL")
+        col.operator("light_studio.reset_control_panel", icon="FILE_REFRESH")
 
         sub = col.row(align=True)
         sub.operator(
