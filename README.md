@@ -61,7 +61,14 @@ Why not just use a background HDR lighting plugin? Because template-based lighti
 LeoMoon LightStudio lets you build your own lighting setups, save them as light profiles, and import/export those profiles across projects.
 
 ## Changelog
-- 3.2.0 unreleased
+- 3.2.1 2026-08-31
+    - Added light pinning
+    - Added donate button
+    - Removed animation mode with shared visible-light keying
+    - Fixed LightPanel not updating animation when scrubbing
+    - Added change lights to adv/basic button with UI reodering
+
+- 3.2.0 2026-08-16
     - Added native Blender Light Linking and Shadow Linking rows to the Selected Light panel
     - Added support for object and collection targets with compact `In` / `Ex` row controls
     - Improved LightStudio preview
